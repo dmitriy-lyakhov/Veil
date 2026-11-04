@@ -78,6 +78,12 @@ type ui struct {
 	share       *shareState
 }
 
+func (u *ui) buildPages() {
+	u.curtain = canvas.NewRectangle(color.Transparent)
+	u.serversView = u.serversPage()
+	u.pages = container.NewStack(u.homePage(), u.sharePage(), u.settingsPage(), u.addPage(), u.curtain)
+}
+
 func Run() {
 	release, first := acquireSingleInstance()
 	if !first {
@@ -94,9 +100,7 @@ func Run() {
 	u.loadSettings()
 	applyPalette(u.st.Dark())
 	curLang = u.st.Language()
-	u.curtain = canvas.NewRectangle(color.Transparent)
-	u.serversView = u.serversPage()
-	u.pages = container.NewStack(u.homePage(), u.sharePage(), u.settingsPage(), u.addPage(), u.curtain)
+	u.buildPages()
 	u.win.SetContent(u.buildShell())
 	u.showPage(0)
 	u.reload()

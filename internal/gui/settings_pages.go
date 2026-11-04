@@ -137,7 +137,8 @@ func (u *ui) settingsPage() fyne.CanvasObject {
 	rows := container.NewVBox(
 		navRow("Серверы", "", u.openServersPage),
 		navRow("Подключение", "", u.openConnection),
-		navRow("Приложение", "", u.openApplication),
+		navRow(L("Appearance", "Внешний вид"), "", u.openAppearance),
+			navRow("Приложение", "", u.openApplication),
 		navRow("Резервная копия", "", u.openBackup),
 		navRow("О Veil", "", u.openAbout),
 		navRow("Закрыть приложение", "", u.quit),
