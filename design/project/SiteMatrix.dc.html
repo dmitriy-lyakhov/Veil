@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil cover sites: palettes and layouts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+<style>body{margin:0}button{font-family:inherit}button:focus-visible{outline:2px solid #FF393D;outline-offset:2px}</style>
+</helmet>
+<div style="width:2000px;height:1180px;box-sizing:border-box;padding:40px;background:#E4E6EA;color:#0B0B0C;font-family:Montserrat,system-ui,sans-serif;display:flex;flex-direction:column;gap:18px;overflow:hidden">
+<h1 style="margin:0;font-size:24px;font-weight:600">Сайты-заглушки: палитры × раскладки</h1>
+<p style="margin:0;font-size:13px;font-weight:500;color:#5B6068">Генератор выбирает случайную палитру (6), раскладку (3), порядок секций и тематику (5 направлений, ru и en). Здесь — шапка главной страницы.</p>
+<div style="display:flex;flex-direction:column;gap:22px">
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;font-weight:600">{{r.title}}</span>
+<div style="display:flex;gap:16px"><sc-for list="{{r.cells}}" as="p" hint-placeholder-count="6"><div style="width:292px;height:190px;overflow:hidden;border-radius:10px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);flex:none"><div style="width:1080px;height:700px;transform:scale(.27);transform-origin:top left"><dc-import name="Site" page="index" palette="{{p.pal}}" layout="{{p.lay}}" lang="{{p.lang}}" w="1080" h="700" hint-size="1080px,700px"></dc-import></div></div></sc-for></div></div>
+</sc-for>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2000,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const names = ['1 · сплошной фон', '2 · градиент и карточка компании', '3 · светлый, зеркальный'];
+    return { rows: [0, 1, 2].map(l => ({ title: names[l], cells: [0, 1, 2, 3, 4, 5].map(p => ({ pal: p, lay: l, lang: (p + l) % 2 ? 'en' : 'ru' })) })) };
+  }
+}
+</script>
+</body>
+</html>

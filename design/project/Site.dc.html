@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil cover site</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+button{font-family:inherit}
+@keyframes sFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001s !important}}
+</style>
+</helmet>
+<div style="{{rootStyle}}">
+
+<sc-if value="{{isIndex}}" hint-placeholder-val="{{true}}">
+<div style="{{pageBox}}">
+<header style="{{topStyle}}"><div style="{{wrapStyle}}height:64px;display:flex;align-items:center;justify-content:space-between">
+<a style="display:flex;align-items:center;gap:10px;font-weight:700;color:{{P.ink}};text-decoration:none"><span style="{{logoS}}">{{initials}}</span><span>{{company}}</span></a>
+<nav style="display:flex;gap:22px;align-items:center"><sc-if value="{{showNav}}" hint-placeholder-val="{{true}}"><a style="color:{{P.ink}}">{{t.services}}</a><a style="color:{{P.ink}}">{{t.about}}</a></sc-if><a style="{{btnSmall}}">{{t.cta}}</a></nav></div></header>
+<section style="{{heroStyle}}"><div style="{{heroWrap}}">
+<div style="min-width:0"><h1 style="{{h1Style}}">{{tagline}}</h1><p style="{{heroP}}">{{about0}}</p><a style="{{btnS}}">{{t.cta}}</a></div>
+<sc-if value="{{showCard}}" hint-placeholder-val="{{true}}"><div style="{{cardStyle}}"><span style="{{logoBig}}">{{initials}}</span><strong>{{company}}</strong><span>{{city}} · {{since}}</span></div></sc-if>
+</div></section>
+<main style="{{wrapStyle}}">
+<sc-for list="{{sections}}" as="s" hint-placeholder-count="3">
+<section style="{{s.box}}">
+<sc-if value="{{s.isServices}}" hint-placeholder-val="{{true}}"><h2 style="{{s.h2}}">{{s.title}}</h2><div style="{{s.grid}}"><sc-for list="{{s.items}}" as="i" hint-placeholder-count="3"><div style="{{i.style}}"><h3 style="margin:0 0 8px;font-size:18px">{{i.title}}</h3><p style="margin:0">{{i.text}}</p></div></sc-for></div></sc-if>
+<sc-if value="{{s.isAbout}}" hint-placeholder-val="{{false}}"><h2 style="{{s.h2}}">{{s.title}}</h2><sc-for list="{{s.items}}" as="i" hint-placeholder-count="2"><p style="font-size:18px;max-width:780px;margin:0 0 12px">{{i.text}}</p></sc-for></sc-if>
+<sc-if value="{{s.isWhy}}" hint-placeholder-val="{{false}}"><h2 style="{{s.h2}}">{{s.title}}</h2><div style="{{s.grid3}}"><sc-for list="{{s.items}}" as="i" hint-placeholder-count="3"><div style="{{i.style}}"><h3 style="margin:0 0 8px;font-size:18px">{{i.title}}</h3><p style="margin:0">{{i.text}}</p></div></sc-for></div></sc-if>
+</section>
+</sc-for>
+<section style="{{contactStyle}}">
+<div><h2 style="margin:0 0 24px;font-size:28px">{{t.contact}}</h2><dl style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:0"><dt style="color:#6b7385">{{t.city}}</dt><dd style="margin:0">{{city}}</dd><dt style="color:#6b7385">{{t.hours}}</dt><dd style="margin:0">{{hours}}</dd></dl></div>
+<form style="display:flex;flex-direction:column;gap:12px"><input type="text" placeholder="{{t.name}}" style="{{inputS}}"><input type="text" placeholder="{{t.reply}}" style="{{inputS}}"><textarea rows="4" placeholder="{{t.message}}" style="{{inputS}}"></textarea><button type="button" style="{{btnS}}align-self:flex-start">{{t.send}}</button></form>
+</section>
+</main>
+<footer style="background:{{P.ink}};color:#c9ced8;padding:28px 0;font-size:14px"><div style="{{wrapStyle}}">© {{since}}–2026 {{company}}. {{t.rights}}.</div></footer>
+</div>
+</sc-if>
+
+<sc-if value="{{isThanks}}" hint-placeholder-val="{{false}}">
+<div style="{{pageBox}}">
+<header style="{{topStyle}}"><div style="{{wrapStyle}}height:64px;display:flex;align-items:center"><a style="display:flex;align-items:center;gap:10px;font-weight:700;color:{{P.ink}}"><span style="{{logoS}}">{{initials}}</span><span>{{company}}</span></a></div></header>
+<main style="text-align:center;padding:120px 20px;animation:sFade .4s both"><h1 style="font-size:36px;margin:0 0 16px">{{t.thanksTitle}}</h1><p style="font-size:18px;max-width:560px;margin:0 auto 24px">{{t.thanks}}</p><a style="{{btnS}}">{{t.back}}</a></main>
+</div>
+</sc-if>
+
+<sc-if value="{{isLogin}}" hint-placeholder-val="{{false}}">
+<div style="min-height:100%;display:grid;place-items:center;background:{{P.soft}};padding:20px;box-sizing:border-box;color:{{P.ink}};font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif">
+<form style="width:min(380px,100%);background:#fff;border-radius:14px;padding:22px;box-shadow:0 10px 40px rgba(0,0,0,.08);display:flex;flex-direction:column;gap:12px;box-sizing:border-box;animation:sFade .4s both">
+<div style="display:flex;align-items:center;gap:10px;font-weight:700"><span style="{{logoS}}">{{initials}}</span><span>{{company}}</span></div>
+<h2 style="margin:18px 0 0;font-size:24px">{{t.signin}}</h2><p style="margin:0 0 6px;color:#6b7385">{{t.signinHint}}</p>
+<sc-if value="{{hasError}}" hint-placeholder-val="{{false}}"><p style="margin:0;color:#c0392b">{{t.badLogin}}</p></sc-if>
+<input type="text" placeholder="{{t.login}}" style="{{inputS}}"><input type="password" placeholder="{{t.password}}" style="{{inputS}}"><button type="button" style="{{btnS}}">{{t.enter}}</button>
+</form></div>
+</sc-if>
+
+<sc-if value="{{isNotFound}}" hint-placeholder-val="{{false}}">
+<div style="background:#FFFFFF;color:#000000;min-height:100%;box-sizing:border-box;padding:8px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:normal">
+<div style="text-align:center"><h1 style="font-size:32px;margin:21px 0;font-weight:700">404 Not Found</h1></div>
+<hr style="border:0;border-top:1px solid #9a9a9a;margin:8px 0">
+<div style="text-align:center">nginx</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isFavicon}}" hint-placeholder-val="{{false}}">
+<div style="min-height:100%;display:flex;align-items:center;justify-content:center;gap:24px;background:#F2F3F5">
+<svg width="128" height="128" viewBox="0 0 64 64" role="img" aria-label="favicon"><rect width="64" height="64" rx="14" fill="{{P.primary}}"></rect><text x="32" y="42" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="700" fill="#fff" text-anchor="middle">{{initials}}</text></svg>
+<svg width="32" height="32" viewBox="0 0 64 64" role="img" aria-label="favicon 32"><rect width="64" height="64" rx="14" fill="{{P.primary}}"></rect><text x="32" y="42" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="700" fill="#fff" text-anchor="middle">{{initials}}</text></svg>
+<svg width="16" height="16" viewBox="0 0 64 64" role="img" aria-label="favicon 16"><rect width="64" height="64" rx="14" fill="{{P.primary}}"></rect><text x="32" y="42" font-family="Arial,Helvetica,sans-serif" font-size="28" font-weight="700" fill="#fff" text-anchor="middle">{{initials}}</text></svg>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"page":{"editor":null,"default":"index"},"palette":{"editor":null,"default":0},"layout":{"editor":null,"default":0},"lang":{"editor":null,"default":"ru"},"order":{"editor":null,"default":"services,about,why"},"w":{"editor":null,"default":1080},"h":{"editor":null,"default":800},"$preview":{"width":1080,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const P0 = (k, f) => { const v = this.props[k]; return (v === undefined || v === null || v === '') ? f : v; };
+    const page = P0('page', 'index'), lang = P0('lang', 'ru'), ru = lang === 'ru';
+    const pal = Number(P0('palette', 0)) % 6, lay = Number(P0('layout', 0)) % 3;
+    const w = Number(P0('w', 1080)), h = Number(P0('h', 800));
+    const order = String(P0('order', 'services,about,why')).split(',');
+    const mobile = w < 760;
+    const PALS = [
+      { primary: '#1f4e79', accent: '#2e86c1', ink: '#1b2631', soft: '#eef3f8', hero: '#163a5a' },
+      { primary: '#145a32', accent: '#27ae60', ink: '#1c2a22', soft: '#eef6f0', hero: '#0f3f24' },
+      { primary: '#5b2c6f', accent: '#8e44ad', ink: '#241a2b', soft: '#f4eff7', hero: '#40204f' },
+      { primary: '#7b3f00', accent: '#d35400', ink: '#2b1d12', soft: '#fbf3ec', hero: '#5a2e00' },
+      { primary: '#17202a', accent: '#c0392b', ink: '#17202a', soft: '#f4f6f7', hero: '#1c2833' },
+      { primary: '#0e6655', accent: '#16a085', ink: '#14231f', soft: '#ecf7f4', hero: '#0b4d40' }
+    ];
+    const P = PALS[pal];
+    const DATA = ru ? {
+      company: 'Меридиан Консалтинг', tagline: 'Помогаем бизнесу расти устойчиво', city: 'Казань', hours: 'Пн–Пт, 9:00–18:00', since: 2012,
+      about: ['Мы консультируем малый и средний бизнес по вопросам стратегии, управленческого учёта и операционной эффективности. Работаем проектно и на абонентской основе, всегда фиксируем измеримый результат.', 'Наша команда — практики с опытом работы в производстве, торговле и сфере услуг. Мы не продаём шаблоны: каждый проект начинается с диагностики и заканчивается внедрением.'],
+      services: [['Стратегия развития', 'Анализ рынка, позиционирование и план роста на 1–3 года.'], ['Управленческий учёт', 'Постановка отчётности, бюджетирование и контроль денежных потоков.'], ['Оптимизация процессов', 'Описание и перестройка бизнес-процессов, снижение издержек.'], ['Сопровождение сделок', 'Due diligence, оценка бизнеса и подготовка к переговорам.']],
+      values: [['Опыт', 'Более 10 лет практики в разных отраслях.'], ['Прозрачность', 'Понятные этапы, сроки и стоимость работ.'], ['Результат', 'Фиксируем KPI проекта до начала работ.']],
+      ui: { services: 'Услуги', about: 'О компании', why: 'Почему мы', contact: 'Связаться с нами', name: 'Ваше имя', reply: 'Телефон или e-mail', message: 'Сообщение', send: 'Отправить', hours: 'Часы работы', city: 'Город', rights: 'Все права защищены', cta: 'Оставить заявку', thanksTitle: 'Спасибо!', thanks: 'Мы получили вашу заявку и свяжемся с вами в ближайшее время.', back: 'На главную', signin: 'Вход', login: 'Логин', password: 'Пароль', enter: 'Войти', signinHint: 'Вход для сотрудников', badLogin: 'Неверный логин или пароль' }
+    } : {
+      company: 'Meridian Consulting', tagline: 'Helping businesses grow with confidence', city: 'Amsterdam', hours: 'Mon–Fri, 9:00–17:00', since: 2012,
+      about: ['We advise small and mid-sized companies on strategy, management accounting and operational efficiency. Every engagement starts with a diagnosis and ends with measurable outcomes.', 'Our consultants have hands-on experience in manufacturing, retail and services. We do not sell templates — we work alongside your team until the change sticks.'],
+      services: [['Growth strategy', 'Market analysis, positioning and a 1–3 year growth plan.'], ['Management reporting', 'Budgeting, KPIs and cash-flow control.'], ['Process improvement', 'Mapping and redesigning processes to cut costs.'], ['Transaction support', 'Due diligence, valuation and negotiation prep.']],
+      values: [['Experience', 'Over a decade of cross-industry practice.'], ['Transparency', 'Clear stages, timelines and pricing.'], ['Outcomes', 'KPIs agreed before work begins.']],
+      ui: { services: 'Services', about: 'About us', why: 'Why us', contact: 'Get in touch', name: 'Your name', reply: 'Phone or e-mail', message: 'Message', send: 'Send', hours: 'Office hours', city: 'City', rights: 'All rights reserved', cta: 'Contact us', thanksTitle: 'Thank you!', thanks: 'We have received your message and will get back to you shortly.', back: 'Back to home', signin: 'Sign in', login: 'Username', password: 'Password', enter: 'Sign in', signinHint: 'Staff access', badLogin: 'Invalid username or password' }
+    };
+    const initials = DATA.company.split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase();
+    const font = "system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif";
+    const wrapStyle = 'max-width:1080px;margin:0 auto;padding:0 20px;box-sizing:border-box;width:100%;';
+    const btnS = `display:inline-block;background:${P.accent};color:#fff;border:0;padding:12px 22px;border-radius:10px;font-weight:600;cursor:pointer;font-size:15px;font-family:inherit;text-decoration:none;`;
+    const inputS = 'font:inherit;padding:12px 14px;border:1px solid #d6dbe3;border-radius:10px;background:#fff;color:#1b2631;box-sizing:border-box;width:100%;';
+    const heroBg = lay === 1 ? `linear-gradient(135deg,${P.hero},${P.accent})` : (lay === 2 ? P.soft : P.hero);
+    const heroColor = lay === 2 ? P.ink : '#fff';
+    const heroStyle = `background:${heroBg};color:${heroColor};padding:${mobile ? 56 : 84}px 0`;
+    const cardStyle = lay === 2
+      ? 'flex:0 0 260px;background:#fff;border:1px solid #e6e9ee;border-radius:18px;padding:28px;display:flex;flex-direction:column;gap:10px;align-items:flex-start;color:' + P.ink
+      : 'flex:0 0 260px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:18px;padding:28px;display:flex;flex-direction:column;gap:10px;align-items:flex-start';
+    const secBox = 'padding:56px 0;border-bottom:1px solid #eef0f3;animation:sFade .4s both';
+    const h2 = 'font-size:28px;margin:0 0 24px';
+    const itemCard = `background:${P.soft};border-radius:14px;padding:22px`;
+    const itemVal = `border-left:3px solid ${P.accent};padding:4px 0 4px 16px`;
+    const sections = order.map(k => ({
+      box: secBox, h2,
+      isServices: k === 'services', isAbout: k === 'about', isWhy: k === 'why',
+      title: k === 'services' ? DATA.ui.services : (k === 'about' ? DATA.ui.about : DATA.ui.why),
+      grid: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px', grid3: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px',
+      items: k === 'services' ? DATA.services.map(([title, text]) => ({ title, text, style: itemCard }))
+        : (k === 'about' ? DATA.about.map(text => ({ text })) : DATA.values.map(([title, text]) => ({ title, text, style: itemVal })))
+    }));
+    return {
+      P, t: DATA.ui, initials, company: DATA.company, tagline: DATA.tagline, city: DATA.city, hours: DATA.hours, since: DATA.since, about0: DATA.about[0],
+      sections, wrapStyle, btnS, inputS, heroStyle, cardStyle, showCard: lay !== 0 && !mobile, showNav: !mobile, hasError: false,
+      isIndex: page === 'index', isThanks: page === 'thanks', isLogin: page === 'login', isNotFound: page === 'notfound', isFavicon: page === 'favicon',
+      rootStyle: `width:${w}px;height:${h}px;overflow-y:auto;background:${page === 'notfound' ? '#fff' : '#fff'};color:${P.ink};font:16px/1.6 ${font};box-sizing:border-box;position:relative`,
+      pageBox: 'min-height:100%',
+      topStyle: 'position:sticky;top:0;background:rgba(255,255,255,.95);border-bottom:1px solid #e6e9ee;z-index:2',
+      logoS: `display:inline-grid;place-items:center;width:34px;height:34px;border-radius:9px;background:${P.primary};color:#fff;font-weight:800;font-size:14px`,
+      logoBig: `display:inline-grid;place-items:center;width:72px;height:72px;border-radius:18px;background:${lay === 2 ? P.primary : P.primary};color:#fff;font-weight:800;font-size:28px`,
+      btnSmall: `display:inline-block;background:${P.accent};color:#fff;padding:8px 14px;border-radius:10px;font-weight:600;font-size:15px;text-decoration:none`,
+      heroWrap: `${wrapStyle}display:flex;gap:40px;align-items:${mobile ? 'flex-start' : 'center'};flex-direction:${mobile ? 'column' : (lay === 2 ? 'row-reverse' : 'row')}`,
+      h1Style: `font-size:${mobile ? 30 : 40}px;line-height:1.15;margin:0 0 16px`,
+      heroP: `opacity:${lay === 2 ? 1 : 0.85};max-width:620px;margin:0 0 20px`,
+      contactStyle: `display:grid;grid-template-columns:${mobile ? '1fr' : '1fr 1.3fr'};gap:40px;padding:56px 0`
+    };
+  }
+}
+</script>
+</body>
+</html>

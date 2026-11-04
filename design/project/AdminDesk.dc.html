@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil admin panel in the browser</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+<style>body{margin:0}button{font-family:inherit}button:focus-visible{outline:2px solid #FF393D;outline-offset:2px}</style>
+</helmet>
+<div style="width:1340px;height:1260px;box-sizing:border-box;padding:40px;background:{{c.ground}};color:{{c.ink}};font-family:Montserrat,system-ui,sans-serif;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+<div style="display:flex;align-items:baseline;gap:12px"><h1 style="margin:0;font-size:24px;font-weight:600">Админ-панель в браузере</h1><span style="font-size:13px;font-weight:500;color:{{c.ink2}}">https://10.66.0.1/admin · доступна только через VPN</span></div>
+<div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:96px">Состояние</span><sc-for list="{{viewOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:96px">Ширина окна</span><sc-for list="{{widthOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:96px">Тема</span><sc-for list="{{themeOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:96px">Язык</span><sc-for list="{{langOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div></div>
+<div style="width:{{aw}}px;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.18);flex:none">
+<div style="height:76px;background:#2A2B30;display:flex;flex-direction:column;justify-content:flex-end">
+<div style="display:flex;align-items:flex-end;gap:12px;padding:0 12px"><div style="display:flex;gap:6px;padding-bottom:10px" aria-hidden="true"><span style="width:10px;height:10px;border-radius:50%;background:#FF5F57"></span><span style="width:10px;height:10px;border-radius:50%;background:#FEBC2E"></span><span style="width:10px;height:10px;border-radius:50%;background:#28C840"></span></div>
+<div style="display:flex;align-items:center;gap:8px;background:#1B1C1F;color:#fff;border-radius:10px 10px 0 0;padding:6px 12px;font-size:12px;font-weight:600;min-width:160px;max-width:240px;box-sizing:border-box"><svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg><span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">Veil · панель управления</span></div></div>
+<div style="height:38px;background:#1B1C1F;display:flex;align-items:center;padding:0 12px"><div style="flex:1;height:26px;border-radius:13px;background:#0B0B0C;color:#A8AAB2;font-family:Arimo,Arial,sans-serif;font-size:12px;display:flex;align-items:center;padding:0 12px;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7h8v4"></path></svg>10.66.0.1/admin</div></div></div>
+<dc-import name="Admin" theme="{{theme}}" lang="{{lang}}" w="{{aw}}" h="{{ah}}" view="{{view}}" hint-size="{{aw}}px,{{ah}}px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":1340,"height":1260}}'>
+class Component extends DCLogic {
+  state = { theme: null, lang: null, view: 'none', width: '1240' };
+  renderVals() {
+    const st = this.state;
+    const theme = st.theme || this.props.theme || 'dark';
+    const lang = st.lang || this.props.lang || 'ru';
+    const lt = theme === 'light';
+    const c = lt ? { ground: '#E4E6EA', card: '#FFFFFF', card2: '#C9CCD2', ink: '#0B0B0C', ink2: '#5B6068', acc: '#FF393D', onacc: '#0B0B0C' }
+      : { ground: '#1B1C1F', card: '#0B0B0C', card2: '#2A2B30', ink: '#FFFFFF', ink2: '#A8AAB2', acc: '#FF393D', onacc: '#0B0B0C' };
+    const chip = (on, label, go) => ({ label, go, style: 'min-height:36px;padding:0 14px;border:0;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;background:' + (on ? c.acc : c.card) + ';color:' + (on ? c.onacc : c.ink) });
+    const seg = (key, opts, def) => opts.map(([v, l]) => chip(String(st[key] === undefined ? def : st[key]) === String(v), l, () => this.setState({ [key]: v })));
+    const themeOpts = [['dark', 'Тёмная'], ['light', 'Светлая']].map(([v, l]) => chip(theme === v, l, () => this.setState({ theme: v })));
+    const langOpts = [['ru', 'Русский'], ['en', 'English']].map(([v, l]) => chip(lang === v, l, () => this.setState({ lang: v })));
+    const views = [['none', 'Главная'], ['new', 'Новый клиент: вручную'], ['newAuto', 'Новый клиент: авто'], ['edit', 'Изменить клиента'], ['up', 'Узел каскада'], ['rel', 'Ключ каскада'], ['link', 'Конфиг и QR']];
+    const viewOpts = seg('view', views, 'none');
+    const widthOpts = seg('width', [['1240', '1240 · ПК'], ['820', '820 · планшет'], ['390', '390 · телефон']], '1240');
+    const aw = Number(st.width || 1240);
+    const ah = aw < 640 ? 760 : 820;
+    return { c, theme, lang, viewOpts, widthOpts, themeOpts, langOpts, aw, ah, view: st.view || 'none' };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil admin panel on a phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+<style>body{margin:0}button{font-family:inherit}button:focus-visible{outline:2px solid #FF393D;outline-offset:2px}</style>
+</helmet>
+<div style="width:1400px;height:1000px;box-sizing:border-box;padding:40px;background:{{c.ground}};color:{{c.ink}};font-family:Montserrat,system-ui,sans-serif;display:flex;flex-direction:column;gap:20px;overflow:hidden">
+<h1 style="margin:0;font-size:24px;font-weight:600">Админ-панель на телефоне</h1>
+<div style="display:flex;gap:40px;align-items:flex-start">
+<div style="display:flex;flex-direction:column;gap:10px;flex:none"><span style="font-size:13px;font-weight:600;color:{{c.ink2}}">Главная · тёмная</span>
+<div style="width:406px;box-sizing:border-box;padding:8px;background:#01040F;border-radius:48px"><div style="position:relative;width:390px;height:844px;border-radius:40px;overflow:hidden;background:#0B0B0C">
+<div style="height:96px;background:#2A2B30;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:10px"><div style="margin:0 14px;height:30px;border-radius:15px;background:#0B0B0C;color:#A8AAB2;font-family:Arimo,Arial,sans-serif;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7h8v4"></path></svg>10.66.0.1/admin</div></div>
+<dc-import name="Admin" theme="dark" lang="ru" view="none" w="390" h="748" hint-size="390px,748px"></dc-import></div></div></div>
+<div style="display:flex;flex-direction:column;gap:10px;flex:none"><span style="font-size:13px;font-weight:600;color:{{c.ink2}}">Home · light</span>
+<div style="width:406px;box-sizing:border-box;padding:8px;background:#01040F;border-radius:48px"><div style="position:relative;width:390px;height:844px;border-radius:40px;overflow:hidden;background:#0B0B0C">
+<div style="height:96px;background:#2A2B30;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:10px"><div style="margin:0 14px;height:30px;border-radius:15px;background:#0B0B0C;color:#A8AAB2;font-family:Arimo,Arial,sans-serif;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7h8v4"></path></svg>10.66.0.1/admin</div></div>
+<dc-import name="Admin" theme="light" lang="en" view="none" w="390" h="748" hint-size="390px,748px"></dc-import></div></div></div>
+<div style="display:flex;flex-direction:column;gap:10px;flex:none"><span style="font-size:13px;font-weight:600;color:{{c.ink2}}">Новый клиент</span>
+<div style="width:406px;box-sizing:border-box;padding:8px;background:#01040F;border-radius:48px"><div style="position:relative;width:390px;height:844px;border-radius:40px;overflow:hidden;background:#0B0B0C">
+<div style="height:96px;background:#2A2B30;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:10px"><div style="margin:0 14px;height:30px;border-radius:15px;background:#0B0B0C;color:#A8AAB2;font-family:Arimo,Arial,sans-serif;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7h8v4"></path></svg>10.66.0.1/admin</div></div>
+<dc-import name="Admin" theme="dark" lang="ru" view="new" w="390" h="748" hint-size="390px,748px"></dc-import></div></div></div>
+</div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":1400,"height":1000}}'>
+class Component extends DCLogic {
+  state = { theme: null, lang: null };
+  renderVals() {
+    const st = this.state;
+    const theme = st.theme || this.props.theme || 'dark';
+    const lang = st.lang || this.props.lang || 'ru';
+    const lt = theme === 'light';
+    const c = lt ? { ground: '#E4E6EA', card: '#FFFFFF', card2: '#C9CCD2', ink: '#0B0B0C', ink2: '#5B6068', acc: '#FF393D', onacc: '#0B0B0C' }
+      : { ground: '#1B1C1F', card: '#0B0B0C', card2: '#2A2B30', ink: '#FFFFFF', ink2: '#A8AAB2', acc: '#FF393D', onacc: '#0B0B0C' };
+    const chip = (on, label, go) => ({ label, go, style: 'min-height:36px;padding:0 14px;border:0;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;background:' + (on ? c.acc : c.card) + ';color:' + (on ? c.onacc : c.ink) });
+    const seg = (key, opts, def) => opts.map(([v, l]) => chip(String(st[key] === undefined ? def : st[key]) === String(v), l, () => this.setState({ [key]: v })));
+    const themeOpts = [['dark', 'Тёмная'], ['light', 'Светлая']].map(([v, l]) => chip(theme === v, l, () => this.setState({ theme: v })));
+    const langOpts = [['ru', 'Русский'], ['en', 'English']].map(([v, l]) => chip(lang === v, l, () => this.setState({ lang: v })));
+    return { c, theme, lang };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil cover sites</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+<style>body{margin:0}button{font-family:inherit}button:focus-visible{outline:2px solid #FF393D;outline-offset:2px}</style>
+</helmet>
+<div style="width:1260px;height:1190px;box-sizing:border-box;padding:40px;background:{{c.ground}};color:{{c.ink}};font-family:Montserrat,system-ui,sans-serif;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+<div style="display:flex;align-items:baseline;gap:12px"><h1 style="margin:0;font-size:24px;font-weight:600">Сайты-заглушки</h1><span style="font-size:13px;font-weight:500;color:{{c.ink2}}">Для посторонних сервер выглядит как обычный сайт небольшой компании. Шесть палитр, три раскладки.</span></div>
+<div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:96px">Страница</span><sc-for list="{{pageOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:96px">Палитра</span><sc-for list="{{palOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:96px">Раскладка</span><sc-for list="{{layOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:96px">Язык сайта</span><sc-for list="{{slangOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:96px">Окно</span><sc-for list="{{devOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div></div>
+<div style="width:{{sw}}px;border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 4px 12px rgba(0,0,0,.18);flex:none">
+<div style="height:76px;background:#2A2B30;display:flex;flex-direction:column;justify-content:flex-end">
+<div style="display:flex;align-items:flex-end;gap:12px;padding:0 12px"><div style="display:flex;gap:6px;padding-bottom:10px" aria-hidden="true"><span style="width:10px;height:10px;border-radius:50%;background:#FF5F57"></span><span style="width:10px;height:10px;border-radius:50%;background:#FEBC2E"></span><span style="width:10px;height:10px;border-radius:50%;background:#28C840"></span></div>
+<div style="display:flex;align-items:center;gap:8px;background:#1B1C1F;color:#fff;border-radius:10px 10px 0 0;padding:6px 12px;font-size:12px;font-weight:600;min-width:160px;max-width:240px;box-sizing:border-box"><svg width="14" height="14" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="{{favColor}}"></rect></svg><span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{tabTitle}}</span></div></div>
+<div style="height:38px;background:#1B1C1F;display:flex;align-items:center;padding:0 12px"><div style="flex:1;height:26px;border-radius:13px;background:#0B0B0C;color:#A8AAB2;font-family:Arimo,Arial,sans-serif;font-size:12px;display:flex;align-items:center;padding:0 12px;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M6 11h12v10H6zM8 11V7h8v4"></path></svg>example.com{{path}}</div></div></div>
+<dc-import name="Site" page="{{page}}" palette="{{pal}}" layout="{{lay}}" lang="{{slang}}" w="{{sw}}" h="{{sh}}" hint-size="{{sw}}px,{{sh}}px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":1260,"height":1190}}'>
+class Component extends DCLogic {
+  state = { theme: null, lang: null, page: 'index', pal: '0', lay: '0', slang: 'ru', dev: '1080' };
+  renderVals() {
+    const st = this.state;
+    const theme = st.theme || this.props.theme || 'dark';
+    const lang = st.lang || this.props.lang || 'ru';
+    const lt = theme === 'light';
+    const c = lt ? { ground: '#E4E6EA', card: '#FFFFFF', card2: '#C9CCD2', ink: '#0B0B0C', ink2: '#5B6068', acc: '#FF393D', onacc: '#0B0B0C' }
+      : { ground: '#1B1C1F', card: '#0B0B0C', card2: '#2A2B30', ink: '#FFFFFF', ink2: '#A8AAB2', acc: '#FF393D', onacc: '#0B0B0C' };
+    const chip = (on, label, go) => ({ label, go, style: 'min-height:36px;padding:0 14px;border:0;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;background:' + (on ? c.acc : c.card) + ';color:' + (on ? c.onacc : c.ink) });
+    const seg = (key, opts, def) => opts.map(([v, l]) => chip(String(st[key] === undefined ? def : st[key]) === String(v), l, () => this.setState({ [key]: v })));
+    const themeOpts = [['dark', 'Тёмная'], ['light', 'Светлая']].map(([v, l]) => chip(theme === v, l, () => this.setState({ theme: v })));
+    const langOpts = [['ru', 'Русский'], ['en', 'English']].map(([v, l]) => chip(lang === v, l, () => this.setState({ lang: v })));
+    const pageOpts = seg('page', [['index', 'Главная'], ['thanks', 'Спасибо'], ['login', 'Вход'], ['notfound', '404 nginx'], ['favicon', 'Favicon']], 'index');
+    const palOpts = seg('pal', [['0', '1 · синяя'], ['1', '2 · зелёная'], ['2', '3 · фиолетовая'], ['3', '4 · терракотовая'], ['4', '5 · графит'], ['5', '6 · бирюзовая']], '0');
+    const layOpts = seg('lay', [['0', '1 · сплошной'], ['1', '2 · градиент и карточка'], ['2', '3 · светлый, зеркальный']], '0');
+    const slangOpts = seg('slang', [['ru', 'Русский'], ['en', 'English']], 'ru');
+    const devOpts = seg('dev', [['1080', '1080 · компьютер'], ['390', '390 · телефон']], '1080');
+    const pal = Number(st.pal || 0), page = st.page || 'index';
+    const cols = ['#1f4e79', '#145a32', '#5b2c6f', '#7b3f00', '#17202a', '#0e6655'];
+    const sw = Number(st.dev || 1080);
+    const paths = { index: '/', thanks: '/contact', login: '/admin', notfound: '/wp-admin', favicon: '/favicon.svg' };
+    const names = { index: 'Меридиан Консалтинг', thanks: 'Спасибо!', login: 'Вход', notfound: '404 Not Found', favicon: 'favicon.svg' };
+    return { c, theme, lang, pageOpts, palOpts, layOpts, slangOpts, devOpts, themeOpts, page, pal: String(pal), lay: st.lay || '0', slang: st.slang || 'ru', sw, sh: sw < 640 ? 760 : 700, path: paths[page], tabTitle: names[page], favColor: cols[pal] };
+  }
+}
+</script>
+</body>
+</html>
