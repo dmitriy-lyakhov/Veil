@@ -6,7 +6,9 @@ DMG     := $(DIST)/Veil-$(VERSION).dmg
 ICONSET := $(DIST)/Veil.iconset
 LDFLAGS := -s -w
 
-.PHONY: all server app app-universal icns macos-app dmg test clean
+WINDIR  := $(DIST)/windows
+
+.PHONY: all server app app-universal icns macos-app dmg windows test clean
 
 all: server app
 
@@ -54,3 +56,10 @@ test:
 
 clean:
 	rm -rf $(DIST)
+
+# Windows: GUI (нужен MinGW-w64 в PATH), консольный клиент и серверные бинарники для Linux рядом.
+windows: server
+	mkdir -p $(WINDIR)/server
+	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 $(GO) build -trimpath -ldflags '$(LDFLAGS) -H=windowsgui' -o $(WINDIR)/veil.exe ./cmd/veil
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GO) build -trimpath -ldflags '$(LDFLAGS)' -o $(WINDIR)/veil-cli.exe ./cmd/veil-cli
+	cp $(DIST)/server/veil-server-linux-* $(WINDIR)/server/
