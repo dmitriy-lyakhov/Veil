@@ -188,6 +188,14 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request, path string, 
 			events = []RerouteEvent{}
 		}
 		reply(map[string]any{"events": events}, nil)
+	case "settings/front":
+		var req struct {
+			SNI  string `json:"sni"`
+			Dest string `json:"dest"`
+		}
+		if decode(&req) {
+			reply(nil, s.SetFront(req.SNI, req.Dest))
+		}
 	case "settings/domain":
 		var req domainRequest
 		if decode(&req) {

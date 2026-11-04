@@ -1,7 +1,6 @@
 package client
 
 import (
-	"veil/internal/netpin"
 	"context"
 	"crypto/x509"
 	"encoding/base64"
@@ -13,6 +12,8 @@ import (
 	"slices"
 	"sync"
 	"time"
+	"veil/internal/front"
+	"veil/internal/netpin"
 
 	utls "github.com/refraction-networking/utls"
 	"golang.org/x/net/http2"
@@ -73,7 +74,10 @@ func (d *Dialer) candidates() ([]candidate, error) {
 		return nil, err
 	}
 	kinds := []Kind{KindH3, KindH2}
-	if len(d.Profile.Transports) > 0 {
+	if d.Profile.FrontKey != "" {
+		// маскировка работает поверх TCP: QUIC нельзя прозрачно проксировать на чужой сайт
+		kinds = []Kind{KindH2}
+	} else if len(d.Profile.Transports) > 0 {
 		kinds = kinds[:0]
 		for _, k := range d.Profile.Transports {
 			switch k {
@@ -266,11 +270,20 @@ func (d *Dialer) dialH2(ctx context.Context, t config.Target, authKey []byte) (T
 
 func (d *Dialer) tlsOnly(raw net.Conn) (*utls.UConn, error) {
 	uc := utls.UClient(raw, &utls.Config{
-		ServerName:            d.Profile.ServerName,
+		ServerName:            d.Profile.TLSName(),
 		InsecureSkipVerify:    d.pinned(),
 		NextProtos:            []string{"h2", "http/1.1"},
 		VerifyPeerCertificate: d.verifyPin,
 	}, utls.HelloChrome_120) // совпадает с QUIC-пресетом: ECH GREASE, без PQ, ALPS 17513
+	if d.Profile.FrontKey != "" {
+		key, err := front.DecodeKey(d.Profile.FrontKey)
+		if err != nil {
+			return nil, fmt.Errorf("front key: %w", err)
+		}
+		if err := front.Apply(uc, key); err != nil {
+			return nil, fmt.Errorf("front: %w", err)
+		}
+	}
 	if err := uc.Handshake(); err != nil {
 		return nil, fmt.Errorf("tls: %w", err)
 	}

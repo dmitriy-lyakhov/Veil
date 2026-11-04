@@ -1,7 +1,6 @@
 package provision
 
 import (
-	mrand "math/rand/v2"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -14,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	mrand "math/rand/v2"
 	"net/netip"
 	"time"
 
@@ -116,6 +116,8 @@ func AddPeer(s *config.Server, name string) (*config.Profile, error) {
 		Port:            config.DefaultPort,
 		Path:            s.Path,
 		CertPin:         pin,
+		FrontSNI:        frontSNI(s),
+		FrontKey:        frontKey(s),
 		ServerPublicKey: serverPub,
 		PrivateKey:      priv,
 		AuthKey:         authB64,
@@ -267,4 +269,18 @@ func randomHostname() string {
 	}
 	tlds := []string{"com", "net", "org", "io"}
 	return string(b) + "." + tlds[mrand.IntN(len(tlds))]
+}
+
+func frontSNI(s *config.Server) string {
+	if s.Front != nil {
+		return s.Front.SNI
+	}
+	return ""
+}
+
+func frontKey(s *config.Server) string {
+	if s.Front != nil {
+		return s.Front.Key
+	}
+	return ""
 }

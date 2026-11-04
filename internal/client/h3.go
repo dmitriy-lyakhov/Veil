@@ -161,7 +161,7 @@ func (d *Dialer) h3Handshake(ctx context.Context, c *h3Conn, authKey []byte) err
 	}
 	ut := &quic.UTransport{Transport: &quic.Transport{Conn: c.udp}, QUICSpec: spec}
 	tlsConf := &utls.Config{
-		ServerName:            d.Profile.ServerName,
+		ServerName:            d.Profile.TLSName(),
 		InsecureSkipVerify:    d.pinned(),
 		NextProtos:            []string{"h3"},
 		VerifyPeerCertificate: d.verifyPin,

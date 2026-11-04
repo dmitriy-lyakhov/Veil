@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	"veil/internal/front"
 
 	"github.com/quic-go/quic-go"
 	"golang.zx2c4.com/wireguard/tun"
@@ -104,6 +105,7 @@ func run(cfgPath, socket string, log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	fln := front.NewListener(ln, srv.FrontConfig, srv.FrontBypass)
 	h3, err := srv.HTTP3Server()
 	if err != nil {
 		return err
@@ -115,7 +117,7 @@ func run(cfgPath, socket string, log *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	errc := make(chan error, 2)
-	go func() { errc <- hs.ServeTLS(ln, "", "") }()
+	go func() { errc <- hs.ServeTLS(fln, "", "") }()
 	go func() { errc <- h3.Serve(pc) }()
 	defer h3.Close()
 	if port80 := redirectAddr(cfg.Listen); port80 != "" {

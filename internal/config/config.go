@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"time"
 
-	"veil/internal/site"
-	"veil/internal/wgconf"
 	"veil/internal/ipsecconf"
 	"veil/internal/ovpnconf"
+	"veil/internal/site"
+	"veil/internal/wgconf"
 )
 
 const (
@@ -39,8 +39,16 @@ type Server struct {
 	Site       *site.Site `json:"site,omitempty"`
 	Admin      Admin      `json:"admin"`
 	Domain     string     `json:"domain,omitempty"`
+	Front      *Front     `json:"front,omitempty"`
 	Relays     []Relay    `json:"relays,omitempty"`
 	Upstreams  []Upstream `json:"upstreams,omitempty"`
+}
+
+// Front — маскировка входа под чужой сайт: SNI, куда проксировать посторонних и общий ключ (base64).
+type Front struct {
+	SNI  string `json:"sni"`
+	Dest string `json:"dest,omitempty"`
+	Key  string `json:"key"`
 }
 
 type Admin struct {
@@ -109,12 +117,15 @@ type RelayLink struct {
 	ServerPublicKey string   `json:"server_public_key"`
 	ServerName      string   `json:"server_name,omitempty"`
 	Transports      []string `json:"transports,omitempty"`
+	FrontSNI        string   `json:"front_sni,omitempty"`
+	FrontKey        string   `json:"front_key,omitempty"`
 }
 
 func (l *RelayLink) DialProfile() *Profile {
 	return &Profile{
 		Name: l.Company, IPv4: l.IPv4, IPv6: l.IPv6, Port: l.Port, Path: l.Path, ServerName: l.ServerName,
 		CertPin: l.CertPin, AuthKey: l.AuthKey, ServerPublicKey: l.ServerPublicKey, Transports: l.Transports,
+		FrontSNI: l.FrontSNI, FrontKey: l.FrontKey,
 	}
 }
 
@@ -134,6 +145,8 @@ type Profile struct {
 	DNS             []string `json:"dns"`
 	MTU             int      `json:"mtu"`
 	Transports      []string `json:"transports,omitempty"`
+	FrontSNI        string   `json:"front_sni,omitempty"` // SNI, под который маскируется вход
+	FrontKey        string   `json:"front_key,omitempty"` // общий ключ метки (base64)
 	AdminUser       string   `json:"admin_user,omitempty"`
 	AdminPassword   string   `json:"admin_password,omitempty"`
 	AdminURL        string   `json:"admin_url,omitempty"`
@@ -144,11 +157,11 @@ type Profile struct {
 	SSH             *SSHInfo `json:"ssh,omitempty"`
 
 	// Protocol — протокол профиля: пусто или "veil" (по умолчанию), "wireguard", "openvpn".
-	Protocol  string        `json:"protocol,omitempty"`
-	WG        *wgconf.Config `json:"wg,omitempty"`
+	Protocol  string            `json:"protocol,omitempty"`
+	WG        *wgconf.Config    `json:"wg,omitempty"`
 	IPsec     *ipsecconf.Config `json:"ipsec,omitempty"`
-	OVPN      *ovpnconf.Config `json:"ovpn,omitempty"`
-	ServerRef string        `json:"server_ref,omitempty"` // имя профиля сервера, с которого поставлен протокол
+	OVPN      *ovpnconf.Config  `json:"ovpn,omitempty"`
+	ServerRef string            `json:"server_ref,omitempty"` // имя профиля сервера, с которого поставлен протокол
 }
 
 // IsVeil — профиль работает по протоколу Veil (а не по одному из обычных протоколов).
@@ -165,12 +178,15 @@ type Entry struct {
 	AuthKey    string   `json:"auth_key"`
 	Via        string   `json:"via,omitempty"`
 	Transports []string `json:"transports,omitempty"`
+	FrontSNI   string   `json:"front_sni,omitempty"`
+	FrontKey   string   `json:"front_key,omitempty"`
 }
 
 func (p *Profile) ForEntry(e Entry) *Profile {
 	c := *p
 	c.Entries = nil
 	c.IPv4, c.IPv6, c.Port, c.ServerName, c.Path, c.CertPin, c.AuthKey = e.IPv4, e.IPv6, e.Port, e.ServerName, e.Path, e.CertPin, e.AuthKey
+	c.FrontSNI, c.FrontKey = e.FrontSNI, e.FrontKey
 	if len(e.Transports) > 0 {
 		c.Transports = e.Transports
 	}
@@ -327,4 +343,12 @@ func SafeFileName(name string) string {
 		return "server"
 	}
 	return string(out)
+}
+
+// TLSName — SNI для TLS и QUIC: маскировочный, если задан, иначе имя сервера.
+func (p *Profile) TLSName() string {
+	if p.FrontSNI != "" {
+		return p.FrontSNI
+	}
+	return p.ServerName
 }

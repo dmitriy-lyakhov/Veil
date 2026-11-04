@@ -157,8 +157,10 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case path == adminPrefix && r.Method == http.MethodGet:
 		h.Set("Content-Type", "text/html; charset=utf-8")
-		h.Set("Content-Security-Policy", "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:")
+		h.Set("Content-Security-Policy", "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; font-src 'self'")
 		_, _ = w.Write([]byte(panelHTML))
+	case strings.HasPrefix(path, adminPrefix+"/fonts/") && (r.Method == http.MethodGet || r.Method == http.MethodHead):
+		serveAdminFont(w, strings.TrimPrefix(path, adminPrefix+"/fonts/"))
 	case strings.HasPrefix(path, adminPrefix+"/api/"):
 		s.handleAPI(w, r, strings.TrimPrefix(path, adminPrefix+"/api/"), false)
 	case path == adminPrefix+"/logout" && r.Method == http.MethodPost:
