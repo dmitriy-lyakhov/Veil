@@ -17,6 +17,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 ::-webkit-scrollbar{width:10px;height:10px;background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--card2);border-radius:5px;border:3px solid transparent;background-clip:padding-box}
 @keyframes aPop{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes aFlow{to{stroke-dashoffset:-12}}
 @keyframes aFade{from{opacity:0}to{opacity:1}}
 @keyframes aRise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @keyframes aPulse{0%{box-shadow:0 0 0 0 rgba(125,224,160,.45)}100%{box-shadow:0 0 0 8px rgba(125,224,160,0)}}
@@ -46,6 +47,26 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 </div>
 </sc-for>
 </div>
+
+<section style="background:var(--card);border-radius:16px;padding:20px;margin-bottom:20px">
+<h2 style="margin:0 0 6px;font-size:16px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">{{t.scheme}}<button type="button" onClick="{{openBuilder}}" style="min-height:40px;padding:0 16px;border:0;border-radius:12px;background:var(--acc);color:var(--onacc);font-size:13px;font-weight:600;cursor:pointer">{{t.builder}}</button></h2>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"><sc-for list="{{summary}}" as="m" hint-placeholder-count="4"><span style="{{m.style}}">{{m.label}} <b style="font-family:Arimo,Arial,sans-serif">{{m.value}}</b></span></sc-for></div>
+<div style="overflow:auto;background:var(--bg);border-radius:14px;padding:6px 0"><div style="width:{{gm.sw}}px;height:{{gm.sh}}px;flex:none;overflow:hidden"><div style="position:relative;width:{{gm.w}}px;height:{{gm.h}}px;transform:scale({{gm.sc}});transform-origin:0 0">
+<svg width="{{gm.w}}" height="{{gm.h}}" style="position:absolute;left:0;top:0;overflow:visible" aria-hidden="true">
+<sc-for list="{{gm.wires}}" as="wr" hint-placeholder-count="4"><path d="{{wr.d}}" fill="none" stroke="{{wr.stroke}}" stroke-width="{{wr.sw}}" stroke-dasharray="{{wr.dash}}" stroke-linecap="round" style="{{wr.anim}}"></path></sc-for>
+</svg>
+<sc-for list="{{gm.labels}}" as="lb" hint-placeholder-count="4"><span style="{{lb.style}}"><b style="font-family:Arimo,Arial,sans-serif">{{lb.rtt}}</b><span style="color:var(--ink2)"> {{lb.tr}}</span></span></sc-for>
+<sc-for list="{{gm.nodes}}" as="n" hint-placeholder-count="5">
+<div style="{{n.style}}">
+<span style="{{n.pinIn}}"></span><span style="{{n.pinOut}}"></span>
+<button type="button" onClick="{{n.select}}" aria-label="{{n.title}}" style="{{n.headStyle}}"><span style="{{n.dot}}"></span><strong style="font-size:14px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{n.title}}</strong><span style="{{n.roleStyle}}">{{n.role}}</span></button>
+<div style="padding:8px 12px;display:flex;flex-direction:column;gap:4px;font-size:12px"><sc-for list="{{n.rows}}" as="r" hint-placeholder-count="3"><div style="display:flex;justify-content:space-between;gap:8px"><span style="color:var(--ink2)">{{r.label}}</span><span style="font-family:Arimo,Arial,sans-serif;font-weight:700;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{r.value}}</span></div></sc-for></div>
+<sc-if value="{{n.hasCtl}}" hint-placeholder-val="{{false}}"><div style="display:flex;gap:6px;padding:0 10px 10px"><button type="button" onClick="{{n.up}}" aria-label="{{n.upAria}}" style="{{n.ctl}}">{{n.upText}}</button><button type="button" onClick="{{n.down}}" aria-label="{{n.downAria}}" style="{{n.ctl}}">{{n.downText}}</button><button type="button" onClick="{{n.remove}}" aria-label="{{n.rmAria}}" style="{{n.ctlBad}}">✕</button></div></sc-if>
+</div>
+</sc-for>
+</div></div></div>
+<div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:12px;color:var(--ink2)"><sc-for list="{{legend}}" as="l" hint-placeholder-count="4"><span style="display:inline-flex;align-items:center;gap:6px"><span style="{{l.sw}}"></span>{{l.text}}</span></sc-for></div>
+</section>
 
 <section style="background:var(--card);border-radius:16px;padding:20px;margin-bottom:20px">
 <h2 style="margin:0 0 14px;font-size:16px;font-weight:600">{{t.clients}}</h2>
@@ -111,6 +132,51 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 </div>
 </div>
 
+<sc-if value="{{builderOpen}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;background:var(--bg);display:flex;flex-direction:column;animation:aFade .25s both;z-index:4">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px {{pad}}px;border-bottom:1px solid var(--card2)">
+<div style="min-width:0"><h2 style="margin:0;font-size:{{h1}}px;font-weight:600">{{t.builder}}</h2><span style="font-size:12px;color:var(--ink2)">{{t.builderHint}}</span></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<div style="display:flex;background:var(--card);border-radius:12px;padding:3px"><sc-for list="{{modes}}" as="m" hint-placeholder-count="2"><button type="button" onClick="{{m.go}}" style="{{m.style}}">{{m.label}}</button></sc-for></div>
+<button type="button" onClick="{{checkRoute}}" style="{{ghost}}">{{t.check}}</button>
+<button type="button" onClick="{{applyRoute}}" style="min-height:40px;padding:0 16px;border:0;border-radius:12px;background:var(--acc);color:var(--onacc);font-size:13px;font-weight:600;cursor:pointer">{{t.apply}}</button>
+<button type="button" onClick="{{closeBuilder}}" aria-label="{{t.close}}" style="{{ghost}}">✕</button>
+</div></div>
+<div style="flex:1;min-height:0;display:flex;flex-direction:{{bdir}};overflow:auto">
+<aside style="width:{{palW}};flex:none;padding:14px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;border-right:1px solid var(--card2)">
+<span style="font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--ink2);text-transform:uppercase">{{t.available}}</span>
+<sc-for list="{{palette}}" as="p" hint-placeholder-count="3"><div style="{{p.style}}"><div style="min-width:0"><strong style="font-size:13px">{{p.title}}</strong><div style="font-size:11px;color:var(--ink2);line-height:1.4">{{p.sub}}</div></div><button type="button" onClick="{{p.add}}" aria-label="{{p.addAria}}" style="{{p.btn}}">+</button></div></sc-for>
+<button type="button" style="{{ghost}}">{{t.byKey}}</button><button type="button" style="{{ghost}}">{{t.issueKey}}</button>
+</aside>
+<div style="flex:1;min-width:0;min-height:260px;overflow:auto;padding:16px;box-sizing:border-box;background-color:var(--bg);background-image:radial-gradient(var(--card2) 1.2px, transparent 1.2px);background-size:20px 20px">
+<div style="width:{{gb.sw}}px;height:{{gb.sh}}px;flex:none;overflow:hidden"><div style="position:relative;width:{{gb.w}}px;height:{{gb.h}}px;transform:scale({{gb.sc}});transform-origin:0 0">
+<svg width="{{gb.w}}" height="{{gb.h}}" style="position:absolute;left:0;top:0;overflow:visible" aria-hidden="true">
+<sc-for list="{{gb.wires}}" as="wr" hint-placeholder-count="4"><path d="{{wr.d}}" fill="none" stroke="{{wr.stroke}}" stroke-width="{{wr.sw}}" stroke-dasharray="{{wr.dash}}" stroke-linecap="round" style="{{wr.anim}}"></path></sc-for>
+</svg>
+<sc-for list="{{gb.labels}}" as="lb" hint-placeholder-count="4"><span style="{{lb.style}}"><b style="font-family:Arimo,Arial,sans-serif">{{lb.rtt}}</b><span style="color:var(--ink2)"> {{lb.tr}}</span></span></sc-for>
+<sc-for list="{{gb.nodes}}" as="n" hint-placeholder-count="5">
+<div style="{{n.style}}">
+<span style="{{n.pinIn}}"></span><span style="{{n.pinOut}}"></span>
+<button type="button" onClick="{{n.select}}" aria-label="{{n.title}}" style="{{n.headStyle}}"><span style="{{n.dot}}"></span><strong style="font-size:14px;flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{n.title}}</strong><span style="{{n.roleStyle}}">{{n.role}}</span></button>
+<div style="padding:8px 12px;display:flex;flex-direction:column;gap:4px;font-size:12px"><sc-for list="{{n.rows}}" as="r" hint-placeholder-count="3"><div style="display:flex;justify-content:space-between;gap:8px"><span style="color:var(--ink2)">{{r.label}}</span><span style="font-family:Arimo,Arial,sans-serif;font-weight:700;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{r.value}}</span></div></sc-for></div>
+<sc-if value="{{n.hasCtl}}" hint-placeholder-val="{{false}}"><div style="display:flex;gap:6px;padding:0 10px 10px"><button type="button" onClick="{{n.up}}" aria-label="{{n.upAria}}" style="{{n.ctl}}">{{n.upText}}</button><button type="button" onClick="{{n.down}}" aria-label="{{n.downAria}}" style="{{n.ctl}}">{{n.downText}}</button><button type="button" onClick="{{n.remove}}" aria-label="{{n.rmAria}}" style="{{n.ctlBad}}">✕</button></div></sc-if>
+</div>
+</sc-for>
+</div></div>
+<div style="margin-top:14px;display:flex;flex-direction:column;gap:6px"><sc-for list="{{warns}}" as="w" hint-placeholder-count="1"><div style="{{w.style}}">{{w.text}}</div></sc-for></div>
+</div>
+<aside style="width:{{insW}};flex:none;padding:14px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;border-left:1px solid var(--card2)">
+<span style="font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--ink2);text-transform:uppercase">{{t.inspector}}</span>
+<strong style="font-size:16px">{{insTitle}}</strong>
+<div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{ins}}" as="k" hint-placeholder-count="5"><div style="display:flex;justify-content:space-between;gap:8px;background:var(--card);border-radius:12px;padding:8px 12px;font-size:12px"><span style="color:var(--ink2)">{{k.label}}</span><b style="font-family:Arimo,Arial,sans-serif;text-align:right;word-break:break-all">{{k.value}}</b></div></sc-for></div>
+<div style="background:var(--card);border-radius:12px;padding:10px 12px"><span style="font-size:11px;color:var(--ink2)">{{t.history}}</span><div style="display:flex;align-items:flex-end;gap:3px;height:48px;margin-top:6px"><sc-for list="{{insBars}}" as="b" hint-placeholder-count="16"><div style="{{b.style}}"></div></sc-for></div></div>
+<div style="background:var(--card);border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.5"><div style="color:var(--ink2)">{{t.route}}</div><div style="font-weight:600">{{routeText}}</div><div style="font-family:Arimo,Arial,sans-serif;margin-top:4px">{{routeTotal}}</div></div>
+</aside>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}"><div role="status" style="position:absolute;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 18px;font-size:14px;font-weight:600;z-index:8;animation:aRise .25s both;white-space:nowrap">{{toast}}</div></sc-if>
 <sc-if value="{{hasModal}}" hint-placeholder-val="{{false}}">
 <div style="position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;animation:aFade .25s both">
 <div role="dialog" aria-label="{{dTitle}}" style="background:var(--card);border-radius:16px;padding:24px;width:min(560px,100%);max-height:100%;overflow:auto;box-sizing:border-box;box-shadow:0 4px 12px rgba(0,0,0,.18);animation:aPop .3s cubic-bezier(.2,0,.2,1) both">
@@ -133,7 +199,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":null,"default":"dark"},"lang":{"editor":null,"default":"ru"},"w":{"editor":null,"default":1240},"h":{"editor":null,"default":900},"view":{"editor":null,"default":"none"},"$preview":{"width":1240,"height":900}}'>
 class Component extends DCLogic {
+  state = { chain: ['this', 'tokyo', 'frank'], sel: 'tokyo', mode: 'manual', builder: false, k: 0, toast: null };
+  componentDidMount() { this._iv = setInterval(() => this.setState({ k: this.state.k + 1 }), 1500); }
+  componentWillUnmount() { clearInterval(this._iv); clearTimeout(this._tt); }
   renderVals() {
+    const st = this.state;
     const P = (k, f) => { const v = this.props[k]; return (v === undefined || v === null || v === '') ? f : v; };
     const theme = P('theme', 'dark'), lang = P('lang', 'ru'), ru = lang === 'ru';
     const L = (en, r) => (ru ? r : en);
@@ -181,6 +251,124 @@ class Component extends DCLogic {
     const rels = [{ title: L('Amsterdam', 'Амстердам'), sub: `${L('online', 'на связи')} · ${L('clients', 'клиентов')}: 1`, btn: lnk(true), revokeText: t.revoke }];
     const kv = [{ label: 'IPv6', value: '[2001:db8::10]:443' }, { label: 'IPv4', value: '203.0.113.10:443' }, { label: L('Transport', 'Транспорт'), value: 'HTTP/3 → HTTP/2' }, { label: L('Version', 'Версия'), value: '0.5.x' }];
 
+
+    // ---------- cascade graph ----------
+    const k = st.k, vertical = mobile;
+    const NODES = {
+      this: { name: L('Amsterdam', 'Амстердам'), addr: '203.0.113.10', tr: 'h3', rtt: 38, clients: 4 },
+      tokyo: { name: L('Tokyo', 'Токио'), addr: 'tokyo.example.net', tr: 'h3', rtt: 96, clients: 1 },
+      frank: { name: L('Frankfurt', 'Франкфурт'), addr: 'de.example.com', tr: 'h2', rtt: 112, clients: 2 },
+      stamb: { name: L('Istanbul', 'Стамбул'), addr: 'ist.example.net', tr: 'h3', rtt: 74, clients: 0 },
+      seoul: { name: L('Seoul', 'Сеул'), addr: 'kr.example.net', tr: 'h2', rtt: -1, clients: 0 }
+    };
+    const TRN = { h3: 'HTTP/3 · QUIC · UDP/443', h2: 'HTTP/2 · TLS · TCP/443' };
+    const live = (id, i) => NODES[id].rtt < 0 ? -1 : NODES[id].rtt + Math.round(3 * Math.sin(k * 1.3 + i));
+    let ids = st.chain.slice();
+    if (st.mode === 'auto' && ids.length > 2) ids = [ids[0], ...ids.slice(1, -1).sort((a, b) => NODES[a].rtt - NODES[b].rtt), ids[ids.length - 1]];
+    const qual = (r) => r < 0 ? 'bad' : (r < 100 ? 'good' : (r < 200 ? 'mid' : 'bad'));
+    const qcol = { good: 'var(--ok)', mid: 'var(--ink2)', bad: 'var(--accInk)' };
+    const hopMs = ids.map((id, i) => live(id, i));
+    const total = hopMs.reduce((a, b) => a + (b > 0 ? b : 0), 0) + 6;
+    const selId = ids.includes(st.sel) ? st.sel : ids[0];
+    const setChain = (c) => this.setState({ chain: c });
+    const move = (id, d) => { const c = st.chain.slice(); const i = c.indexOf(id); const j = i + d; if (i < 1 || j < 1 || j >= c.length) return; const t0 = c[i]; c[i] = c[j]; c[j] = t0; setChain(c); };
+    const removeN = (id) => { if (id === 'this') return; setChain(st.chain.filter(x => x !== id)); };
+    const addN = (id) => { if (st.chain.includes(id) || NODES[id].rtt < 0) return; const c = st.chain.slice(); c.splice(c.length > 1 ? c.length - 1 : c.length, 0, id); setChain(c); };
+    const selectN = (id) => () => this.setState({ sel: id });
+    const buildGraph = (editable) => {
+      const NW = editable ? 224 : 204, NH = editable ? 178 : 132, gx = 100, gy = 78;
+      const seq = [{ id: 'client' }, ...ids.map((id, i) => ({ id, i })), { id: 'internet' }];
+      const last = seq.length - 1;
+      const pos = seq.map((n, i) => vertical ? { x: 16, y: 16 + i * (NH + gy) } : { x: 20 + i * (NW + gx), y: 44 });
+      const W = vertical ? NW + 32 : 40 + seq.length * NW + (seq.length - 1) * gx, Hh = vertical ? 32 + seq.length * NH + (seq.length - 1) * gy : NH + 88;
+      const nodes = [], wires = [], labels = [];
+      seq.forEach((n, idx) => {
+        const p = pos[idx];
+        const isC = n.id === 'client', isI = n.id === 'internet';
+        const info = (isC || isI) ? null : NODES[n.id];
+        const role = isC ? L('source', 'источник') : (isI ? L('internet', 'интернет') : (idx === 1 ? L('entry', 'вход') : (idx === last - 1 ? L('exit', 'выход') : L('intermediate', 'промежуточный'))));
+        const r = n.i !== undefined ? hopMs[n.i] : 0;
+        const rows = isC ? [{ label: L('Clients', 'Клиентов'), value: '4' }, { label: L('Online', 'Онлайн'), value: '1' }, { label: L('Core', 'Ядро'), value: 'WireGuard' }]
+          : (isI ? [{ label: L('Addresses', 'Адреса'), value: 'IPv4 + IPv6' }, { label: 'NAT', value: 'NAT44 / NAT66' }, { label: L('Tunnel', 'Туннель'), value: '10.66.0.0/24' }]
+          : [{ label: L('Address', 'Адрес'), value: info.addr }, { label: L('Transport', 'Транспорт'), value: info.tr === 'h3' ? 'HTTP/3 · QUIC' : 'HTTP/2 · TLS' }, { label: r < 0 ? L('Status', 'Состояние') : L('Latency', 'Задержка'), value: r < 0 ? L('no connection', 'нет связи') : (r + ' ' + ms) }]);
+        const sel = !isC && !isI && n.id === selId && editable;
+        const canMove = editable && !isC && !isI && idx > 1;
+        nodes.push({
+          title: isC ? L('Clients', 'Клиенты') : (isI ? L('Internet', 'Интернет') : info.name), role, rows,
+          style: 'position:absolute;left:' + p.x + 'px;top:' + p.y + 'px;width:' + NW + 'px;height:' + NH + 'px;background:var(--card);border-radius:14px;box-sizing:border-box;border:2px solid ' + (sel ? 'var(--acc)' : 'var(--card2)') + ';box-shadow:0 4px 12px rgba(0,0,0,.18);animation:aRise .4s both;animation-delay:' + (idx * 0.05) + 's',
+          headStyle: 'display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border:0;border-radius:12px 12px 0 0;background:var(--card2);color:var(--ink);cursor:pointer;text-align:left',
+          dot: 'flex:none;width:9px;height:9px;border-radius:50%;background:' + (r < 0 && !isC && !isI ? 'var(--accInk)' : 'var(--ok)'),
+          roleStyle: 'flex:none;font-size:10px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:' + (idx === 1 || idx === last - 1 ? 'var(--accInk)' : 'var(--ink2)'),
+          pinIn: isC ? 'display:none' : (vertical ? 'position:absolute;left:' + (NW / 2 - 6) + 'px;top:-7px;' : 'position:absolute;left:-8px;top:14px;') + 'width:12px;height:12px;border-radius:3px;background:var(--acc);border:2px solid var(--bg)',
+          pinOut: isI ? 'display:none' : (vertical ? 'position:absolute;left:' + (NW / 2 - 6) + 'px;bottom:-7px;' : 'position:absolute;right:-8px;top:14px;') + 'width:12px;height:12px;border-radius:3px;background:var(--ink);border:2px solid var(--bg)',
+          hasCtl: canMove, select: selectN(n.id),
+          up: () => move(n.id, -1), down: () => move(n.id, 1), remove: () => removeN(n.id),
+          upText: vertical ? '↑' : '←', downText: vertical ? '↓' : '→', upAria: L('Move earlier', 'Сдвинуть раньше'), downAria: L('Move later', 'Сдвинуть позже'), rmAria: L('Remove from the route', 'Убрать из маршрута'),
+          ctl: 'flex:1;min-height:34px;border:0;border-radius:10px;background:var(--card2);color:var(--ink);font-size:14px;font-weight:600;cursor:pointer',
+          ctlBad: 'flex:none;width:40px;min-height:34px;border:0;border-radius:10px;background:var(--card2);color:var(--accInk);font-size:14px;font-weight:600;cursor:pointer'
+        });
+        if (idx < last) {
+          const q = idx === 0 ? qual(hopMs[0]) : (idx === last - 1 ? 'good' : qual(hopMs[idx]));
+          const rr = idx === 0 ? hopMs[0] : (idx === last - 1 ? 6 : hopMs[idx]);
+          const trk = idx === 0 ? NODES[ids[0]].tr : (idx === last - 1 ? '' : NODES[ids[idx]].tr);
+          const a = vertical ? { x: p.x + NW / 2, y: p.y + NH } : { x: p.x + NW, y: p.y + 20 };
+          const q2 = pos[idx + 1];
+          const b = vertical ? { x: q2.x + NW / 2, y: q2.y } : { x: q2.x, y: q2.y + 20 };
+          const d = vertical ? 'M' + a.x + ' ' + a.y + ' C' + a.x + ' ' + (a.y + gy * 0.6) + ',' + b.x + ' ' + (b.y - gy * 0.6) + ',' + b.x + ' ' + b.y
+            : 'M' + a.x + ' ' + a.y + ' C' + (a.x + gx * 0.6) + ' ' + a.y + ',' + (b.x - gx * 0.6) + ' ' + b.y + ',' + b.x + ' ' + b.y;
+          const flow = q !== 'bad';
+          wires.push({ d, stroke: qcol[q], sw: 2.5, dash: flow ? '3 9' : '5 6', anim: flow ? 'animation:aFlow ' + (1 * spdA) + 's linear infinite' : '' });
+          labels.push({ rtt: rr < 0 ? '—' : rr + ' ' + ms, tr: trk === 'h3' ? 'H3' : (trk === 'h2' ? 'H2' : L('exit', 'выход')),
+            style: 'position:absolute;left:' + ((a.x + b.x) / 2 - 38) + 'px;top:' + ((a.y + b.y) / 2 - 13) + 'px;width:76px;text-align:center;background:var(--bg);border:1px solid var(--card2);border-radius:9px;padding:3px 0;font-size:11px;line-height:1.3;z-index:2' });
+        }
+      });
+      const avail = w - 2 * (mobile ? 14 : 24) - 40 - 8; const sc = (editable || vertical) ? 1 : Math.max(0.72, Math.min(1, avail / W)); return { w: W, h: Hh, nodes, wires, labels, sc, sw: Math.round(W * sc), sh: Math.round(Hh * sc) };
+    };
+    const spdA = 1;
+    const gm = buildGraph(false), gb = buildGraph(true);
+    const quality = qual(total / Math.max(1, ids.length));
+    const summary = [
+      { label: L('Nodes', 'Узлов'), value: String(ids.length), style: tagS }, { label: L('Total latency', 'Итого'), value: total + ' ' + ms, style: tagS },
+      { label: L('Mode', 'Режим'), value: st.mode === 'auto' ? L('auto by latency', 'авто по задержкам') : L('manual', 'вручную'), style: tagS },
+      { label: L('Transport', 'Транспорт'), value: ids.map(i => NODES[i].tr === 'h3' ? 'H3' : 'H2').join(' → '), style: tagA },
+      { label: L('Online', 'На связи'), value: ids.filter(i => NODES[i].rtt >= 0).length + '/' + ids.length, style: tagS }
+    ];
+    const legend = [
+      { sw: 'width:22px;height:0;border-top:3px dotted var(--ok)', text: L('healthy link (under 100 ms), data flows', 'исправная связь (до 100 мс), идёт трафик') },
+      { sw: 'width:22px;height:0;border-top:3px dotted var(--ink2)', text: L('slow link (100–200 ms)', 'медленная связь (100–200 мс)') },
+      { sw: 'width:22px;height:0;border-top:3px dashed var(--accInk)', text: L('no link or over 200 ms', 'нет связи или больше 200 мс') },
+      { sw: 'width:10px;height:10px;border-radius:3px;background:var(--acc)', text: L('H3: HTTP/3 · QUIC · UDP/443, H2: HTTP/2 · TLS · TCP/443', 'H3: HTTP/3 · QUIC · UDP/443, H2: HTTP/2 · TLS · TCP/443') }
+    ];
+    const modes = [['manual', L('Manual', 'Вручную')], ['auto', L('Auto by latency', 'Авто по задержкам')]].map(([v, label]) => ({ label, go: () => this.setState({ mode: v }),
+      style: 'min-height:34px;padding:0 12px;border:0;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;background:' + (st.mode === v ? 'var(--acc)' : 'transparent') + ';color:' + (st.mode === v ? 'var(--onacc)' : 'var(--ink)') }));
+    const palette = Object.keys(NODES).filter(id => !st.chain.includes(id)).map(id => {
+      const n = NODES[id], bad = n.rtt < 0;
+      return { title: n.name, sub: n.addr + ' · ' + (n.tr === 'h3' ? 'H3' : 'H2') + ' · ' + (bad ? L('no connection', 'нет связи') : n.rtt + ' ' + ms),
+        style: 'display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--card);border-radius:12px;padding:8px 10px;opacity:' + (bad ? 0.55 : 1),
+        btn: 'flex:none;width:36px;min-height:36px;border:0;border-radius:10px;background:' + (bad ? 'var(--card2)' : 'var(--acc)') + ';color:' + (bad ? 'var(--ink2)' : 'var(--onacc)') + ';font-size:18px;font-weight:700;cursor:' + (bad ? 'not-allowed' : 'pointer'),
+        add: () => addN(id), addAria: L('Add to the route', 'Добавить в маршрут') + ' ' + n.name };
+    });
+    const sn = NODES[selId], sIdx = ids.indexOf(selId);
+    const sr = hopMs[sIdx];
+    const ins = [
+      { label: L('Role', 'Роль'), value: sIdx === 0 ? L('entry', 'вход') : (sIdx === ids.length - 1 ? L('exit', 'выход') : L('intermediate', 'промежуточный')) },
+      { label: L('Address', 'Адрес'), value: sn.addr }, { label: L('Transport', 'Транспорт'), value: TRN[sn.tr] },
+      { label: L('Latency from previous', 'Задержка от предыдущего'), value: sr < 0 ? '—' : sr + ' ' + ms }, { label: L('Clients', 'Клиентов'), value: String(sn.clients) },
+      { label: L('Position', 'Позиция'), value: (sIdx + 1) + ' / ' + ids.length }
+    ];
+    const insBars = [];
+    for (let i = 0; i < 16; i++) { const v = sn.rtt < 0 ? 4 : 30 + 55 * Math.abs(Math.sin(i * 0.9 + sIdx)) * (0.6 + 0.4 * Math.abs(Math.cos(i * 0.4))); insBars.push({ style: 'flex:1;height:' + Math.round(v) + '%;background:' + (sn.rtt < 0 ? 'var(--accInk)' : (i === 15 ? 'var(--acc)' : 'var(--ink2)')) + ';border-radius:2px' }); }
+    const warns = [];
+    if (ids.length > 5) warns.push({ text: L('More than 5 nodes: the latency grows with every hop.', 'Больше 5 узлов: задержка растёт с каждым переходом.'), style: 'background:var(--card);color:var(--accInk);border-radius:12px;padding:8px 12px;font-size:12px' });
+    if (total > 300) warns.push({ text: L('The total latency is above 300 ms: interactive traffic may feel slow.', 'Итоговая задержка больше 300 мс: интерактивный трафик может ощущаться медленным.'), style: 'background:var(--card);color:var(--accInk);border-radius:12px;padding:8px 12px;font-size:12px' });
+    if (st.mode === 'auto') warns.push({ text: L('Entry and exit are fixed. Intermediate nodes are ordered by the lowest total latency and rebuilt when another path is faster by 20% and 5 ms twice in a row.', 'Вход и выход фиксированы. Промежуточные узлы упорядочиваются по минимальной задержке и перестраиваются, когда другой путь быстрее на 20% и на 5 мс два замера подряд.'), style: 'background:var(--card);color:var(--ink2);border-radius:12px;padding:8px 12px;font-size:12px' });
+    if (!warns.length) warns.push({ text: L('The route is valid: all nodes are online.', 'Маршрут корректен: все узлы на связи.'), style: 'background:var(--card);color:var(--ok);border-radius:12px;padding:8px 12px;font-size:12px' });
+    const flash = (msg) => { this.setState({ toast: msg }); clearTimeout(this._tt); this._tt = setTimeout(() => this.setState({ toast: null }), 1800); };
+    const builderOpen = view === 'builder' || st.builder;
+    t.scheme = L('Cascade scheme', 'Схема каскада'); t.builder = L('Cascade builder', 'Конструктор каскада'); t.builderHint = L('Entry and exit are chosen explicitly. Move nodes, add them from the list and apply.', 'Вход и выход задаются явно. Двигайте узлы, добавляйте их из списка и применяйте.');
+    t.check = L('Check the route', 'Проверить маршрут'); t.apply = L('Apply', 'Применить'); t.close = L('Close', 'Закрыть'); t.available = L('Available nodes', 'Доступные узлы'); t.byKey = L('Node by key…', 'Узел по ключу…'); t.issueKey = L('Issue a key…', 'Выдать ключ…');
+    t.inspector = L('Node', 'Узел'); t.history = L('Latency, last 16 checks', 'Задержка, последние 16 замеров'); t.route = L('Route', 'Маршрут');
+
     // modal
     const prim = 'min-height:44px;padding:0 18px;border:0;border-radius:14px;background:var(--acc);color:var(--onacc);font-size:14px;font-weight:600;cursor:pointer';
     const sec = 'min-height:44px;padding:0 18px;border:0;border-radius:14px;background:var(--card2);color:var(--ink);font-size:14px;font-weight:600;cursor:pointer';
@@ -226,7 +414,12 @@ class Component extends DCLogic {
         if (dark) qrD += `M${x} ${y}h1v1h-1z`;
       }
     }
+    const routeNames = ['client', ...ids, 'internet'].map(i => i === 'client' ? L('Clients', 'Клиенты') : (i === 'internet' ? L('Internet', 'Интернет') : NODES[i].name)).join(' → ');
     return {
+      gm, gb, summary, legend, modes, palette, ins, insBars, warns, insTitle: sn.name, routeText: routeNames, routeTotal: total + ' ' + ms + ' · ' + ids.length + ' ' + L('nodes', 'узл.'),
+      builderOpen, openBuilder: () => this.setState({ builder: true }), closeBuilder: () => this.setState({ builder: false }),
+      checkRoute: () => flash(L('All nodes answered: ', 'Все узлы ответили: ') + total + ' ' + ms), applyRoute: () => { flash(L('Cascade applied', 'Каскад применён')); this.setState({ builder: false }); },
+      hasToast: !!st.toast, toast: st.toast, bdir: narrow ? 'column' : 'row', palW: narrow ? '100%' : '230px', insW: narrow ? '100%' : '270px',
       t, stats, clients, ups, rels, kv, ghost, input, link, tag, qrD, dQr, dTitle, dWarn, fieldsM, dBtns, hasModal: view !== 'none',
       rootStyle: `width:${w}px;height:${h}px;position:relative;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Montserrat,system-ui,sans-serif;font-size:14px;line-height:1.5;display:flex;flex-direction:column;box-sizing:border-box;${vars}`,
       pad: mobile ? 14 : 24, h1: mobile ? 16 : 18, statCols: mobile ? 2 : (narrow ? 3 : 5), cols2: narrow ? 1 : 2, kvCols: mobile ? 1 : 2,

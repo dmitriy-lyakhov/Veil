@@ -37,7 +37,7 @@ class Component extends DCLogic {
     const seg = (key, opts, def) => opts.map(([v, l]) => chip(String(st[key] === undefined ? def : st[key]) === String(v), l, () => this.setState({ [key]: v })));
     const themeOpts = [['dark', 'Тёмная'], ['light', 'Светлая']].map(([v, l]) => chip(theme === v, l, () => this.setState({ theme: v })));
     const langOpts = [['ru', 'Русский'], ['en', 'English']].map(([v, l]) => chip(lang === v, l, () => this.setState({ lang: v })));
-    const views = [['none', 'Главная'], ['new', 'Новый клиент: вручную'], ['newAuto', 'Новый клиент: авто'], ['edit', 'Изменить клиента'], ['up', 'Узел каскада'], ['rel', 'Ключ каскада'], ['link', 'Конфиг и QR']];
+    const views = [['none', 'Главная'], ['new', 'Новый клиент: вручную'], ['newAuto', 'Новый клиент: авто'], ['edit', 'Изменить клиента'], ['up', 'Узел каскада'], ['rel', 'Ключ каскада'], ['link', 'Конфиг и QR'], ['builder', 'Конструктор каскада']];
     const viewOpts = seg('view', views, 'none');
     const widthOpts = seg('width', [['1240', '1240 · ПК'], ['820', '820 · планшет'], ['390', '390 · телефон']], '1240');
     const aw = Number(st.width || 1240);
