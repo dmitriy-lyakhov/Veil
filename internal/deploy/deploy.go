@@ -20,6 +20,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"veil/internal/config"
+	"veil/internal/front"
 	"veil/internal/netpin"
 	"veil/internal/provision"
 	"veil/internal/site"
@@ -62,6 +63,7 @@ type Request struct {
 	KnownHostKey  string
 	ServerBinDir  string
 	SiteLang      string
+	FrontSNI      string
 }
 
 type Logf func(format string, args ...any)
@@ -270,9 +272,17 @@ func (r *remote) install(ctx context.Context, req Request, hostKey string, logf 
 			return nil, fmt.Errorf("порт 443 на сервере уже занят:\n%s", busy)
 		}
 	}
+	if err := applyFront(srvCfg, req.FrontSNI); err != nil {
+		return nil, err
+	}
 	prof, err := provision.AddPeer(srvCfg, uniquePeerName(srvCfg, req.Name))
 	if err != nil {
 		return nil, err
+	}
+	if srvCfg.Front != nil && srvCfg.Front.SNI != "" {
+		prof.FrontSNI, prof.FrontKey = srvCfg.Front.SNI, srvCfg.Front.Key
+		logf("Маскировка под %s: посторонние соединения уйдут на настоящий сайт", srvCfg.Front.SNI)
+		r.checkFrontReachable(srvCfg.Front.SNI, logf)
 	}
 	prof.Name = req.Name
 	prof.IPv4, prof.IPv6 = req.IPv4, req.IPv6
@@ -328,6 +338,34 @@ func (r *remote) install(ctx context.Context, req Request, hostKey string, logf 
 	}
 	logf("Служба veil запущена, устройств на сервере: %d", len(srvCfg.Peers))
 	return prof, nil
+}
+
+func applyFront(cfg *config.Server, want string) error {
+	sni, err := front.NormalizeSNI(want)
+	if err != nil {
+		return err
+	}
+	if sni == "" || (cfg.Front != nil && cfg.Front.SNI == sni) {
+		return nil
+	}
+	key := ""
+	if cfg.Front != nil {
+		key = cfg.Front.Key
+	}
+	if key == "" {
+		if key, err = front.NewKey(); err != nil {
+			return err
+		}
+	}
+	cfg.Front = &config.Front{SNI: sni, Key: key}
+	return nil
+}
+
+func (r *remote) checkFrontReachable(sni string, logf Logf) {
+	cmd := "timeout 8 bash -c 'exec 3<>/dev/tcp/" + sni + "/443'"
+	if _, err := r.exec(cmd, nil, false); err != nil {
+		logf("Внимание: сервер не достучался до %s:443 — посторонние соединения проксироваться не будут. Выберите другой сайт.", sni)
+	}
 }
 
 func (r *remote) loadOrCreateConfig(siteLang string, logf Logf) (*config.Server, bool, error) {

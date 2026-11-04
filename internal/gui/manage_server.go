@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -116,6 +117,7 @@ func (m *manager) renderProtocol() {
 		L("WireGuard inside HTTPS: HTTP/3 (QUIC) with HTTP/2 fallback on port 443. To outsiders the server looks like an ordinary website.", "WireGuard внутри HTTPS: HTTP/3 (QUIC) с запасным HTTP/2 на порту 443. Для посторонних сервер выглядит как обычный сайт."),
 		widget.NewIcon(theme.ConfirmIcon()), nil))
 	m.body.Add(listRow(L("Server address", "Адрес сервера"), addresses(p), nil, nil))
+	m.body.Add(m.frontRow())
 	if p.SSH != nil {
 		auth := L("by password", "по паролю")
 		if p.SSH.KeyPath != "" {
@@ -141,4 +143,75 @@ func (m *manager) renderProtocol() {
 	if p.SSH != nil {
 		m.renderProtocolList()
 	}
+}
+
+// frontRow — строка «Маскировка»: под какой сайт замаскирован вход; нажатие открывает настройку.
+func (m *manager) frontRow() fyne.CanvasObject {
+	current := m.p.FrontSNI
+	if m.loaded {
+		current = m.state.Server.Front.SNI
+	}
+	sub := L("Off — the server answers as its own cover site", "Выключена — сервер отвечает как собственный сайт-прикрытие")
+	if current != "" {
+		sub = fmt.Sprintf(L("Strangers are sent to the real %s", "Посторонние уходят на настоящий %s"), current)
+	}
+	if m.loaded && m.p.FrontKey == "" && m.state.Server.Front.Enabled {
+		sub += "\n" + L("This config has no masking key: add the server again from a new config", "В этом конфиге нет ключа маскировки: получите новый конфиг сервера")
+	}
+	return listRow(L("Masquerade as another site", "Маскировка под чужой сайт"), sub, widget.NewIcon(theme.NavigateNextIcon()), func() { m.showFrontDialog(current) })
+}
+
+func (m *manager) showFrontDialog(current string) {
+	picker := newFrontPicker(current)
+	hint := note(L("Real visitors and probes see the genuine site and its certificate; only your clients get through to the tunnel. TCP only: QUIC is turned off while masquerading is on.", "Посторонние и проверяющие видят настоящий сайт и его сертификат, в туннель проходят только ваши клиенты. Только TCP: пока маскировка включена, QUIC отключён."))
+	content := container.NewVBox(hint, picker.View())
+	d := newCustomConfirm(L("Masquerade as another site", "Маскировка под чужой сайт"), L("Apply", "Применить"), L("Cancel", "Отмена"), container.NewGridWrap(fyne.NewSize(340, 260), content), func(ok bool) {
+		if !ok {
+			return
+		}
+		sni, err := picker.SNI()
+		if err != nil {
+			showError(err, m.w)
+			return
+		}
+		if sni != "" && sni != current {
+			showConfirm(L("Turn masquerading on", "Включить маскировку"), frontWarning(sni), func(yes bool) {
+				if yes {
+					m.applyFront(sni)
+				}
+			}, m.w)
+			return
+		}
+		m.applyFront(sni)
+	}, m.w)
+	d.Show()
+}
+
+// applyFront включает или выключает маскировку на сервере и обновляет профиль на этом устройстве:
+// ключ общий для сервера, поэтому конфиг владельца перевыпускать не нужно.
+func (m *manager) applyFront(sni string) {
+	var resp struct {
+		SNI string `json:"sni"`
+		Key string `json:"key"`
+	}
+	m.call("POST", "/settings/front", map[string]string{"sni": sni}, &resp, func(err error) {
+		if err != nil {
+			showError(err, m.w)
+			return
+		}
+		m.p.FrontSNI, m.p.FrontKey = resp.SNI, resp.Key
+		if sni == "" {
+			m.p.FrontSNI, m.p.FrontKey = "", ""
+		}
+		if err := saveProfile(m.p); err != nil {
+			showError(err, m.w)
+			return
+		}
+		msg := L("Masquerading is off.", "Маскировка выключена.")
+		if sni != "" {
+			msg = fmt.Sprintf(L("Masquerading as %s is on. Issue configs for other clients again, and reconnect this device.", "Маскировка под %s включена. Конфиги других клиентов выпустите заново, а это устройство переподключите."), sni)
+		}
+		showInfo(L("Done", "Готово"), msg, m.w)
+		m.refresh()
+	})
 }

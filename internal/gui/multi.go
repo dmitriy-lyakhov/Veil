@@ -264,6 +264,7 @@ func (j multiJob) register(done func(*config.Profile, error)) {
 					result.Entries = append(result.Entries, config.Entry{
 						Name: entry.Name, IPv4: prof.IPv4, IPv6: prof.IPv6, Port: prof.Port, ServerName: prof.ServerName,
 						Path: prof.Path, CertPin: prof.CertPin, AuthKey: prof.AuthKey, Via: prof.Via,
+						FrontSNI: prof.FrontSNI, FrontKey: prof.FrontKey,
 					})
 					if prof.Via != "" {
 						j.say(L("   route: ", "   маршрут: ") + prof.Via)

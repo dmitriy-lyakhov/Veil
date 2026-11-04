@@ -128,6 +128,7 @@ func (u *ui) showDeployForm() {
 	})
 	lang := widget.NewSelect([]string{"Русский", "English"}, nil)
 	lang.SetSelected("Русский")
+	frontPick := newFrontPicker("")
 
 	authForm := widget.NewForm()
 	method := widget.NewRadioGroup([]string{methodPassword(), methodKey()}, func(s string) {
@@ -151,6 +152,7 @@ func (u *ui) showDeployForm() {
 		widget.NewFormItem(L("SSH port", "SSH-порт"), port),
 		widget.NewFormItem(L("User", "Пользователь"), user),
 		widget.NewFormItem(L("Site language", "Язык сайта"), lang),
+		widget.NewFormItem(L("Masquerade as", "Маскировка под"), frontPick.View()),
 	)
 	logView := widget.NewMultiLineEntry()
 	logView.Wrapping = fyne.TextWrapWord
@@ -170,6 +172,12 @@ func (u *ui) showDeployForm() {
 			return
 		}
 		req.SiteLang = siteLangs[lang.Selected]
+		sni, err := frontPick.SNI()
+		if err != nil {
+			showError(err, w)
+			return
+		}
+		req.FrontSNI = sni
 		if u.profileExists(req.Name) {
 			showError(fmt.Errorf(L("server “%s” already exists — choose a different name", "сервер «%s» уже есть — выберите другое название"), req.Name), w)
 			return

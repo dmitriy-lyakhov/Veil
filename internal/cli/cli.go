@@ -74,6 +74,7 @@ func cmdDeploy(args []string) error {
 	fs.StringVar(&req.KeyPath, "key", "", "путь к приватному SSH-ключу")
 	fs.StringVar(&req.ServerBinDir, "server-dir", "", "каталог с veil-server-linux-*")
 	fs.StringVar(&req.SiteLang, "site-lang", "ru", "язык сайта-прикрытия: ru или en")
+	fs.StringVar(&req.FrontSNI, "front", "", "маскировка под чужой сайт, например ya.ru (пусто — без маскировки)")
 	usePassword := fs.Bool("password", false, "спросить пароль SSH (или задать VEIL_SSH_PASSWORD)")
 	_ = fs.Parse(args)
 	if *usePassword || req.KeyPath == "" {

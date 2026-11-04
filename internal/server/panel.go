@@ -289,6 +289,12 @@ select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer
 <label data-i="domain"></label>
 <div class="drow"><input id="domain" placeholder="example.com" autocomplete="off"><button type="button" class="btn sm" id="domain-save" data-i="save"></button></div>
 <p class="hint" style="margin:10px 0 0" id="cert"></p>
+<label data-i="frontLabel" style="margin-top:20px"></label>
+<div class="sel"><select id="front-sel"></select></div>
+<div class="drow" id="front-custom" style="display:none;margin:-4px 0 12px"><input id="front-domain" placeholder="example.ru" autocomplete="off"></div>
+<div class="drow"><button type="button" class="btn sm acc" id="front-save" data-i="frontApply"></button></div>
+<p class="hint" style="margin:10px 0 0" id="front-state"></p>
+<p class="hint" style="margin:6px 0 0" id="front-note"></p>
 </section>
 <section class="card pwd">
 <h2 class="m14" data-i="password"></h2>
@@ -363,6 +369,10 @@ nextHint:'Узлы, через которые этот сервер может �
 keys:'Каскад: выданные ключи',key:'Ключ',keysHint:'Ключ разрешает другому узлу отправлять клиентов через этот сервер.',revoke:'Отозвать',
 server:'Сервер',transport:'Транспорт',version:'Версия',domain:'Домен (откроет сайт-прикрытие и даст сертификат Let\'s Encrypt)',save:'Сохранить',
 password:'Пароль администратора',pwCur:'Текущий пароль',pwNew:'Новый пароль (не короче 8 символов)',pwRep:'Повторите новый пароль',pwSave:'Сменить пароль',
+frontLabel:'Маскировка под чужой сайт',frontApply:'Применить',frontNone:'Без маскировки',frontOther:'Свой домен…',
+frontOn:'Включена: посторонние соединения уходят на настоящий {0}, свои клиенты проходят в туннель.',frontOff:'Выключена: сервер отвечает как собственный сайт-прикрытие.',
+frontConfirm:'Включить маскировку под {0}?\n\nКонфиги клиентов, выданные раньше, перестанут работать: выпустите их заново (в них нет ключа). QUIC (UDP/443) будет отключён. Ключи каскада, выданные этим сервером, тоже нужно выдать заново.',
+frontDoneOn:'Маскировка включена',frontDoneOff:'Маскировка выключена',frontDomainNote:'При включённой маскировке сертификат домена не обновится: Let\'s Encrypt не пройдёт проверку.',frontBad:'Укажите доменное имя сайта, например ya.ru',
 certNone:'Домен не задан — клиенты подключаются по IP с закреплённым сертификатом.',certPending:'Получаем сертификат…',certReady:'Сертификат действителен до {0}. Новые клиенты подключаются по домену.',certErr:'Ошибка',
 noClients:'Клиентов пока нет',auto:'авто',transitFrom:'транзит от {0}',exitHere:'выход здесь',unreachable:'путь недоступен',ms:'мс',
 edit:'Изменить',block:'Заблокировать',unblock:'Разблокировать',newCfg:'Новый конфиг',del:'Удалить',
@@ -401,6 +411,10 @@ nextHint:'Nodes this server can pass clients to. The route may go through severa
 keys:'Cascade: issued keys',key:'Key',keysHint:'A key lets another node send clients through this server.',revoke:'Revoke',
 server:'Server',transport:'Transport',version:'Version',domain:'Domain (opens the cover site and issues a Let\'s Encrypt certificate)',save:'Save',
 password:'Administrator password',pwCur:'Current password',pwNew:'New password (at least 8 characters)',pwRep:'Repeat the new password',pwSave:'Change password',
+frontLabel:'Masquerade as another site',frontApply:'Apply',frontNone:'No masquerading',frontOther:'Other domain…',
+frontOn:'On: strangers are sent to the real {0}, your clients get through to the tunnel.',frontOff:'Off: the server answers as its own cover site.',
+frontConfirm:'Masquerade as {0}?\n\nClient configs issued earlier will stop working: issue them again (they have no key). QUIC (UDP/443) will be turned off. Cascade keys issued by this server must be issued again too.',
+frontDoneOn:'Masquerading is on',frontDoneOff:'Masquerading is off',frontDomainNote:'While masquerading is on, the domain certificate will not renew: Let\'s Encrypt validation cannot pass.',frontBad:'Enter a site domain name, for example ya.ru',
 certNone:'No domain set: clients connect by IP with a pinned certificate.',certPending:'Getting the certificate…',certReady:'The certificate is valid until {0}. New clients connect by domain.',certErr:'Error',
 noClients:'No clients yet',auto:'auto',transitFrom:'transit from {0}',exitHere:'exit on this server',unreachable:'path unavailable',ms:'ms',
 edit:'Edit',block:'Block',unblock:'Unblock',newCfg:'New config',del:'Delete',
@@ -460,7 +474,7 @@ const box=$('stats');box.replaceChildren();st.forEach((x,i)=>{const d=el('div','
 $('v6').textContent=s.public_ipv6?('['+s.public_ipv6+']:'+s.port):'—';$('v4').textContent=s.public_ipv4?(s.public_ipv4+':'+s.port):'—';$('ver').textContent=s.version;
 if(document.activeElement!==$('domain'))$('domain').value=s.domain||'';
 const cs={none:t('certNone'),pending:t('certPending'),ready:t('certReady',s.cert.expires?new Date(s.cert.expires).toLocaleDateString(lang==='ru'?'ru-RU':'en-GB'):'—'),error:s.cert.message||t('certErr')};$('cert').textContent=cs[s.cert.state]||'';
-renderClients();renderLists();renderScheme();if($('builder').classList.contains('show'))renderBuilder()}
+renderFront(s);renderClients();renderLists();renderScheme();if($('builder').classList.contains('show'))renderBuilder()}
 
 function clientTags(c){const a=[];
 if(c.auto){let x=t('auto')+' → '+c.auto.exit;if(c.auto.cost_ms>0)x+=' · '+ms1(c.auto.cost_ms);else if(c.auto.cost_ms<0)x+=' · '+t('unreachable');a.push(el('span','tag acc',x))}
@@ -612,6 +626,20 @@ $('up-add').onclick=()=>{$('u-name').value='';$('u-link').value='';$('u-err').te
 $('u-save').onclick=async()=>{$('u-save').disabled=true;try{await api('upstreams',{name:$('u-name').value,link:$('u-link').value});close('m-up');refresh()}catch(e){$('u-err').textContent=e.message}finally{$('u-save').disabled=false}};
 $('rel-add').onclick=()=>{$('r-name').value='';$('r-err').textContent='';open('m-rel')};
 $('r-save').onclick=async()=>{try{const r=await api('relays',{name:$('r-name').value});close('m-rel');showLink(t('relKeyTitle',r.name),r,t('relKeyWarn',r.name));refresh()}catch(e){$('r-err').textContent=e.message}};
+const FRONT_PRESETS=['ya.ru','yandex.ru','vk.com','mail.ru'];
+function frontChoice(){const v=$('front-sel').value;return v==='custom'?$('front-domain').value.trim().toLowerCase():v}
+function renderFront(s){const f=s.front||{};const sel=$('front-sel');
+if(document.activeElement!==sel&&document.activeElement!==$('front-domain')){
+sel.replaceChildren(new Option(t('frontNone'),''));for(const d of FRONT_PRESETS)sel.append(new Option(d,d));sel.append(new Option(t('frontOther'),'custom'));
+if(!f.enabled)sel.value='';else if(FRONT_PRESETS.includes(f.sni))sel.value=f.sni;else{sel.value='custom';$('front-domain').value=f.sni}
+$('front-custom').style.display=sel.value==='custom'?'flex':'none'}
+$('front-state').textContent=f.enabled?t('frontOn',f.sni):t('frontOff');
+$('front-note').textContent=f.enabled&&s.domain?t('frontDomainNote'):''}
+$('front-sel').onchange=()=>{$('front-custom').style.display=$('front-sel').value==='custom'?'flex':'none'};
+$('front-save').onclick=async()=>{const sni=frontChoice();const cur=state.server.front||{};
+if($('front-sel').value==='custom'&&!sni){toast(t('frontBad'));return}
+if(sni&&sni!==cur.sni&&!confirm(t('frontConfirm',sni)))return;
+try{await api('settings/front',{sni,dest:sni&&sni===cur.sni?cur.dest:''});toast(t(sni?'frontDoneOn':'frontDoneOff'));refresh()}catch(e){toast(e.message)}};
 $('domain-save').onclick=async()=>{try{await api('settings/domain',{domain:$('domain').value});refresh()}catch(e){toast(e.message)}};
 $('pw-save').onclick=async()=>{$('pw-err').textContent='';if($('pw-new').value!==$('pw-rep').value){$('pw-err').textContent=t('pwMismatch');return}
 try{await api('settings/password',{current:$('pw-cur').value,new:$('pw-new').value});toast(t('pwDone'),1500);setTimeout(()=>{location.href='/admin'},1500)}catch(e){$('pw-err').textContent=e.message}};
