@@ -196,7 +196,7 @@ func (u *ui) openDNS() {
 		secondary.SetText(u.st.DNS[1])
 	}
 	w := u.newSubPage(L("DNS servers", "DNS-серверы"))
-	save := widget.NewButton(L("Save", "Сохранить"), func() {
+	save := bigButton(L("Save", "Сохранить"), "", true, func() {
 		var list []string
 		for _, e := range []*widget.Entry{primary, secondary} {
 			v := strings.TrimSpace(e.Text)
@@ -214,19 +214,19 @@ func (u *ui) openDNS() {
 		u.logf("DNS: %v", list)
 		w.Close()
 	})
-	save.Importance = widget.HighImportance
-	restore := widget.NewButton(L("Restore defaults", "Вернуть по умолчанию"), func() {
+	restore := bigButton(L("Restore defaults", "Вернуть по умолчанию"), "", false, func() {
 		primary.SetText("")
 		secondary.SetText("")
 		u.st.DNS = nil
 		u.saveSettings()
 	})
 	body := container.NewVBox(
-		note(L("Used when the server does not provide its own DNS. Empty fields use the profile values. Applies on the next connection.", "Используются, когда сервер не предоставляет свои DNS. Пустые поля — значения из профиля. Применяется при следующем подключении.")),
-		lead(text(L("Primary DNS", "Основной DNS"), 12, colMuted, false)), primary,
-		lead(text(L("Secondary DNS", "Запасной DNS"), 12, colMuted, false)), secondary,
+		infoNote(L("Used when the server does not provide its own DNS. Empty fields use the profile values. Applies on the next connection.", "Используются, когда сервер не предоставляет свои DNS. Пустые поля — значения из профиля. Применяется при следующем подключении.")),
+		fieldEntry(L("Primary DNS", "Основной DNS"), primary),
+		fieldEntry(L("Secondary DNS", "Запасной DNS"), secondary),
+		restore,
 	)
-	w.SetContent(container.NewPadded(container.NewBorder(nil, container.NewVBox(restore, save), nil, nil, scrolled(body))))
+	w.SetContent(container.NewPadded(container.NewBorder(nil, save, nil, nil, scrolled(body))))
 	w.Show()
 }
 
@@ -305,7 +305,7 @@ func (u *ui) openApplication() {
 		logState = L("On", "Включено")
 	}
 	rows := container.NewVBox(
-		autoRow, connRow, minRow, updRow,
+		autoRow, minRow, connRow, updRow,
 		navRow(L("Logs", "Журналы"), logState, u.openLogging),
 		listRowColored(L("Reset settings and delete all app data", "Сбросить настройки и удалить все данные приложения"), "", theme.ColorNameError, widget.NewIcon(theme.NavigateNextIcon()), u.confirmReset),
 	)

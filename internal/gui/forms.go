@@ -130,3 +130,8 @@ func infoBG() fyne.CanvasObject {
 	r.CornerRadius = 14
 	return r
 }
+
+// infoNote — пояснение в карточке (13 px, как на страницах DNS и «Новый сервер»).
+func infoNote(s string) fyne.CanvasObject {
+	return container.NewStack(infoBG(), container.New(layout.NewCustomPaddedLayout(10, 10, 16, 16), prose(s)))
+}
