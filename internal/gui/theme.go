@@ -37,6 +37,7 @@ var (
 	colBorder     color.NRGBA // граница карточек и полей
 	colBorderHot  color.NRGBA // граница под курсором
 	colShadow     color.NRGBA // тень диалогов и панелей
+	colMenu       color.NRGBA // фон выпадающих списков
 	colText       color.NRGBA // ink
 	colMuted      color.NRGBA // ink-muted
 	colAccent     color.NRGBA // accent
@@ -75,6 +76,7 @@ func applyPalette(dark bool) {
 		colBar = nrgba(0x1B1C1F)
 		colScrim = color.NRGBA{0x0B, 0x0B, 0x0C, 0xC7}
 		colShadow = color.NRGBA{0, 0, 0, 0x2e}
+		colMenu = nrgba(0x34353B)
 	} else {
 		colBackground, colCard, colCard2 = nrgba(0xFFFFFF), nrgba(0xF2F3F5), nrgba(0xE4E6EA)
 		colText, colMuted = nrgba(0x0B0B0C), nrgba(0x5B6068)
@@ -82,6 +84,7 @@ func applyPalette(dark bool) {
 		colBar = nrgba(0xF2F3F5)
 		colScrim = color.NRGBA{0x0B, 0x0B, 0x0C, 0x8C}
 		colShadow = color.NRGBA{0x0B, 0x0B, 0x0C, 0x33}
+		colMenu = nrgba(0xFFFFFF)
 	}
 	colLine = colCard2
 	colBorder = mix(colCard2, colText, 0.07)
@@ -100,7 +103,9 @@ func (veilTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
 		return colBackground
 	case theme.ColorNameButton, theme.ColorNameInputBackground, theme.ColorNameHeaderBackground:
 		return colCard2
-	case theme.ColorNameMenuBackground, theme.ColorNameOverlayBackground:
+	case theme.ColorNameMenuBackground:
+		return colMenu
+	case theme.ColorNameOverlayBackground:
 		return colCard
 	case theme.ColorNameDisabledButton:
 		return colCard
@@ -129,7 +134,10 @@ func (veilTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
 	case theme.ColorNameError:
 		return colAccentInk
 	case theme.ColorNameShadow:
-		return colShadow
+		if paletteDark {
+			return color.NRGBA{0, 0, 0, 0x99}
+		}
+		return color.NRGBA{0x0B, 0x0B, 0x0C, 0x40}
 	}
 	return theme.DefaultTheme().Color(n, theme.VariantDark)
 }
