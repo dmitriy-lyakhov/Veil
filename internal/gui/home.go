@@ -16,9 +16,9 @@ import (
 // туннелирование и внизу карточка выбранного сервера (по нажатию открывается выбор).
 func (u *ui) homePage() fyne.CanvasObject {
 	u.power = newPowerButton(u.toggle)
-	u.status = text("Отключено", 20, colText, true)
+	u.status = text(L("Disconnected", "Отключено"), 20, colText, true)
 	u.status.Alignment = fyne.TextAlignCenter
-	u.sub = text("Выберите сервер и нажмите кнопку", 13, colMuted, false)
+	u.sub = text(L("Pick a server and press the button", "Выберите сервер и нажмите кнопку"), 13, colMuted, false)
 	u.sub.Alignment = fyne.TextAlignCenter
 	u.traffic = text("", 12, colMuted, false)
 	u.traffic.Alignment = fyne.TextAlignCenter
@@ -28,13 +28,13 @@ func (u *ui) homePage() fyne.CanvasObject {
 		widget.NewIcon(theme.MailForwardIcon()), u.splitTxt, widget.NewIcon(theme.MenuDropDownIcon()), layout.NewSpacer())), u.openSplitSheet)
 	u.refreshSplitLink()
 
-	u.srvName = text("Сервер не выбран", 22, colText, false)
-	u.srvAddr = text("Добавьте сервер кнопкой «+»", 13, colMuted, false)
+	u.srvName = text(L("No server selected", "Сервер не выбран"), 22, colText, false)
+	u.srvAddr = text(L("Add a server with the + button", "Добавьте сервер кнопкой «+»"), 13, colMuted, false)
 	u.srvAddr.Alignment = fyne.TextAlignCenter
 	srvTitle := container.NewHBox(layout.NewSpacer(), u.srvName, widget.NewIcon(theme.MenuDropDownIcon()), layout.NewSpacer())
 	server := newTapCard(container.NewVBox(srvTitle, u.srvAddr), colCard, colCardHover, u.openServerSheet)
 
-	u.recheck = widget.NewButtonWithIcon("Перепроверить ближайший вход", theme.ViewRefreshIcon(), func() {
+	u.recheck = widget.NewButtonWithIcon(L("Recheck nearest entry", "Перепроверить ближайший вход"), theme.ViewRefreshIcon(), func() {
 		if p := u.current(); p != nil {
 			u.recheckEntries(p)
 		}
@@ -62,24 +62,24 @@ func (u *ui) refreshSplitLink() {
 		return
 	}
 	if u.splitEnabled() {
-		u.splitTxt.Text = "Раздельное туннелирование включено"
+		u.splitTxt.Text = L("Split tunneling is on", "Раздельное туннелирование включено")
 	} else {
-		u.splitTxt.Text = "Раздельное туннелирование отключено"
+		u.splitTxt.Text = L("Split tunneling is off", "Раздельное туннелирование отключено")
 	}
 	u.splitTxt.Refresh()
 }
 
 func (u *ui) openSplitSheet() {
 	var s *sheet
-	state := "Отключено"
+	state := L("Off", "Отключено")
 	if u.splitEnabled() {
-		state = "Включено"
+		state = L("On", "Включено")
 	}
-	desc := prose("Позволяет направлять через VPN одни сайты и адреса, а другие — напрямую")
+	desc := prose(L("Route some sites and addresses through the VPN and the rest directly", "Позволяет направлять через VPN одни сайты и адреса, а другие — напрямую"))
 	content := container.NewVBox(
-		lead(text("Раздельное туннелирование", 20, colText, false)),
+		lead(text(L("Split tunneling", "Раздельное туннелирование"), 20, colText, false)),
 		desc,
-		navRow("По сайтам и адресам", state, func() {
+		navRow(L("By sites and addresses", "По сайтам и адресам"), state, func() {
 			s.Close()
 			u.openSplit()
 		}),
@@ -101,9 +101,9 @@ func (u *ui) openServerSheet() {
 		head.Add(title)
 		head.Add(addr)
 	}
-	head.Add(sectionLabel("Серверы"))
+	head.Add(sectionLabel(L("Servers", "Серверы")))
 	if len(u.profiles) == 0 {
-		box.Add(richText("Серверов пока нет. Нажмите «+» внизу, чтобы добавить.", true, false))
+		box.Add(richText(L("No servers yet. Press + below to add one.", "Серверов пока нет. Нажмите «+» внизу, чтобы добавить."), true, false))
 	}
 	for _, p := range u.profiles {
 		p := p

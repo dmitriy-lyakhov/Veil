@@ -255,7 +255,7 @@ func (u *ui) toggle() {
 	u.logf("подключение к «%s»", p.Name)
 	u.power.SetState(powerBusy)
 	// открытые SSH-сессии установлены без привязки к физическому интерфейсу:	// после подъёма туннеля их пакеты ушли бы внутрь него	for n := range u.sessions {		u.dropSession(n)	}
-	u.setStatus("Подключение…", "Подтвердите права администратора", "")
+	u.setStatus(L("Connecting…", "Подключение…"), L("Confirm administrator rights", "Подтвердите права администратора"), "")
 	name := p.Name
 	go func() {
 		h, err := helper.Launch(path)
@@ -267,7 +267,7 @@ func (u *ui) toggle() {
 		fyne.Do(func() {
 			if err != nil {
 				u.power.SetState(powerOff)
-				u.setStatus("Отключено", err.Error(), theme.ColorNameError)
+				u.setStatus(L("Disconnected", "Отключено"), err.Error(), theme.ColorNameError)
 				return
 			}
 			u.handle, u.active, u.connected = h, name, false
@@ -310,7 +310,7 @@ func (u *ui) showReport(r *helper.Report) {
 	switch r.State {
 	case client.StateConnecting:
 		u.power.SetState(powerBusy)
-		u.setStatus("Подключение…", "Ищем лучший маршрут: IPv6 → IPv4, HTTP/3 → HTTP/2", "")
+		u.setStatus(L("Connecting…", "Подключение…"), L("Finding the best route: IPv6 → IPv4, HTTP/3 → HTTP/2", "Ищем лучший маршрут: IPv6 → IPv4, HTTP/3 → HTTP/2"), "")
 	case client.StateConnected:
 		if !u.connected {
 			u.connected, u.since = true, time.Now()
@@ -323,10 +323,10 @@ func (u *ui) showReport(r *helper.Report) {
 		if r.Entry != "" {
 			sub = fmt.Sprintf("вход %s (%.0f мс) → выход %s\n%s", r.Entry, r.EntryRTT, r.Exit, sub)
 		}
-		u.setStatus("Подключено", sub, "")
+		u.setStatus(L("Connected", "Подключено"), sub, "")
 	case client.StateReconnecting:
 		u.power.SetState(powerBusy)
-		u.setStatus("Переподключение…", r.LastError, "")
+		u.setStatus(L("Reconnecting…", "Переподключение…"), r.LastError, "")
 	}
 	u.traffic.Text = "↓ " + humanBytes(r.RxBytes) + "     ↑ " + humanBytes(r.TxBytes)
 	u.traffic.Refresh()
@@ -352,9 +352,9 @@ func (u *ui) finish(errMsg string) {
 	netpin.Set(0, 0)
 	u.power.SetState(powerOff)
 	if errMsg != "" {
-		u.setStatus("Отключено", errMsg, theme.ColorNameError)
+		u.setStatus(L("Disconnected", "Отключено"), errMsg, theme.ColorNameError)
 	} else {
-		u.setStatus("Отключено", "Нажмите кнопку, чтобы подключиться", "")
+		u.setStatus(L("Disconnected", "Отключено"), L("Press the button to connect", "Нажмите кнопку, чтобы подключиться"), "")
 	}
 	u.rebuildServers()
 	u.refreshHome()
