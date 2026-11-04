@@ -8,9 +8,9 @@ HTTP/2 поверх TLS 1.3 с отпечатком Chrome (TCP/443). Для в�
 ## Как это устроено
 
 ```
-                                    ┌→ HTTP/3 датаграммы (RFC 9297) → QUIC → UDP/443   основной
+                                     ┌→ HTTP/3 датаграммы (RFC 9297) → QUIC → UDP/443   основной
 IP-пакеты → WireGuard (wireguard-go) ┤
-                                    └→ кадры в HTTP/2 POST-потоке → TLS 1.3 → TCP/443  запасной
+                                     └→ кадры в HTTP/2 POST-потоке → TLS 1.3 → TCP/443  запасной
 ```
 
 - **Отпечаток Chrome везде**: HTTP/2 идёт через uTLS (ClientHello Chrome), HTTP/3 — через uquic с QUIC-пресетом Chrome 115 (ALPS, compress_certificate, `max_datagram_frame_size`, без Go-маркеров); HTTP/3-слой клиента написан поверх uquic вручную (SETTINGS, QPACK-заголовки в порядке Chrome, HTTP-датаграммы). Тест `TestH3ClientLooksLikeChrome` разбирает реальный Initial-пакет.
