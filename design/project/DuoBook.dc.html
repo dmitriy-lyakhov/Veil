@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil on iPhone Duo inner</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:880px;height:660px;box-sizing:border-box;padding:10px;background:#01040F;border-radius:40px">
+<div style="position:relative;width:860px;height:640px;border-radius:30px;overflow:hidden">
+<dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="ios" layout="rail" hinge="vertical" w="860" h="640" safe-top="0" safe-bottom="0" hint-size="860px,640px"></dc-import>
+<div style="position:absolute;left:421px;top:0;width:18px;height:640px;pointer-events:none;display:flex;justify-content:space-between" aria-hidden="true"><span style="width:1px;height:100%;background:#01040F;opacity:.35"></span><span style="width:6px;height:100%;background:#01040F;opacity:.28"></span><span style="width:1px;height:100%;background:#01040F;opacity:.35"></span></div>
+<div style="position:absolute;left:640px;top:10px;width:10px;height:10px;border-radius:50%;background:#01040F;opacity:.7;pointer-events:none" aria-hidden="true"></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":880,"height":660}}'>
+class Component extends DCLogic {
+  renderVals() { return { theme: this.props.theme ?? 'dark', lang: this.props.lang ?? 'ru' }; }
+}
+</script>
+</body>
+</html>

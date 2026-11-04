@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil menu bar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:420px;height:640px;position:relative;background:#E4E6EA;font-family:Montserrat,system-ui,sans-serif;overflow:hidden;border-radius:12px">
+<div style="height:28px;background:#0B0B0C;display:flex;align-items:center;justify-content:flex-end;gap:14px;padding:0 16px;box-sizing:border-box">
+<span style="width:20px;height:20px;border-radius:5px;background:#2A2B30;display:flex;align-items:center;justify-content:center" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg></span>
+</div>
+<div style="position:absolute;right:20px;top:34px;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:9px solid #0B0B0C" aria-hidden="true"></div>
+<div style="position:absolute;left:30px;top:43px;width:360px;height:560px;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.18)">
+<dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="macos" layout="compact" w="360" h="560" hint-size="360px,560px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":420,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() { const th = this.props.theme ?? 'dark'; const lt = th === 'light'; return { theme: th, lang: this.props.lang ?? 'ru', c: { bg: lt ? '#FFFFFF' : '#0B0B0C', bar: lt ? '#F2F3F5' : '#1B1C1F', ink: lt ? '#0B0B0C' : '#FFFFFF', ctl: lt ? '#E4E6EA' : '#2A2B30', ground: lt ? '#E4E6EA' : '#0B0B0C' } }; }
+}
+</script>
+</body>
+</html>

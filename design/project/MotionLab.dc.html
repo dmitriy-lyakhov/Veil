@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil motion lab</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+<style>body{margin:0}button{font-family:inherit}</style>
+</helmet>
+<div style="width:1280px;height:1100px;overflow:hidden;box-sizing:border-box;padding:40px;background:#0B0B0C;color:#fff;font-family:Montserrat,system-ui,sans-serif;display:flex;gap:40px">
+
+<div style="width:300px;flex:none;display:flex;flex-direction:column;gap:12px">
+<div>
+<h1 style="margin:0;font-size:28px;font-weight:600;line-height:1.1">Лаборатория анимаций</h1>
+<p style="margin:8px 0 0;font-size:13px;font-weight:500;color:#A8AAB2;line-height:1.5">Задайте состояние вручную или запустите последовательность. Телефон в центре — настоящий интерфейс.</p>
+</div>
+<button type="button" onClick="{{playSeq}}" style="height:52px;border:0;border-radius:14px;background:#FF393D;color:#0B0B0C;font-size:15px;font-weight:600;cursor:pointer">{{seqLabel}}</button>
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:12px;font-weight:600;color:#A8AAB2">{{g.title}}</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{g.opts}}" as="o" hint-placeholder-count="3">
+<button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div style="width:393px;height:800px;flex:none;align-self:center;border-radius:16px;overflow:hidden">
+<dc-import name="App" platform="ios" layout="compact" w="393" h="800" safe-top="20" safe-bottom="16" theme="{{theme}}" lang="{{lang}}" conn="{{conn}}" sheet="{{sheet}}" speed="{{speed}}" reduce="{{reduce}}" hint-size="393px,800px"></dc-import>
+</div>
+
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+<h2 style="margin:0 0 8px;font-size:20px;font-weight:600">Токены движения</h2>
+<sc-for list="{{table}}" as="r" hint-placeholder-count="8">
+<div style="background:#1B1C1F;border-radius:14px;padding:10px 14px;display:flex;flex-direction:column;gap:3px">
+<div style="display:flex;justify-content:space-between;gap:12px;font-size:13px;font-weight:600"><span>{{r.name}}</span><span style="font-family:Arimo,Arial,sans-serif;font-weight:700;color:#FF393D">{{r.time}}</span></div>
+<div style="font-size:12px;font-weight:500;color:#A8AAB2;line-height:1.4">{{r.what}}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1100}}'>
+class Component extends DCLogic {
+  state = { conn: 'auto', sheet: 'auto', speed: 1, reduce: 'false', seq: false, theme: 'dark', lang: 'ru' };
+  componentWillUnmount() { clearTimeout(this._t); }
+  renderVals() {
+    const st = this.state;
+    const chip = (on, label, go) => ({
+      label, go,
+      style: `min-height:44px;padding:0 14px;border:0;border-radius:14px;font-size:13px;font-weight:600;cursor:pointer;background:${on ? '#FF393D' : '#1B1C1F'};color:${on ? '#0B0B0C' : '#FFFFFF'};transition:background .2s ease`
+    });
+    const manual = (patch) => () => { clearTimeout(this._t); this.setState({ seq: false, ...patch }); };
+    const connOpts = [['auto', 'Интерактив'], ['idle', 'Idle'], ['connecting', 'Connecting'], ['connected', 'Connected'], ['disconnecting', 'Disconnecting'], ['error', 'Error']]
+      .map(([id, l]) => chip(st.conn === id, l, manual({ conn: id })));
+    const sheetOpts = [['auto', 'Интерактив'], ['none', 'Закрыта'], ['servers', 'Серверы'], ['protocols', 'Протоколы'], ['format', 'Формат'], ['split', 'Раздельный доступ'], ['full', 'Полный доступ']]
+      .map(([id, l]) => chip(st.sheet === id, l, () => this.setState({ sheet: id })));
+    const speedOpts = [[1, '1×'], [2, 'Замедл. ×2'], [4, 'Замедл. ×4']].map(([v, l]) => chip(st.speed === v, l, () => this.setState({ speed: v })));
+    const redOpts = [['false', 'Выкл.'], ['true', 'Reduce motion']].map(([v, l]) => chip(st.reduce === v, l, () => this.setState({ reduce: v })));
+    const themeOpts = [['dark', 'Тёмная'], ['light', 'Светлая']].map(([v, l]) => chip(st.theme === v, l, () => this.setState({ theme: v })));
+    const langOpts = [['ru', 'Русский'], ['en', 'English']].map(([v, l]) => chip(st.lang === v, l, () => this.setState({ lang: v })));
+    const groups = [
+      { title: 'Тема', opts: themeOpts },
+      { title: 'Язык', opts: langOpts },
+      { title: 'Состояние подключения', opts: connOpts },
+      { title: 'Шторка / диалог', opts: sheetOpts },
+      { title: 'Скорость', opts: speedOpts },
+      { title: 'Уменьшение движения', opts: redOpts }
+    ];
+    const steps = ['idle', 'connecting', 'connected', 'disconnecting', 'idle', 'error'];
+    const playSeq = () => {
+      clearTimeout(this._t);
+      if (st.seq) { this.setState({ seq: false, conn: 'auto' }); return; }
+      this.setState({ seq: true, sheet: 'none' });
+      let i = 0;
+      const next = () => {
+        if (i >= steps.length) { this.setState({ seq: false, conn: 'auto' }); return; }
+        this.setState({ conn: steps[i] });
+        const d = (steps[i] === 'connected' ? 4200 : 2400) * this.state.speed;
+        i++;
+        this._t = setTimeout(next, d);
+      };
+      next();
+    };
+    const table = [
+      { name: 'Idle · дыхание кольца', time: '4000 мс', what: 'Масштаб 1 → 1,03, ease-in-out, бесконечно. Показывает, что кнопка живая.' },
+      { name: 'Connecting · дуга', time: '1100 мс', what: 'Красная дуга вращается линейно вокруг кольца.' },
+      { name: 'Connecting · волны', time: '1800 мс', what: '3 кольца расходятся от 1× до 1,65×, затухая; сдвиг 600 мс.' },
+      { name: 'Connected · «хлопок»', time: '500 мс', what: 'Заливка красным, масштаб 0,92 → 1,05 → 1. Один раз.' },
+      { name: 'Connected · волны', time: '4200 мс', what: '2 медленные волны вместо дыхания. Индикатор «Protected» меняется за 300 мс.' },
+      { name: 'Disconnecting · откат', time: '700 мс', what: 'Заливка уходит в цвет фона, обводка и текст становятся белыми.' },
+      { name: 'Error · встряска', time: '500 мс', what: 'Пунктирное красное кольцо, смещение ±8 px, затухание.' },
+      { name: 'Шторка / диалог', time: '300 мс', what: 'Телефон: снизу вверх. Десктоп и iPad: подъём 14 px + проявление. Фон — 250 мс.' },
+      { name: 'Список в шторке', time: '320 + 40 мс', what: 'Каскад: каждая строка поднимается на 10 px с шагом 40 мс.' },
+      { name: 'Раздельный доступ', time: '320 + 30 мс', what: 'Хаб — шторка; экраны списков поднимаются на 10 px, строки каскадом по 30 мс; меню ⋮ — 200 мс.' },
+      { name: 'Переход вперёд / назад', time: '140 + 320 мс', what: 'Старая страница уходит влево и гаснет (140 мс), новая выезжает справа на 32 px; назад — зеркально. Между вкладками — плавное проявление. Заголовок поднимается на 6 px.' },
+      { name: 'Выпадающий список', time: '220 мс', what: 'Меню раскрывается сверху (масштаб 0,9 → 1), стрелка поворачивается на 180°, пункты каскадом по 35 мс. На телефоне вместо списка — шторка.' },
+      { name: 'Тумблер', time: '200 мс', what: 'Ползунок едет на 20 px, дорожка меняет цвет, внутри появляется галочка. При нажатии ползунок растягивается до 30 px за 120 мс.' },
+      { name: 'Установка сервера', time: '300 мс', what: 'Шаги по очереди: точка → спиннер → галочка (масштаб 0,4 → 1).' },
+      { name: 'Переключатели', time: '200 мс', what: 'Radio-точка, тумблер, вкладки, индикатор навигации и сегмент (250 мс).' },
+      { name: 'Reduce motion', time: '1 мс', what: 'Все анимации сводятся к мгновенной смене состояния; кольца и волны не движутся.' }
+    ];
+    return {
+      groups, playSeq, table, seqLabel: st.seq ? 'Остановить последовательность' : 'Запустить последовательность',
+      conn: st.conn, sheet: st.sheet, theme: st.theme, lang: st.lang, speed: String(st.speed), reduce: st.reduce
+    };
+  }
+}
+</script>
+</body>
+</html>

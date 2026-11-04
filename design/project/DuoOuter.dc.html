@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil on iPhone Duo outer</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:376px;height:796px;box-sizing:border-box;padding:8px;background:#01040F;border-radius:52px">
+<div style="position:relative;width:360px;height:780px;border-radius:44px;overflow:hidden">
+<dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="ios" layout="compact" w="360" h="780" safe-top="48" safe-bottom="28" hint-size="360px,780px"></dc-import>
+<div style="position:absolute;left:50%;top:16px;margin-left:-8px;width:16px;height:16px;border-radius:50%;background:#01040F;pointer-events:none" aria-hidden="true"></div>
+<div style="position:absolute;left:50%;bottom:8px;margin-left:-62px;width:124px;height:5px;border-radius:3px;background:{{ink}};pointer-events:none" aria-hidden="true"></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":376,"height":796}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const th = this.props.theme ?? 'dark';
+    return { theme: th, lang: this.props.lang ?? 'ru', ink: th === 'light' ? '#0B0B0C' : '#FFFFFF' };
+  }
+}
+</script>
+</body>
+</html>

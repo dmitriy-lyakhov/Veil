@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil brand and icons</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:1240px;height:880px;display:flex;font-family:Montserrat,system-ui,sans-serif">
+<sc-for list="{{panels}}" as="p" hint-placeholder-count="2">
+<div style="{{p.style}}">
+<div style="display:flex;align-items:center;gap:20px">
+<svg width="96" height="96" viewBox="0 0 32 32" role="img" aria-label="Veil"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg>
+<div style="display:flex;flex-direction:column;gap:6px">
+<span style="font-size:44px;font-weight:600;line-height:1">Veil</span>
+<span style="font-size:13px;font-weight:500;color:{{p.ink2}}">{{p.tagline}}</span>
+</div>
+</div>
+<p style="margin:0;font-size:13px;font-weight:500;line-height:1.5;color:{{p.ink2}};max-width:520px">{{p.concept}}</p>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font-size:12px;font-weight:600;color:{{p.ink2}}">{{p.iconsTitle}}</span>
+<div style="display:flex;gap:20px;align-items:flex-end">
+<div style="width:96px;height:96px;border-radius:22px;background:#0B0B0C;display:flex;align-items:center;justify-content:center"><svg width="56" height="56" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg></div>
+<div style="width:96px;height:96px;border-radius:22px;background:#F2F3F5;display:flex;align-items:center;justify-content:center"><svg width="56" height="56" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg></div>
+<div style="width:96px;height:96px;border-radius:50%;background:#0B0B0C;display:flex;align-items:center;justify-content:center"><svg width="48" height="48" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg></div>
+<div style="width:96px;height:96px;border-radius:50%;background:#E4E6EA;display:flex;align-items:center;justify-content:center"><svg width="48" height="48" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#0B0B0C"></path><path d="M29 4h-8l-9 23h8z" fill="#0B0B0C"></path><path d="M16 16.8L12 27h8z" fill="#E4E6EA"></path></svg></div>
+<div style="width:44px;height:44px;border-radius:11px;background:#0B0B0C;display:flex;align-items:center;justify-content:center"><svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg></div>
+</div>
+<span style="font-size:12px;font-weight:500;color:{{p.ink2}}">{{p.iconsCaption}}</span>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<span style="font-size:12px;font-weight:600;color:{{p.ink2}}">{{p.setTitle}}</span>
+<div style="display:grid;grid-template-columns:repeat(8, minmax(0, 1fr));gap:8px">
+<sc-for list="{{p.cells}}" as="c" hint-placeholder-count="16">
+<div style="{{p.cellStyle}}">
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{{p.ink}}" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{c.d}}"></path></svg>
+<span style="font-size:11px;font-weight:500;color:{{p.ink2}}">{{c.name}}</span>
+</div>
+</sc-for>
+</div>
+<span style="font-size:12px;font-weight:500;color:{{p.ink2}}">{{p.setCaption}}</span>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":1240,"height":880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ru = (this.props.lang ?? 'ru') === 'ru';
+    const L = (en, r) => (ru ? r : en);
+    const icons = [
+      ['home', 'M3 11l9-8 9 8M5 9.5V21h5v-6h4v6h5V9.5'],
+      ['share', 'M17 3h4v4h-4zM3 10h4v4H3zM17 17h4v4h-4zM7 11l10-5M7 13l10 5'],
+      ['sliders', 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4'],
+      ['plus', 'M12 4v16M4 12h16'], ['down', 'M5 9l7 7 7-7'], ['right', 'M9 5l7 7-7 7'], ['back', 'M15 5l-7 7 7 7'],
+      ['download', 'M12 3v13M6 11l6 6 6-6M4 21h16'], ['check', 'M4 12l5 5 11-11'],
+      ['search', 'M7 3h6l4 4v6l-4 4H7l-4-4V7zM16 16l5 5'], ['split', 'M4 20L20 4M11 4h9v9'],
+      ['shield', 'M12 2l8 3v7l-8 10-8-10V5z'], ['close', 'M5 5l14 14M19 5L5 19'],
+      ['server', 'M3 4h18v6H3zM3 14h18v6H3zM7 7h2M7 17h2'],
+      ['qr', 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2z'],
+      ['info', 'M8 3h8l5 5v8l-5 5H8l-5-5V8zM12 11v6M12 7.5h.01']
+    ];
+    const mk = (cardBg) => icons.map(([name, d]) => ({ name, d }));
+    const base = 'flex:1;box-sizing:border-box;padding:40px;display:flex;flex-direction:column;gap:28px;';
+    const cell = (bg) => `background:${bg};border-radius:14px;height:72px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px`;
+    const common = {
+      tagline: L('Quiet VPN for every device', 'Тихий VPN для каждого устройства'),
+      concept: L('Two layers of a veil fold over each other: red and gray, with a light overlap where they meet. The shape reads as a V and as a drape that hides what is behind it. Hard edges and flat fills follow the brand.', 'Два слоя вуали накладываются друг на друга: красный и серый, а на пересечении светлый треугольник. Форма читается как «V» и как занавес, скрывающий то, что за ним. Острые углы и плоские заливки — как в бренде.'),
+      iconsTitle: L('App icons: iOS, Android, adaptive, monochrome, desktop', 'Иконки приложения: iOS, Android, адаптивная, монохромная, десктоп'),
+      iconsCaption: L('Monochrome version for Android themed icons and system tray.', 'Монохромная версия для тематических иконок Android и трея.'),
+      setTitle: L('Icon set: 24 px grid, 2 px stroke, square caps, mitered joins', 'Набор иконок: сетка 24 px, штрих 2 px, квадратные окончания, острые углы'),
+      setCaption: L('Angular shapes echo the mark. Icons stay at 2 px stroke at every size; touch targets are 44 px.', 'Угловатые формы повторяют знак. Штрих 2 px на любом размере; область нажатия 44 px.'),
+      cells: mk()
+    };
+    return { panels: [
+      { ...common, style: base + 'background:#0B0B0C;color:#FFFFFF', ink: '#FFFFFF', ink2: '#A8AAB2', cellStyle: cell('#1B1C1F') },
+      { ...common, style: base + 'background:#FFFFFF;color:#0B0B0C', ink: '#0B0B0C', ink2: '#5B6068', cellStyle: cell('#F2F3F5') }
+    ] };
+  }
+}
+</script>
+</body>
+</html>

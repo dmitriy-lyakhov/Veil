@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil for Windows</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:1000px;height:700px;border-radius:8px;overflow:hidden;background:{{c.bg}};display:flex;flex-direction:column;font-family:Montserrat,system-ui,sans-serif">
+<div style="height:32px;flex:none;display:flex;align-items:center;justify-content:space-between;background:{{c.bar}};color:{{c.ink}}">
+<div style="display:flex;align-items:center;gap:8px;padding-left:12px;font-size:12px;font-weight:500">
+<svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg>
+<span>Veil</span>
+</div>
+<div style="display:flex;height:32px">
+<button type="button" aria-label="Minimize" style="width:46px;height:32px;border:0;background:transparent;color:{{c.ink}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M0 5h10" stroke="currentColor" stroke-width="1"></path></svg></button>
+<button type="button" aria-label="Maximize" style="width:46px;height:32px;border:0;background:transparent;color:{{c.ink}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor"></rect></svg></button>
+<button type="button" aria-label="Close" style="width:46px;height:32px;border:0;background:transparent;color:{{c.ink}};display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M0 0l10 10M10 0L0 10" stroke="currentColor" stroke-width="1"></path></svg></button>
+</div>
+</div>
+<dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="windows" layout="wide" w="1000" h="668" hint-size="1000px,668px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":1000,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() { const th = this.props.theme ?? 'dark'; const lt = th === 'light'; return { theme: th, lang: this.props.lang ?? 'ru', c: { bg: lt ? '#FFFFFF' : '#0B0B0C', bar: lt ? '#F2F3F5' : '#1B1C1F', ink: lt ? '#0B0B0C' : '#FFFFFF', ctl: lt ? '#E4E6EA' : '#2A2B30', ground: lt ? '#E4E6EA' : '#0B0B0C' } }; }
+}
+</script>
+</body>
+</html>

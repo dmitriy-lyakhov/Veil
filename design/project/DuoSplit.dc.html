@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil Split View on Duo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:880px;height:660px;box-sizing:border-box;padding:10px;background:#01040F;border-radius:40px">
+<div style="position:relative;width:860px;height:640px;border-radius:30px;overflow:hidden;display:flex;gap:6px;background:#01040F">
+<div style="width:427px;height:640px;flex:none;overflow:hidden">
+<dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="ios" layout="compact" w="427" h="640" safe-top="0" safe-bottom="8" hint-size="427px,640px"></dc-import>
+</div>
+<div style="width:427px;height:640px;flex:none;overflow:hidden">
+<dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="ios" layout="compact" start="share" w="427" h="640" safe-top="0" safe-bottom="8" hint-size="427px,640px"></dc-import>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":880,"height":660}}'>
+class Component extends DCLogic {
+  renderVals() { return { theme: this.props.theme ?? 'dark', lang: this.props.lang ?? 'ru' }; }
+}
+</script>
+</body>
+</html>

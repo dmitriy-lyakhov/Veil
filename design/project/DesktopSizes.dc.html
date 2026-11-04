@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil desktop window sizes</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:2280px;height:1000px;box-sizing:border-box;padding:48px;background:{{c.ground}};color:{{c.ink}};font-family:Montserrat,system-ui,sans-serif;display:flex;flex-direction:column;gap:32px">
+
+<div style="display:flex;gap:24px;align-items:stretch">
+<div style="flex:1.1;min-width:0">
+<h1 style="margin:0;font-size:36px;font-weight:600;line-height:1.1">{{t.title}}</h1>
+<p style="margin:10px 0 0;font-size:15px;font-weight:500;line-height:1.5;color:{{c.ink2}};max-width:760px">{{t.lead}}</p>
+</div>
+<div style="flex:2;min-width:0;display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:12px">
+<sc-for list="{{specs}}" as="s" hint-placeholder-count="4">
+<div style="background:{{c.card}};border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0">
+<span style="font-size:12px;font-weight:500;color:{{c.ink2}}">{{s.label}}</span>
+<span style="font-family:Arimo,Arial,sans-serif;font-size:24px;font-weight:700;white-space:nowrap">{{s.value}}</span>
+<span style="font-size:12px;font-weight:500;line-height:1.4;color:{{c.ink2}}">{{s.note}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="display:flex;gap:48px;align-items:flex-start">
+<sc-for list="{{frames}}" as="f" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:12px;flex:none">
+<div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:16px;font-weight:600">{{f.cap}}</span><span style="font-family:Arimo,Arial,sans-serif;font-size:14px;font-weight:700;color:{{c.accInk}}">{{f.size}}</span></div>
+<div style="width:{{f.bw}}px;height:{{f.bh}}px;overflow:hidden;border-radius:10px;outline:1px solid {{c.card2}}">
+<div style="width:{{f.w}}px;height:{{f.h}}px;transform:scale({{f.scale}});transform-origin:top left">
+<dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="windows" layout="responsive" w="{{f.w}}" h="{{f.h}}" hint-size="{{f.hint}}"></dc-import>
+</div>
+</div>
+<span style="font-size:13px;font-weight:500;line-height:1.45;color:{{c.ink2}};max-width:{{f.bw}}px">{{f.note}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":2280,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const th = this.props.theme ?? 'dark';
+    const lang = this.props.lang ?? 'ru';
+    const ru = lang === 'ru';
+    const L = (en, r) => (ru ? r : en);
+    const lt = th === 'light';
+    const c = lt
+      ? { ground: '#E4E6EA', card: '#FFFFFF', card2: '#C9CCD2', ink: '#0B0B0C', ink2: '#5B6068', accInk: '#DB1E32' }
+      : { ground: '#1B1C1F', card: '#0B0B0C', card2: '#2A2B30', ink: '#FFFFFF', ink2: '#A8AAB2', accInk: '#FF393D' };
+    const t = {
+      title: L('Desktop window sizes', 'Размеры окна на десктопе'),
+      lead: L('The same layout works in Windows, macOS and Linux. Below 720 px the window uses the compact phone layout with a bottom bar; from 720 px it switches to the wide layout with a sidebar.', 'Один и тот же макет работает в Windows, macOS и Linux. Уже 720 px окно использует компактную раскладку, как на телефоне, с нижней панелью; от 720 px — широкую, с боковой панелью.')
+    };
+    const specs = [
+      { label: L('Minimum window', 'Минимальный размер'), value: '360 × 560', note: L('Compact layout; the connect ring shrinks to 150 px', 'Компактная раскладка, кольцо уменьшается до 150 px') },
+      { label: L('Wide layout from', 'Широкая раскладка от'), value: '720 px', note: L('Sidebar 232 px, server card and statistics at the right', 'Боковая панель 232 px, справа карточка сервера и статистика') },
+      { label: L('Default window', 'По умолчанию'), value: '1000 × 700', note: L('Default and maximum: the window opens at the largest size', 'По умолчанию и максимум: окно открывается в предельном размере') },
+      { label: L('Maximum window', 'Максимальный размер'), value: '1000 × 700', note: L('The window cannot be enlarged further; a smaller size is remembered', 'Больше окно сделать нельзя; меньший размер запоминается') }
+    ];
+    const frames = [
+      { cap: L('Minimum', 'Минимум'), size: '360 × 560', w: 360, h: 560, scale: 1, bw: 360, bh: 560, hint: '360px,560px', note: L('Smaller sizes are blocked by the window frame. Bottom bar keeps icons only.', 'Меньше окно сделать нельзя. В нижней панели остаются только иконки.') },
+      { cap: L('Switch to the wide layout', 'Переход к широкой раскладке'), size: '720 × 600', w: 720, h: 600, scale: 1, bw: 720, bh: 600, hint: '720px,600px', note: L('At 719 px the compact layout is used, at 720 px the sidebar appears.', 'При 719 px действует компактная раскладка, с 720 px появляется боковая панель.') },
+      { cap: L('Maximum', 'Максимум'), size: '1000 × 700', w: 1000, h: 700, scale: 1, bw: 1000, bh: 700, hint: '1000px,700px', note: L('Largest size: the window frame stops here. Sidebar 232 px, the rest is content.', 'Предельный размер: рамка окна дальше не растягивается. Боковая панель 232 px, остальное — содержимое.') }
+    ];
+    return { theme: th, lang, c, t, specs, frames };
+  }
+}
+</script>
+</body>
+</html>

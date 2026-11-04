@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil for Android</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:412px;height:892px;box-sizing:border-box;padding:8px;background:#01040F;border-radius:48px">
+<div style="position:relative;width:396px;height:876px;border-radius:40px;overflow:hidden">
+<dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="android" layout="compact" w="396" h="876" safe-top="40" safe-bottom="24" hint-size="396px,876px"></dc-import>
+<div style="position:absolute;left:50%;top:14px;margin-left:-8px;width:16px;height:16px;border-radius:50%;background:#01040F;pointer-events:none" aria-hidden="true"></div>
+<div style="position:absolute;left:50%;bottom:8px;margin-left:-54px;width:108px;height:4px;border-radius:2px;background:{{c.ink}};pointer-events:none" aria-hidden="true"></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":412,"height":892}}'>
+class Component extends DCLogic {
+  renderVals() { const th = this.props.theme ?? 'dark'; const lt = th === 'light'; return { theme: th, lang: this.props.lang ?? 'ru', c: { bg: lt ? '#FFFFFF' : '#0B0B0C', bar: lt ? '#F2F3F5' : '#1B1C1F', ink: lt ? '#0B0B0C' : '#FFFFFF', ctl: lt ? '#E4E6EA' : '#2A2B30', ground: lt ? '#E4E6EA' : '#0B0B0C' } }; }
+}
+</script>
+</body>
+</html>

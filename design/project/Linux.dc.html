@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil for Linux</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:1000px;height:700px;border-radius:12px;overflow:hidden;background:{{c.bg}};display:flex;flex-direction:column;font-family:Montserrat,system-ui,sans-serif">
+<div style="height:46px;flex:none;position:relative;display:flex;align-items:center;justify-content:space-between;background:{{c.bar}};color:{{c.ink}};padding:0 8px">
+<button type="button" aria-label="Main menu" style="width:34px;height:34px;border:0;border-radius:8px;background:transparent;color:{{c.ink}};display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+<div style="position:absolute;left:0;right:0;text-align:center;font-size:14px;font-weight:600;pointer-events:none">Veil</div>
+<button type="button" aria-label="Close" style="width:28px;height:28px;border:0;border-radius:50%;background:{{c.ctl}};color:{{c.ink}};display:flex;align-items:center;justify-content:center"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path></svg></button>
+</div>
+<dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="linux" layout="wide" w="1000" h="654" hint-size="1000px,654px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":1000,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() { const th = this.props.theme ?? 'dark'; const lt = th === 'light'; return { theme: th, lang: this.props.lang ?? 'ru', c: { bg: lt ? '#FFFFFF' : '#0B0B0C', bar: lt ? '#F2F3F5' : '#1B1C1F', ink: lt ? '#0B0B0C' : '#FFFFFF', ctl: lt ? '#E4E6EA' : '#2A2B30', ground: lt ? '#E4E6EA' : '#0B0B0C' } }; }
+}
+</script>
+</body>
+</html>

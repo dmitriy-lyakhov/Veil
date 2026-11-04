@@ -1,0 +1,380 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Android.dc.html": {
+      "h": 892,
+      "is_interactive": true,
+      "title": "Android",
+      "w": 412,
+      "x": 490,
+      "y": 2560
+    },
+    "App.dc.html": {
+      "h": 760,
+      "is_interactive": true,
+      "title": "Общий компонент App",
+      "w": 393,
+      "x": 1522,
+      "y": 2560
+    },
+    "ScreensA.dc.html": {
+      "x": 0,
+      "y": 7608,
+      "w": 1772,
+      "h": 1740,
+      "title": "Все экраны · 1. Главная и настройки",
+      "is_interactive": true
+    },
+    "ScreensB.dc.html": {
+      "x": 1852,
+      "y": 7608,
+      "w": 1772,
+      "h": 1740,
+      "title": "Все экраны · 2. Подключение и приложение",
+      "is_interactive": true
+    },
+    "ScreensC.dc.html": {
+      "x": 3704,
+      "y": 7608,
+      "w": 1772,
+      "h": 1740,
+      "title": "Все экраны · 3. Новый сервер",
+      "is_interactive": true
+    },
+    "DesktopSizes.dc.html": {
+      "x": 1620,
+      "y": 11568,
+      "w": 2280,
+      "h": 1000,
+      "title": "Размеры окна на десктопе",
+      "is_interactive": true
+    },
+    "Brand.dc.html": {
+      "h": 880,
+      "title": "Знак и иконки",
+      "w": 1240,
+      "x": 0,
+      "y": 6208
+    },
+    "DuoBook.dc.html": {
+      "h": 660,
+      "is_interactive": true,
+      "title": "iPhone Duo · внутренний экран, шарнир",
+      "w": 880,
+      "x": 456,
+      "y": 3812
+    },
+    "DuoOuter.dc.html": {
+      "h": 796,
+      "is_interactive": true,
+      "title": "iPhone Duo · внешний экран",
+      "w": 376,
+      "x": 0,
+      "y": 3812
+    },
+    "DuoSplit.dc.html": {
+      "h": 660,
+      "is_interactive": true,
+      "title": "iPhone Duo · Split View, два окна",
+      "w": 880,
+      "x": 1416,
+      "y": 3812
+    },
+    "Linux.dc.html": {
+      "h": 700,
+      "is_interactive": true,
+      "title": "Linux (GNOME)",
+      "w": 1000,
+      "x": 2160,
+      "y": 300
+    },
+    "LiveActivity.dc.html": {
+      "h": 640,
+      "is_interactive": true,
+      "title": "iOS · Live Activity",
+      "w": 460,
+      "x": 982,
+      "y": 2560
+    },
+    "MacOS.dc.html": {
+      "h": 700,
+      "is_interactive": true,
+      "title": "macOS",
+      "w": 1000,
+      "x": 1080,
+      "y": 300
+    },
+    "Main.dc.html": {
+      "h": 700,
+      "is_interactive": true,
+      "title": "Windows 11",
+      "w": 1000,
+      "x": 0,
+      "y": 300
+    },
+    "MenuBar.dc.html": {
+      "h": 640,
+      "is_interactive": true,
+      "title": "macOS · menu bar",
+      "w": 420,
+      "x": 0,
+      "y": 1360
+    },
+    "MotionLab.dc.html": {
+      "h": 1100,
+      "is_interactive": true,
+      "title": "Лаборатория анимаций",
+      "w": 1280,
+      "x": 1320,
+      "y": 6208
+    },
+    "SplitTunneling.dc.html": {
+      "h": 880,
+      "title": "Раздельный доступ",
+      "w": 1772,
+      "x": 1852,
+      "y": 4968
+    },
+    "Themes.dc.html": {
+      "h": 880,
+      "is_interactive": true,
+      "title": "Темы и языки",
+      "w": 1772,
+      "x": 0,
+      "y": 4968
+    },
+    "iPad.dc.html": {
+      "h": 840,
+      "is_interactive": true,
+      "title": "iPadOS",
+      "w": 1200,
+      "x": 500,
+      "y": 1360
+    },
+    "iPhone.dc.html": {
+      "h": 868,
+      "is_interactive": true,
+      "title": "iPhone · Dynamic Island",
+      "w": 409,
+      "x": 0,
+      "y": 2560
+    },
+    "ScreensD.dc.html": {
+      "x": 0,
+      "y": 9468,
+      "w": 1772,
+      "h": 1740,
+      "title": "Все экраны · 4. Управление сервером",
+      "is_interactive": true
+    },
+    "ScreensE.dc.html": {
+      "x": 1852,
+      "y": 9468,
+      "w": 1772,
+      "h": 1740,
+      "title": "Все экраны · 5. Доступ и прочее",
+      "is_interactive": true
+    },
+    "ViewDesktop.dc.html": {
+      "x": 0,
+      "y": 11568,
+      "w": 1500,
+      "h": 1140,
+      "title": "Десктоп · все экраны",
+      "is_interactive": true
+    },
+    "ViewDuo.dc.html": {
+      "x": 0,
+      "y": 13068,
+      "w": 1860,
+      "h": 1220,
+      "title": "iPhone Duo · все экраны",
+      "is_interactive": true
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-04T12:00:00Z",
+    "v": 1
+  },
+  "designSystems": [
+    {
+      "artifact": "https://claude.ai/code/artifact/ead65507-4e2f-418b-8db5-82266afe4453",
+      "copiedAt": "2026-11-04T14:00:00Z",
+      "namespace": "veil",
+      "title": "Veil (на базе A&D Mortgage)",
+      "version": "1793799289-d91d"
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  },
+  "noteOrder": [
+    "t1",
+    "t2",
+    "t3",
+    "t5",
+    "t6",
+    "t7",
+    "n1",
+    "n2",
+    "n4",
+    "n5",
+    "n3",
+    "n7",
+    "t10"
+  ],
+  "notes": {
+    "n1": {
+      "fill": "blue",
+      "text": "Адаптация по платформам\n• Десктоп/iPad: боковая панель, диалоги вместо шторок, карточки статистики.\n• Телефоны: нижняя навигация, шторки, безопасные зоны.\n• iPhone: отступ под Dynamic Island, индикатор Home, Live Activity.\n• Android: постоянный VPN, жестовая навигация.\n• Все окна кликабельны: нажмите на кольцо подключения.",
+      "w": 360,
+      "x": 1780,
+      "y": 1360
+    },
+    "n2": {
+      "fill": "orange",
+      "text": "Допущения\n• Стиль: дизайн-система A&D Mortgage (чёрный и серый для тёмной темы, белый и светло-серый для светлой, красный акцент, Montserrat).\n• Светлая и тёмная темы, русский и английский: переключаются в Настройках и в Tweaks каждого окна.\n• Знак и иконки Veil — новые, угловатые, в духе бренда.\n• Раздельный доступ по приложениям недоступен в iOS и ограничен на десктопе.",
+      "w": 360,
+      "x": 2000,
+      "y": 2560
+    },
+    "n3": {
+      "fill": "green",
+      "text": "Как проверить анимации\n• В любом окне нажмите кольцо: подключение → подключено → отключение.\n• В лаборатории слева задайте состояние, шторку, тему и язык.\n• «Замедление ×4» растягивает все движения.\n• «Reduce motion» показывает вариант для чувствительных к движению.",
+      "w": 360,
+      "x": 2680,
+      "y": 6208
+    },
+    "n4": {
+      "fill": "teal",
+      "text": "iPhone Duo (по материалам Apple к iOS 27)\n• Приложение не делится на режимы: layout по size class, safe areas и системным контейнерам.\n• Внешний экран — как телефон; внутренний — боковая рейка с иконками (панели уходят к краю), контент обходит шарнир.\n• Split View: приложение работает в половине экрана; два окна одного приложения.\n• iOS 27 SDK сохраняет поля на обоих экранах, iOS 27.1 SDK занимает всю область. Проверяйте оба.\n• Камеры: внешняя и под внутренним экраном — в Veil не используются.",
+      "w": 380,
+      "x": 2360,
+      "y": 3812
+    },
+    "n5": {
+      "fill": "purple",
+      "text": "Раздельный доступ\nХаб из двух режимов → сайты (через VPN / напрямую, импорт и экспорт списка, меню ⋮) → приложения. iOS: по приложениям недоступно. Windows/macOS/Linux: только «напрямую». Android: оба режима. Весь поток работает на любом кликабельном окне: Настройки → Раздельный доступ или кнопка под кольцом.",
+      "w": 380,
+      "x": 3700,
+      "y": 4968
+    },
+    "t1": {
+      "kind": "title1",
+      "maxW": 3160,
+      "text": "Десктоп · Windows, macOS, Linux",
+      "w": 240,
+      "x": 0,
+      "y": 60
+    },
+    "t2": {
+      "kind": "title1",
+      "maxW": 1700,
+      "text": "Меню-бар и iPadOS",
+      "w": 240,
+      "x": 0,
+      "y": 1120
+    },
+    "t3": {
+      "kind": "title1",
+      "maxW": 1915,
+      "text": "Телефоны · iPhone, Android",
+      "w": 240,
+      "x": 0,
+      "y": 2320
+    },
+    "t5": {
+      "kind": "title1",
+      "maxW": 2296,
+      "text": "Складной iPhone Duo",
+      "w": 240,
+      "x": 0,
+      "y": 3572
+    },
+    "t6": {
+      "kind": "title1",
+      "maxW": 3624,
+      "text": "Темы, языки, раздельный доступ",
+      "w": 240,
+      "x": 0,
+      "y": 4728
+    },
+    "n6": {
+      "x": 3260,
+      "y": 300,
+      "w": 380,
+      "text": "Размеры окна (Windows, macOS, Linux)\n• Минимум: 360 × 560 — компактная раскладка.\n• Широкая раскладка с боковой панелью — от 720 px по ширине.\n• По умолчанию: 1000 × 700 (он же максимум; меньший размер запоминается).\n• Максимум: 1000 × 700, дальше окно не растягивается.\nПодробности и примеры — в окне «Размеры окна на десктопе».",
+      "fill": "blue",
+      "size": "s"
+    },
+    "t9": {
+      "kind": "title1",
+      "maxW": 3900,
+      "text": "Десктоп: все экраны и размеры окна",
+      "w": 240,
+      "x": 0,
+      "y": 11328
+    },
+    "t8": {
+      "kind": "title1",
+      "maxW": 5476,
+      "text": "Все экраны приложения (по реальной структуре Veil)",
+      "w": 240,
+      "x": 0,
+      "y": 7368
+    },
+    "t7": {
+      "kind": "title1",
+      "maxW": 2600,
+      "text": "Знак, иконки, анимации",
+      "w": 240,
+      "x": 0,
+      "y": 5968
+    },
+    "n7": {
+      "x": 5580,
+      "y": 7608,
+      "w": 420,
+      "text": "Структура взята из приложения Veil\n• Вкладки: Главная, Поделиться, Настройки, «+».\n• Настройки: Серверы, Подключение (DNS, раздельное туннелирование по сайтам, KillSwitch), Приложение, Резервная копия, О Veil.\n• Сервер: четыре вкладки — Протокол, Сервисы, Каскад, Управление.\n• Каскад, автомаршрут по задержкам, ближайший вход, каталог iplist.opencck.org.\n• Протоколы: AmneziaWG, WireGuard, OpenVPN, IPsec.\nДобавлено сверх приложения: светлая тема, язык, раздельный доступ по приложениям.",
+      "fill": "blue",
+      "size": "s"
+    },
+    "t10": {
+      "kind": "title1",
+      "maxW": 1860,
+      "text": "iPhone Duo: все экраны",
+      "w": 240,
+      "x": 0,
+      "y": 12828
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "MacOS.dc.html",
+    "Linux.dc.html",
+    "MenuBar.dc.html",
+    "iPad.dc.html",
+    "iPhone.dc.html",
+    "Android.dc.html",
+    "LiveActivity.dc.html",
+    "App.dc.html",
+    "DuoOuter.dc.html",
+    "DuoBook.dc.html",
+    "DuoSplit.dc.html",
+    "Themes.dc.html",
+    "SplitTunneling.dc.html",
+    "Brand.dc.html",
+    "MotionLab.dc.html",
+    "ScreensA.dc.html",
+    "ScreensB.dc.html",
+    "ScreensC.dc.html",
+    "ScreensE.dc.html",
+    "ScreensD.dc.html",
+    "DesktopSizes.dc.html",
+    "ViewDesktop.dc.html",
+    "ViewDuo.dc.html"
+  ],
+  "pages": [],
+  "title": "Veil VPN — дизайн приложения"
+}

@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil all screens on desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+<style>body{margin:0}button{font-family:inherit}button:focus-visible{outline:2px solid #FF393D;outline-offset:2px}</style>
+</helmet>
+<div style="width:1500px;height:1140px;overflow:hidden;box-sizing:border-box;padding:40px;background:{{c.ground}};color:{{c.ink}};font-family:Montserrat,system-ui,sans-serif;display:flex;gap:32px">
+<div style="width:340px;flex:none;display:flex;flex-direction:column;gap:6px;overflow-y:auto;padding-right:6px">
+<sc-for list="{{items}}" as="it" hint-placeholder-count="12">
+<sc-if value="{{it.isHead}}" hint-placeholder-val="{{false}}"><div style="margin:12px 4px 2px;font-size:11px;font-weight:700;letter-spacing:.04em;color:{{c.ink2}}">{{it.label}}</div></sc-if>
+<sc-if value="{{it.isItem}}" hint-placeholder-val="{{true}}"><button type="button" onClick="{{it.go}}" style="{{it.style}}">{{it.label}}</button></sc-if>
+</sc-for>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:12px"><h1 style="margin:0;font-size:24px;font-weight:600">Все экраны · десктоп</h1><span style="font-size:14px;font-weight:600;color:{{c.ink2}}">{{caption}}</span></div>
+<div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:84px">Система</span><sc-for list="{{platOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:84px">Размер окна</span><sc-for list="{{sizeOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:84px">Тема</span><sc-for list="{{themeOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:84px">Язык</span><sc-for list="{{langOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;gap:8px"><button type="button" onClick="{{prev}}" style="{{navStyle}}">← Предыдущий</button><button type="button" onClick="{{next}}" style="{{navStyle}}">Следующий →</button></div></div>
+<div style="width:{{fw}}px;height:{{fh}}px;border-radius:{{radius}}px;overflow:hidden;background:{{c.card}};display:flex;flex-direction:column;flex:none">
+<sc-if value="{{isWin}}" hint-placeholder-val="{{true}}"><div style="height:32px;flex:none;display:flex;align-items:center;justify-content:space-between;background:{{c.bar}};color:{{c.ink}}"><div style="display:flex;align-items:center;gap:8px;padding-left:12px;font-size:12px;font-weight:500"><svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg><span>Veil</span></div><div style="display:flex;gap:26px;padding-right:18px;font-size:12px"><span>—</span><span>☐</span><span>✕</span></div></div></sc-if>
+<sc-if value="{{isMac}}" hint-placeholder-val="{{false}}"><div style="height:40px;flex:none;position:relative;display:flex;align-items:center;background:{{c.bar}};color:{{c.ink}}"><div style="display:flex;gap:8px;padding-left:16px" aria-hidden="true"><span style="width:12px;height:12px;border-radius:50%;background:#FF5F57"></span><span style="width:12px;height:12px;border-radius:50%;background:#FEBC2E"></span><span style="width:12px;height:12px;border-radius:50%;background:#28C840"></span></div><div style="position:absolute;left:0;right:0;text-align:center;font-size:13px;font-weight:600">Veil</div></div></sc-if>
+<sc-if value="{{isLin}}" hint-placeholder-val="{{false}}"><div style="height:46px;flex:none;position:relative;display:flex;align-items:center;justify-content:center;background:{{c.bar}};color:{{c.ink}};font-size:14px;font-weight:600">Veil</div></sc-if>
+<dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="{{plat}}" layout="responsive" w="{{aw}}" h="{{ah}}" screen="{{scr.screen}}" conn="{{scr.conn}}" server="{{scr.server}}" mgr="{{scr.mgr}}" ssh="{{scr.ssh}}" tabsel="{{scr.tabsel}}" step="{{scr.step}}" sheet="none" hint-size="{{aw}}px,{{ah}}px"></dc-import>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":1500,"height":1140}}'>
+class Component extends DCLogic {
+  state = { sel: 1, theme: null, lang: null, plat: 'windows', size: '1000' };
+  renderVals() {
+    const st = this.state;
+    const theme = st.theme || this.props.theme || 'dark';
+    const lang = st.lang || this.props.lang || 'ru';
+    const lt = theme === 'light';
+    const c = lt
+      ? { ground: '#E4E6EA', card: '#FFFFFF', card2: '#C9CCD2', ink: '#0B0B0C', ink2: '#5B6068', acc: '#FF393D', onacc: '#0B0B0C' }
+      : { ground: '#1B1C1F', card: '#0B0B0C', card2: '#2A2B30', ink: '#FFFFFF', ink2: '#A8AAB2', acc: '#FF393D', onacc: '#0B0B0C' };
+    const SCREENS = [["Вкладки",null],["Главная: отключено","home"],["Главная: подключено","home",{"conn":"connected"}],["Главная: ближайший вход","home",{"conn":"connected","server":"s2"}],["Проверка входов","entries"],["Поделиться: подключение","share"],["Поделиться: пользователи","share",{"tabsel":"users"}],["Настройки","settings"],["Добавить","add"],["Серверы",null],["Серверы","servers"],["Сервер","serverInfo"],["Управление: протокол","manager"],["Управление: сервисы","manager",{"mgr":"svc","ssh":"true"}],["Управление: каскад","manager",{"mgr":"casc","ssh":"true"}],["Управление: управление","manager",{"mgr":"mgmt"}],["Вход по SSH","sshLogin"],["Каскад и ближайший вход",null],["Построить каскад","chain"],["Ключ каскада","relayIssue"],["Узел по ключу","nodeByKey"],["Через ближайший вход","multiEntry"],["Новый сервер",null],["Свой сервер по SSH","deploy"],["Установка","installing",{"step":"2"}],["Сервер добавлен","addDone"],["Импорт конфигурации","importFile"],["Протоколы",null],["Установка протокола","protoInstall"],["Протокол установлен","protoManage"],["Настройки подключения","awgConn"],["Клиенты протокола","protoClients"],["Сертификат центра","trustCA"],["Подключение",null],["Подключение","conn"],["DNS-серверы","dnsPage"],["KillSwitch","killPage"],["Раздельное: сайты","splitSites"],["Раздельное: приложения","splitApps"],["Каталог адресов","catalog"],["Приложение",null],["Приложение","appPage"],["Журналы","logsPage"],["Журнал туннеля","logView"],["Резервная копия","backup"],["О Veil","aboutPage"],["Обновление","updateAvail"],["Язык","langPage"],["Клиенты",null],["Новый клиент","clientNew"],["Клиент","clientDetail"],["Доступ: QR и ссылка","shareResult"]];
+    const items = SCREENS.map((s, i) => s[1] === null
+      ? { isHead: true, isItem: false, label: s[0], style: '' }
+      : { isHead: false, isItem: true, label: s[0], go: () => this.setState({ sel: i }),
+          style: 'display:block;width:100%;min-height:36px;padding:6px 12px;border:0;border-radius:11px;text-align:left;font-size:13px;font-weight:600;cursor:pointer;background:' + (st.sel === i ? c.acc : 'transparent') + ';color:' + (st.sel === i ? c.onacc : c.ink) });
+    const cur = SCREENS[st.sel];
+    const ex = cur[2] || {};
+    const chip = (on, label, go) => ({ label, go, style: 'min-height:36px;padding:0 14px;border:0;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;background:' + (on ? c.acc : c.card) + ';color:' + (on ? c.onacc : c.ink) });
+    const seg = (key, opts) => opts.map(([v, l]) => chip((st[key] || opts[0][0]) === v, l, () => this.setState({ [key]: v })));
+    const themeOpts = [['dark', 'Тёмная'], ['light', 'Светлая']].map(([v, l]) => chip(theme === v, l, () => this.setState({ theme: v })));
+    const langOpts = [['ru', 'Русский'], ['en', 'English']].map(([v, l]) => chip(lang === v, l, () => this.setState({ lang: v })));
+    const scr = { screen: cur[1], conn: ex.conn || 'idle', server: ex.server || 's1', mgr: ex.mgr || 'proto', ssh: ex.ssh || 'false', tabsel: ex.tabsel || 'auto', step: ex.step || 'auto' };
+    const next = () => { let i = st.sel; do { i = (i + 1) % SCREENS.length; } while (SCREENS[i][1] === null); this.setState({ sel: i }); };
+    const prev = () => { let i = st.sel; do { i = (i - 1 + SCREENS.length) % SCREENS.length; } while (SCREENS[i][1] === null); this.setState({ sel: i }); };
+    return { c, theme, lang, items, scr, themeOpts, langOpts, caption: cur[0], pid: cur[1], next, prev, plat: st.plat, platOpts: seg('plat', [['windows', 'Windows'], ['macos', 'macOS'], ['linux', 'Linux']]), sizeOpts: seg('size', [['1000', '1000 × 700'], ['720', '720 × 600'], ['360', '360 × 560']]),
+    navStyle: 'min-height:36px;padding:0 14px;border:0;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;background:' + c.card + ';color:' + c.ink,
+    isWin: st.plat === 'windows', isMac: st.plat === 'macos', isLin: st.plat === 'linux',
+    ...(() => { const dims = { '1000': [1000, 700], '720': [720, 600], '360': [360, 560] }[st.size || '1000']; const chrome = { windows: 32, macos: 40, linux: 46 }[st.plat || 'windows']; return { fw: dims[0], fh: dims[1], aw: dims[0], ah: dims[1] - chrome, radius: st.plat === 'windows' ? 8 : 12 }; })(),
+    c: { ...c, bar: lt ? '#F2F3F5' : '#1B1C1F' } };
+  }
+}
+</script>
+</body>
+</html>

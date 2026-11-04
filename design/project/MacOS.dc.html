@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil for macOS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:1000px;height:700px;border-radius:12px;overflow:hidden;background:{{c.bg}};display:flex;flex-direction:column;font-family:Montserrat,system-ui,sans-serif">
+<div style="height:40px;flex:none;position:relative;display:flex;align-items:center;background:{{c.bar}};color:{{c.ink}}">
+<div style="display:flex;gap:8px;padding-left:16px" aria-hidden="true">
+<span style="width:12px;height:12px;border-radius:50%;background:#FF5F57"></span>
+<span style="width:12px;height:12px;border-radius:50%;background:#FEBC2E"></span>
+<span style="width:12px;height:12px;border-radius:50%;background:#28C840"></span>
+</div>
+<div style="position:absolute;left:0;right:0;text-align:center;font-size:13px;font-weight:600;pointer-events:none">Veil</div>
+</div>
+<dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="macos" layout="wide" w="1000" h="660" hint-size="1000px,660px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":1000,"height":700}}'>
+class Component extends DCLogic {
+  renderVals() { const th = this.props.theme ?? 'dark'; const lt = th === 'light'; return { theme: th, lang: this.props.lang ?? 'ru', c: { bg: lt ? '#FFFFFF' : '#0B0B0C', bar: lt ? '#F2F3F5' : '#1B1C1F', ink: lt ? '#0B0B0C' : '#FFFFFF', ctl: lt ? '#E4E6EA' : '#2A2B30', ground: lt ? '#E4E6EA' : '#0B0B0C' } }; }
+}
+</script>
+</body>
+</html>

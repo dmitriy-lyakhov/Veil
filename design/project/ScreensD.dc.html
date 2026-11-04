@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil screens: server management</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&display=swap" rel="stylesheet">
+<style>body{margin:0}</style>
+</helmet>
+<div style="width:1772px;height:1740px;box-sizing:border-box;padding:40px;background:#E4E6EA;display:flex;flex-wrap:wrap;gap:40px;align-content:flex-start;font-family:Montserrat,system-ui,sans-serif;color:#0B0B0C">
+<sc-for list="{{cells}}" as="p" hint-placeholder-count="8">
+<div style="width:393px;flex:none;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:14px;font-weight:600;height:20px">{{p.cap}}</div>
+<div style="width:393px;height:760px;border-radius:28px;overflow:hidden">
+<dc-import name="App" theme="{{p.theme}}" lang="{{p.lang}}" platform="{{p.platform}}" layout="compact" start="{{p.start}}" conn="{{p.conn}}" step="{{p.step}}" server="{{p.server}}" mgr="{{p.mgr}}" ssh="{{p.ssh}}" tabsel="{{p.tabsel}}" pi="{{p.pi}}" pm="{{p.pm}}" sheet="none" w="393" h="760" safe-top="12" safe-bottom="12" hint-size="393px,760px"></dc-import>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1772,"height":1740}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const c = (cap, start, theme, lang, o) => ({ cap, start, theme, lang, platform: 'android', conn: 'idle', step: 'auto', server: 's1', mgr: 'proto', ssh: 'false', tabsel: 'auto', pi: 'awg', pm: 'awg', ...(o || {}) });
+    return { cells: [
+      c('25 · Управление: протокол', 'manager', 'dark', 'ru'),
+      c('26 · Управление: сервисы', 'manager', 'dark', 'ru', { mgr: 'svc', ssh: 'true' }),
+      c('27 · Управление: каскад', 'manager', 'dark', 'ru', { mgr: 'casc', ssh: 'true' }),
+      c('28 · Управление: управление', 'manager', 'dark', 'ru', { mgr: 'mgmt' }),
+      c('29 · Установка протокола', 'protoInstall', 'dark', 'ru'),
+      c('30 · Протокол установлен', 'protoManage', 'dark', 'ru'),
+      c('31 · Настройки подключения', 'awgConn', 'dark', 'ru'),
+      c('32 · Сертификат центра', 'trustCA', 'dark', 'ru')
+    ] };
+  }
+}
+</script>
+</body>
+</html>

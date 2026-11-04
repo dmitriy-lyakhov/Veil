@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil app</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;500;600;700&family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+button{font-family:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accInk);outline-offset:2px}
+*{scrollbar-width:thin;scrollbar-color:var(--card2) transparent}
+::-webkit-scrollbar{width:10px;height:10px;background:transparent}
+::-webkit-scrollbar-track{background:transparent;margin:6px 0}
+::-webkit-scrollbar-thumb{background:var(--card2);border-radius:5px;border:3px solid transparent;background-clip:padding-box;min-height:40px}
+::-webkit-scrollbar-thumb:hover{background:var(--ink2);border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:active{background:var(--acc);border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-button,::-webkit-scrollbar-corner{display:none;width:0;height:0}
+@keyframes vBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+@keyframes vPop{0%{transform:scale(.92)}60%{transform:scale(1.05)}100%{transform:scale(1)}}
+@keyframes vFade{0%{background:var(--acc);border-color:var(--acc);color:var(--onacc)}100%{background:var(--bg);border-color:var(--ink);color:var(--ink)}}
+@keyframes vShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(4px)}}
+@keyframes vSpin{to{transform:rotate(360deg)}}
+@keyframes vRipple{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.65);opacity:0}}
+@keyframes vSheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes vSheetDown{from{transform:translateY(0)}to{transform:translateY(100%)}}
+@keyframes vDialogIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes vDialogOut{from{opacity:1;transform:none}to{opacity:0;transform:translateY(14px) scale(.98)}}
+@keyframes vScrimIn{from{opacity:0}to{opacity:var(--scrimA)}}
+@keyframes vScrimOut{from{opacity:var(--scrimA)}to{opacity:0}}
+@keyframes vRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes vSlideF{from{opacity:0;transform:translateX(32px)}to{opacity:1;transform:none}}
+@keyframes vSlideB{from{opacity:0;transform:translateX(-32px)}to{opacity:1;transform:none}}
+@keyframes vPageOut{from{opacity:1;transform:none}to{opacity:0;transform:translateX(-14px)}}
+@keyframes vTitleA{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes vTitleB{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes vDrop{from{opacity:0;transform:scaleY(.9) translateY(-6px)}to{opacity:1;transform:none}}
+@keyframes vGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes vFill{from{width:0}to{width:100%}}
+@keyframes vTick{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.v-sw:active .v-th{width:30px}
+.v-sw[data-on="true"]:active .v-th{width:30px;margin-left:-8px}
+[data-reduce="1"] *{animation-duration:.001s !important;animation-delay:0s !important;animation-iteration-count:1 !important;transition-duration:.001s !important}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001s !important;animation-delay:0s !important;animation-iteration-count:1 !important;transition-duration:.001s !important}}
+</style>
+</helmet>
+<div data-reduce="{{reduce}}" style="{{rootStyle}}">
+
+<sc-if value="{{isSide}}" hint-placeholder-val="{{false}}">
+<div style="{{sideBarStyle}}">
+<div style="display:flex;align-items:center;gap:10px;padding:0 8px;height:32px">
+<svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg>
+<sc-if value="{{showNavText}}" hint-placeholder-val="{{true}}"><span style="font-size:20px;font-weight:600">Veil</span></sc-if>
+</div>
+<nav aria-label="Main" style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="4">
+<button type="button" onClick="{{n.go}}" aria-current="{{n.aria}}" aria-label="{{n.label}}" title="{{n.label}}" style="{{n.wStyle}}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{n.d}}"></path></svg>
+<sc-if value="{{n.showLabel}}" hint-placeholder-val="{{true}}"><span>{{n.label}}</span></sc-if>
+</button>
+</sc-for>
+</nav>
+</div>
+</sc-if>
+
+<div style="flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;position:relative">
+<div style="{{topPad}}"></div>
+
+<div style="{{hdrStyle}}">
+<sc-if value="{{showBack}}" hint-placeholder-val="{{false}}">
+<button type="button" aria-label="{{t.back}}" onClick="{{goBack}}" style="position:absolute;left:{{backLeft}}px;top:50%;margin-top:-22px;width:44px;height:44px;border:0;border-radius:14px;background:transparent;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.back}}"></path></svg></button>
+</sc-if>
+<sc-if value="{{showLogo}}" hint-placeholder-val="{{true}}">
+<div style="display:flex;align-items:center;gap:10px">
+<svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg>
+<span style="font-size:20px;font-weight:600">Veil</span>
+</div>
+</sc-if>
+<sc-if value="{{showTitle}}" hint-placeholder-val="{{false}}">
+<h1 style="margin:0 0 0 {{titleML}}px;font-size:{{titleSize}}px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:{{titleMax}}px;animation:{{titleAnim}}">{{title}}</h1>
+</sc-if>
+<sc-if value="{{showPill}}" hint-placeholder-val="{{true}}">
+<div style="display:flex;align-items:center;gap:8px;background:var(--card);border-radius:14px;height:36px;padding:0 14px;font-size:13px;font-weight:600;white-space:nowrap">
+<span style="{{dotStyle}}"></span>
+<span>{{pillText}}</span>
+</div>
+</sc-if>
+</div>
+
+<sc-if value="{{showAside}}" hint-placeholder-val="{{false}}">
+<div style="{{asideStyle}}">
+<svg width="72" height="72" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg>
+<div style="text-align:center"><div style="font-size:18px;font-weight:600">{{statusTitle}}</div><div style="font-size:13px;font-weight:500;color:var(--ink2);margin-top:4px">{{statusSub}}</div></div>
+</div>
+</sc-if>
+
+<sc-if value="{{showHome}}" hint-placeholder-val="{{true}}">
+<div style="{{homeStyle}}">
+<div style="{{heroStyle}}">
+<div style="position:relative;width:{{ringS}}px;height:{{ringS}}px;flex:none">
+<sc-for list="{{ripples}}" as="r" hint-placeholder-count="2"><div style="{{r.style}}"></div></sc-for>
+<button type="button" aria-label="{{ringAria}}" onClick="{{onConnect}}" style="{{ringStyle}}">
+<sc-if value="{{showSpin}}" hint-placeholder-val="{{false}}">
+<svg viewBox="0 0 100 100" aria-hidden="true" style="position:absolute;left:-4px;top:-4px;width:calc(100% + 8px);height:calc(100% + 8px);animation:vSpin calc(1.1s*var(--spd)) linear infinite"><circle cx="50" cy="50" r="48.2" fill="none" stroke="#FF393D" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="90 213"></circle></svg>
+</sc-if>
+<sc-if value="{{showShield}}" hint-placeholder-val="{{false}}">
+<svg width="{{shieldS}}" height="{{shieldS}}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.shield}}"></path><path d="M8 12l3 3 5-6"></path></svg>
+</sc-if>
+<span style="{{labelStyle}}">{{ringLabel}}</span>
+<sc-if value="{{showTimer}}" hint-placeholder-val="{{false}}">
+<span style="font-family:Arimo,Arial,sans-serif;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap">{{timer}}</span>
+</sc-if>
+</button>
+</div>
+<div style="text-align:center;padding:0 16px">
+<div style="font-size:16px;font-weight:600">{{statusTitle}}</div>
+<div style="font-size:13px;font-weight:500;color:var(--ink2);margin-top:4px">{{statusSub}}</div>
+<div style="font-family:Arimo,Arial,sans-serif;font-size:13px;color:var(--ink2);margin-top:6px;min-height:16px">{{traffic}}</div>
+</div>
+<sc-if value="{{showRecheck}}" hint-placeholder-val="{{false}}"><button type="button" onClick="{{recheck}}" style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;border:0;border-radius:14px;background:var(--card);color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;max-width:100%"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.refresh}}"></path></svg><span>{{recheckText}}</span></button></sc-if>
+<button type="button" onClick="{{openSplit}}" style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 16px;border:0;border-radius:14px;background:var(--card);color:var(--ink);font-size:13px;font-weight:500;cursor:pointer;max-width:100%">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.split}}"></path></svg>
+<span>{{splitText}}</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink2)" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.down}}"></path></svg>
+</button>
+</div>
+
+<div style="{{sideStyle}}">
+<sc-if value="{{isCompact}}" hint-placeholder-val="{{true}}"><div style="width:44px;height:5px;border-radius:3px;background:var(--card2);margin:0 auto 6px"></div></sc-if>
+<button type="button" onClick="{{openServers}}" style="{{srvStyle}}">
+<span style="display:flex;align-items:center;gap:8px;font-size:{{srvFont}}px;font-weight:600">{{srvName}}
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink2)" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.down}}"></path></svg></span>
+<span style="font-size:13px;font-weight:500;color:var(--ink2)">{{srvInfo}}</span>
+</button>
+<sc-if value="{{isSide}}" hint-placeholder-val="{{false}}">
+<div style="display:grid;grid-template-columns:repeat({{statsCols}}, minmax(0, 1fr));gap:{{statsGap}}px">
+<sc-for list="{{stats}}" as="s" hint-placeholder-count="4">
+<button type="button" onClick="{{openTraffic}}" style="background:var(--card);border:0;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0;text-align:left;color:var(--ink);cursor:pointer">
+<span style="font-size:12px;font-weight:500;color:var(--ink2)">{{s.label}}</span>
+<span style="font-size:{{statsFont}}px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap">{{s.val}}<span style="font-family:Arimo,Arial,sans-serif;font-size:12px;font-weight:400;color:var(--ink2);margin-left:4px">{{s.unit}}</span></span>
+<span style="font-family:Arimo,Arial,sans-serif;font-size:12px;color:var(--ok);min-height:14px">{{s.delta}}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showShare}}" hint-placeholder-val="{{false}}">
+<div style="{{pageStyle}}">
+<div style="position:relative;width:100%;max-width:560px;display:flex;flex-direction:column;gap:12px">
+<sc-if value="{{hasDrop}}" hint-placeholder-val="{{false}}"><button type="button" aria-label="{{t.close}}" onClick="{{closeDrop}}" style="position:absolute;left:-2000px;top:-2000px;width:5000px;height:5000px;border:0;padding:0;background:transparent;z-index:1;cursor:default"></button></sc-if>
+<div style="position:relative;display:flex;background:var(--card);border-radius:16px;padding:4px;height:52px;box-sizing:border-box">
+<div style="{{segInd}}"></div>
+<button type="button" onClick="{{tabToConn}}" style="position:relative;flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-size:15px;font-weight:600;cursor:pointer;border-radius:12px">{{t.segConn}}</button>
+<button type="button" onClick="{{tabToUsers}}" style="position:relative;flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-size:15px;font-weight:600;cursor:pointer;border-radius:12px">{{t.segUsers}}</button>
+</div>
+<sc-if value="{{tabConn}}" hint-placeholder-val="{{true}}">
+<p style="margin:4px 0 4px;font-size:14px;font-weight:500;color:var(--ink2);line-height:1.4">{{t.shareLead}}</p>
+<label style="display:flex;flex-direction:column;gap:4px;background:var(--card);border-radius:14px;padding:10px 16px;min-height:64px;box-sizing:border-box;justify-content:center">
+<span style="font-size:12px;font-weight:500;color:var(--ink2)">{{t.lblName}}</span>
+<input type="text" value="{{name}}" onChange="{{onName}}" style="border:0;outline:0;background:transparent;color:var(--ink);font-family:inherit;font-size:16px;font-weight:600;padding:0;width:100%">
+</label>
+</sc-if>
+<sc-for list="{{fields}}" as="f" hint-placeholder-count="3">
+<div style="position:relative;z-index:{{f.z}}">
+<button type="button" onClick="{{f.go}}" aria-haspopup="listbox" aria-expanded="{{f.exp}}" style="display:flex;align-items:center;justify-content:space-between;width:100%;min-height:64px;padding:10px 16px;box-sizing:border-box;border:0;border-radius:14px;background:var(--card);color:var(--ink);text-align:left;cursor:pointer">
+<span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:500;color:var(--ink2)">{{f.label}}</span><span style="font-size:16px;font-weight:600">{{f.value}}</span></span>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink2)" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" style="{{f.chevStyle}}"><path d="{{f.chev}}"></path></svg>
+</button>
+<sc-if value="{{f.isOpen}}" hint-placeholder-val="{{false}}">
+<div role="listbox" style="position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:8;background:var(--card2);border-radius:14px;padding:6px;display:flex;flex-direction:column;gap:2px;box-shadow:0 4px 12px rgba(0,0,0,.18);transform-origin:top center;animation:vDrop calc(.22s*var(--spd)) cubic-bezier(.2,0,.2,1) both">
+<sc-for list="{{f.items}}" as="o" hint-placeholder-count="3">
+<button type="button" role="option" aria-selected="{{o.aria}}" onClick="{{o.pick}}" style="{{o.anim}}display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 10px;border:0;border-radius:11px;background:transparent;color:var(--ink);text-align:left;cursor:pointer;width:100%">
+<span style="width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center">
+<sc-if value="{{o.isRadio}}" hint-placeholder-val="{{true}}"><span style="{{o.rb}}"><span style="{{o.dot}}"></span></span></sc-if>
+<sc-if value="{{o.isDl}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink2)" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{o.dlPath}}"></path></svg></sc-if>
+<sc-if value="{{o.isBusy}}" hint-placeholder-val="{{false}}"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" style="animation:vSpin calc(.9s*var(--spd)) linear infinite"><circle cx="12" cy="12" r="9" fill="none" stroke="#FF393D" stroke-width="2.4" stroke-dasharray="20 37"></circle></svg></sc-if>
+</span>
+<span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;font-weight:600">{{o.title}}</span><span style="font-size:12px;font-weight:500;color:var(--ink2);line-height:1.35">{{o.sub}}</span></span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+<sc-if value="{{tabConn}}" hint-placeholder-val="{{true}}">
+<button type="button" onClick="{{onShare}}" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;border:0;border-radius:14px;background:var(--acc);color:var(--onacc);font-size:16px;font-weight:600;cursor:pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.share}}"></path></svg>
+<span>{{t.btnShare}}</span>
+</button>
+</sc-if>
+<sc-if value="{{tabConn}}" hint-placeholder-val="{{true}}"><button type="button" onClick="{{openRoute}}" style="display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;border:0;border-radius:14px;background:var(--card);color:var(--ink);font-size:15px;font-weight:600;cursor:pointer">{{routeText}}</button></sc-if>
+<sc-if value="{{tabUsers}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px"><h2 style="margin:0;font-size:20px;font-weight:600">{{t.usersH}}</h2>
+<button type="button" aria-label="{{t.searchAria}}" style="width:44px;height:44px;border:0;border-radius:14px;background:transparent;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.search}}"></path></svg></button></div>
+<sc-for list="{{users}}" as="u" hint-placeholder-count="2">
+<button type="button" onClick="{{u.go}}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:56px;padding:10px 16px;border:0;border-radius:14px;background:var(--card);color:var(--ink);text-align:left;cursor:pointer;font-size:15px;font-weight:600;{{u.anim}}">
+<span style="display:flex;flex-direction:column;gap:4px;min-width:0"><span>{{u.label}}</span><span style="font-size:12px;font-weight:500;color:var(--ink2);white-space:pre-line;line-height:1.4">{{u.sub}}</span></span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink2)" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{u.chev}}"></path></svg>
+</button>
+</sc-for>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showSettings}}" hint-placeholder-val="{{false}}">
+<div style="{{pageStyle}}">
+<div style="width:100%;max-width:560px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{setRows}}" as="r" hint-placeholder-count="4">
+<button type="button" class="v-sw" data-on="{{r.aria}}" role="switch" aria-checked="{{r.aria}}" onClick="{{r.flip}}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:10px 16px;border:0;border-radius:14px;background:var(--card);color:var(--ink);text-align:left;cursor:pointer;{{r.anim}}">
+<span style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-size:16px;font-weight:600">{{r.label}}</span><span style="font-size:13px;font-weight:500;color:var(--ink2)">{{r.sub}}</span></span>
+<span style="{{r.track}}"><span class="v-th" style="{{r.thumb}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" style="{{r.chk}}"><path d="{{r.chkPath}}"></path></svg></span></span>
+</button>
+</sc-for>
+<div style="height:8px"></div>
+<sc-for list="{{linkRows}}" as="r" hint-placeholder-count="4">
+<button type="button" onClick="{{r.go}}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:10px 16px;border:0;border-radius:14px;background:var(--card);color:var(--ink);text-align:left;cursor:pointer;{{r.anim}}">
+<span style="font-size:16px;font-weight:600">{{r.label}}</span>
+<span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;color:var(--ink2)">{{r.sub}}
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{r.chev}}"></path></svg></span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showAdd}}" hint-placeholder-val="{{false}}">
+<div style="{{pageStyle}}">
+<div style="width:100%;max-width:560px;display:flex;flex-direction:column;gap:8px">
+<p style="margin:0 0 8px;font-size:14px;font-weight:500;color:var(--ink2);line-height:1.4">{{t.addLead}}</p>
+<sc-for list="{{addRows}}" as="r" hint-placeholder-count="3">
+<button type="button" onClick="{{r.go}}" style="display:flex;align-items:center;gap:16px;min-height:76px;padding:12px 16px;border:0;border-radius:14px;background:var(--card);color:var(--ink);text-align:left;cursor:pointer;animation:vRise calc(.32s*var(--spd)) both;animation-delay:{{r.delay}}">
+<span style="width:44px;height:44px;border-radius:11px;background:var(--card2);display:flex;align-items:center;justify-content:center;color:var(--accInk);flex:none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{r.d}}"></path></svg></span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:16px;font-weight:600">{{r.label}}</span><span style="font-size:13px;font-weight:500;color:var(--ink2)">{{r.sub}}</span></span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink2)" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{r.chev}}"></path></svg>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showSplitScr}}" hint-placeholder-val="{{false}}">
+<div style="{{splitPageStyle}}">
+<div style="position:relative;flex:1;min-height:0;width:100%;max-width:560px;display:flex;flex-direction:column;gap:12px">
+<button type="button" class="v-sw" data-on="{{sp.aria}}" role="switch" aria-checked="{{sp.aria}}" onClick="{{sp.flipOn}}" style="flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:8px 16px;border:0;border-radius:14px;background:var(--card);color:var(--ink);text-align:left;cursor:pointer;opacity:{{sp.opacity}}" disabled="{{sp.unsupported}}">
+<span style="font-size:16px;font-weight:600">{{sp.toggleLabel}}</span>
+<span style="{{sp.track}}"><span class="v-th" style="{{sp.thumb}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" style="{{sp.chk}}"><path d="{{ic.check}}"></path></svg></span></span>
+</button>
+<div style="position:relative;flex:none;display:flex;background:var(--card);border-radius:16px;padding:4px;height:52px;box-sizing:border-box">
+<div style="{{sp.ind}}"></div>
+<button type="button" onClick="{{sp.setVia}}" disabled="{{sp.viaDis}}" style="position:relative;flex:1;min-width:0;border:0;background:transparent;color:var(--ink);opacity:{{sp.viaOp}};font-size:15px;font-weight:600;cursor:pointer;border-radius:12px">{{t.viaVpn}}</button>
+<button type="button" onClick="{{sp.setDirect}}" disabled="{{sp.unsupported}}" style="position:relative;flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-size:15px;font-weight:600;cursor:pointer;border-radius:12px">{{t.directly}}</button>
+</div>
+<p style="flex:none;margin:0;font-size:14px;font-weight:500;color:var(--ink2);line-height:1.4">{{sp.desc}}</p>
+<sc-if value="{{sp.showNote}}" hint-placeholder-val="{{false}}">
+<div style="flex:none;display:flex;gap:12px;align-items:center;background:var(--card);border-radius:14px;padding:14px 16px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" style="flex:none"><path d="{{sp.infoPath}}"></path></svg>
+<span style="font-size:13px;font-weight:500;line-height:1.45">{{sp.note}}</span>
+</div>
+</sc-if>
+<div style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+<sc-if value="{{sp.empty}}" hint-placeholder-val="{{false}}"><div style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 24px;font-size:14px;font-weight:500;color:var(--ink2)">{{sp.emptyText}}</div></sc-if>
+<sc-for list="{{sp.rows}}" as="r" hint-placeholder-count="3">
+<div style="{{r.anim}}">
+<div style="display:flex;align-items:center;gap:4px;background:var(--card);border-radius:14px;min-height:52px">
+<span style="flex:1;min-width:0;padding:8px 16px;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{r.text}}</span>
+<button type="button" aria-label="{{r.rmAria}}" onClick="{{r.rm}}" style="width:44px;height:44px;margin-right:4px;flex:none;border:0;border-radius:14px;background:transparent;color:var(--ink2);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{r.rmPath}}"></path></svg></button>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="flex:none;display:flex;align-items:center;gap:8px;padding-bottom:4px">
+<div style="flex:1;min-width:0;display:flex;background:var(--card);border-radius:14px;overflow:hidden;height:52px">
+<input type="text" value="{{sp.input}}" onChange="{{sp.onInput}}" placeholder="{{sp.placeholder}}" aria-label="{{sp.placeholder}}" disabled="{{sp.unsupported}}" style="flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font-family:inherit;font-size:15px;font-weight:500;padding:0 16px">
+<button type="button" aria-label="{{t.add}}" onClick="{{sp.add}}" disabled="{{sp.unsupported}}" style="width:60px;border:0;background:var(--card2);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.plus}}"></path></svg></button>
+</div>
+<sc-if value="{{sp.hasMenu}}" hint-placeholder-val="{{false}}"><button type="button" aria-label="{{t.more}}" aria-expanded="{{sp.menuAria}}" onClick="{{sp.toggleMenu}}" style="width:44px;height:52px;flex:none;border:0;border-radius:14px;background:transparent;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.5 4h3v3h-3zM10.5 10.5h3v3h-3zM10.5 17h3v3h-3z"></path></svg></button></sc-if>
+<sc-if value="{{sp.hasPick}}" hint-placeholder-val="{{false}}"><button type="button" aria-label="{{t.pickApp}}" onClick="{{sp.pick}}" style="width:44px;height:52px;flex:none;border:0;border-radius:14px;background:transparent;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.qr}}"></path></svg></button></sc-if>
+</div>
+<sc-if value="{{sp.menuOpen}}" hint-placeholder-val="{{false}}">
+<button type="button" aria-label="{{t.close}}" onClick="{{sp.toggleMenu}}" style="position:absolute;left:-2000px;top:-2000px;width:5000px;height:5000px;border:0;padding:0;background:transparent;cursor:default"></button>
+<div role="menu" style="position:absolute;right:0;bottom:64px;width:min(300px,100%);background:var(--card2);border-radius:14px;padding:6px;display:flex;flex-direction:column;box-shadow:0 4px 12px rgba(0,0,0,.18);transform-origin:bottom right;animation:vDrop calc(.2s*var(--spd)) both">
+<sc-for list="{{sp.menu}}" as="m" hint-placeholder-count="4">
+<button type="button" role="menuitem" onClick="{{m.go}}" style="min-height:44px;padding:0 12px;border:0;border-radius:11px;background:transparent;color:{{m.color}};font-size:14px;font-weight:600;text-align:left;cursor:pointer">{{m.label}}</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{showGen}}" hint-placeholder-val="{{false}}">
+<div style="{{genOuter}}">
+<div style="{{genScroll}}">
+<div style="position:relative;width:100%;max-width:560px;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{gen.blocks}}" as="b" hint-placeholder-count="4">
+<div style="{{b.anim}}">
+
+<sc-if value="{{b.isHero}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:12px 8px 8px">
+<sc-if value="{{b.showMark}}" hint-placeholder-val="{{false}}"><svg width="96" height="96" viewBox="0 0 32 32" aria-hidden="true"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg></sc-if>
+<sc-if value="{{b.showIcon}}" hint-placeholder-val="{{false}}"><div style="{{b.iconStyle}}"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{b.d}}"></path></svg></div></sc-if>
+<h2 style="margin:0;font-size:24px;font-weight:600;line-height:1.2">{{b.title}}</h2>
+<p style="margin:0;font-size:14px;font-weight:500;color:var(--ink2);line-height:1.5;max-width:420px">{{b.text}}</p>
+</div>
+</sc-if>
+
+<sc-if value="{{b.isLead}}" hint-placeholder-val="{{false}}"><p style="margin:0;font-size:14px;font-weight:500;color:var(--ink2);line-height:1.45">{{b.text}}</p></sc-if>
+<sc-if value="{{b.isHeading}}" hint-placeholder-val="{{false}}"><h2 style="margin:10px 0 0;font-size:18px;font-weight:600">{{b.title}}</h2></sc-if>
+<sc-if value="{{b.isSpace}}" hint-placeholder-val="{{false}}"><div style="height:8px"></div></sc-if>
+
+<sc-if value="{{b.isRow}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{b.go}}" style="display:flex;align-items:center;gap:14px;min-height:64px;padding:10px 16px;border:0;border-radius:14px;background:var(--card);color:{{b.color}};text-align:left;cursor:pointer;width:100%">
+<sc-if value="{{b.hasDot}}" hint-placeholder-val="{{false}}"><span style="width:10px;height:10px;flex:none;border-radius:50%;background:{{b.dotColor}}"></span></sc-if>
+<sc-if value="{{b.hasIcon}}" hint-placeholder-val="{{false}}"><span style="width:44px;height:44px;border-radius:11px;background:var(--card2);display:flex;align-items:center;justify-content:center;color:var(--accInk);flex:none"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{b.d}}"></path></svg></span></sc-if>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:16px;font-weight:600">{{b.label}}</span><sc-if value="{{b.hasSub}}" hint-placeholder-val="{{false}}"><span style="font-size:13px;font-weight:500;color:var(--ink2);line-height:1.4">{{b.sub}}</span></sc-if></span>
+<sc-if value="{{b.hasValue}}" hint-placeholder-val="{{false}}"><span style="font-size:13px;font-weight:500;color:var(--ink2);white-space:nowrap">{{b.value}}</span></sc-if>
+<sc-if value="{{b.hasChev}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink2)" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" style="flex:none"><path d="{{b.chev}}"></path></svg></sc-if>
+</button>
+</sc-if>
+
+<sc-if value="{{b.isRadio}}" hint-placeholder-val="{{false}}">
+<button type="button" role="radio" aria-checked="{{b.aria}}" onClick="{{b.pick}}" style="display:flex;align-items:center;gap:14px;min-height:64px;padding:10px 16px;border:0;border-radius:14px;background:var(--card);color:var(--ink);text-align:left;cursor:pointer;width:100%">
+<span style="width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center"><span style="{{b.rb}}"><span style="{{b.dot}}"></span></span></span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:16px;font-weight:600">{{b.label}}</span><sc-if value="{{b.hasSub}}" hint-placeholder-val="{{false}}"><span style="font-size:13px;font-weight:500;color:var(--ink2);line-height:1.4">{{b.sub}}</span></sc-if></span>
+</button>
+</sc-if>
+
+<sc-if value="{{b.isSwitch}}" hint-placeholder-val="{{false}}">
+<button type="button" class="v-sw" data-on="{{b.aria}}" role="switch" aria-checked="{{b.aria}}" onClick="{{b.flip}}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px;padding:10px 16px;border:0;border-radius:14px;background:var(--card);color:var(--ink);text-align:left;cursor:pointer;width:100%">
+<span style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-size:16px;font-weight:600">{{b.label}}</span><sc-if value="{{b.hasSub}}" hint-placeholder-val="{{false}}"><span style="font-size:13px;font-weight:500;color:var(--ink2);line-height:1.4">{{b.sub}}</span></sc-if></span>
+<span style="{{b.track}}"><span class="v-th" style="{{b.thumb}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--acc)" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" style="{{b.chk}}"><path d="{{b.chkPath}}"></path></svg></span></span>
+</button>
+</sc-if>
+
+<sc-if value="{{b.isSection}}" hint-placeholder-val="{{false}}"><div style="margin:10px 4px 0;font-size:12px;font-weight:600;color:var(--ink2)">{{b.title}}</div></sc-if>
+
+<sc-if value="{{b.isCheck}}" hint-placeholder-val="{{false}}">
+<button type="button" role="checkbox" aria-checked="{{b.aria}}" onClick="{{b.flip}}" style="display:flex;align-items:center;gap:14px;min-height:56px;padding:10px 16px;border:0;border-radius:14px;background:var(--card);color:var(--ink);text-align:left;cursor:pointer;width:100%">
+<span style="{{b.rb}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--onacc)" stroke-width="3.4" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" style="{{b.chk}}"><path d="{{b.chkPath}}"></path></svg></span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:600">{{b.label}}</span><sc-if value="{{b.hasSub}}" hint-placeholder-val="{{false}}"><span style="font-size:12px;font-weight:500;color:var(--ink2);line-height:1.4">{{b.sub}}</span></sc-if></span>
+</button>
+</sc-if>
+
+<sc-if value="{{b.isProg}}" hint-placeholder-val="{{false}}">
+<div style="background:var(--card);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px"><span style="font-size:14px;font-weight:600">{{b.label}}</span><div style="{{b.trackStyle}}"><div style="{{b.fillStyle}}"></div></div></div>
+</sc-if>
+
+<sc-if value="{{b.isLog}}" hint-placeholder-val="{{false}}">
+<div style="background:var(--card);border-radius:14px;padding:12px 16px;font-family:Arimo,Arial,sans-serif;font-size:12px;line-height:1.7;display:flex;flex-direction:column"><sc-for list="{{b.lines}}" as="l" hint-placeholder-count="3"><span style="color:{{l.color}}">{{l.text}}</span></sc-for></div>
+</sc-if>
+
+<sc-if value="{{b.isField}}" hint-placeholder-val="{{false}}">
+<label style="display:flex;flex-direction:column;gap:4px;background:var(--card);border-radius:14px;padding:10px 16px;min-height:64px;box-sizing:border-box;justify-content:center">
+<span style="font-size:12px;font-weight:500;color:var(--ink2)">{{b.label}}</span>
+<input type="{{b.inputType}}" value="{{b.input}}" onChange="{{b.onInput}}" placeholder="{{b.placeholder}}" style="border:0;outline:0;background:transparent;color:var(--ink);font-family:inherit;font-size:16px;font-weight:600;padding:0;width:100%">
+</label>
+</sc-if>
+
+<sc-if value="{{b.isArea}}" hint-placeholder-val="{{false}}">
+<label style="display:flex;flex-direction:column;gap:6px;background:var(--card);border-radius:14px;padding:12px 16px;box-sizing:border-box">
+<span style="font-size:12px;font-weight:500;color:var(--ink2)">{{b.label}}</span>
+<textarea rows="5" value="{{b.input}}" onChange="{{b.onInput}}" placeholder="{{b.placeholder}}" style="border:0;outline:0;resize:none;background:transparent;color:var(--ink);font-family:Arimo,Arial,sans-serif;font-size:14px;font-weight:400;padding:0;width:100%;line-height:1.4"></textarea>
+</label>
+</sc-if>
+
+<sc-if value="{{b.isNote}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;gap:12px;align-items:center;background:var(--card);border-radius:14px;padding:14px 16px">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" style="flex:none"><path d="{{b.d}}"></path></svg>
+<span style="font-size:13px;font-weight:500;line-height:1.45">{{b.text}}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{b.isKv}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--card);border-radius:14px;padding:12px 16px;min-height:52px;box-sizing:border-box">
+<span style="font-size:14px;font-weight:500;color:var(--ink2)">{{b.label}}</span>
+<span style="font-family:Arimo,Arial,sans-serif;font-size:14px;font-weight:700;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">{{b.value}}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{b.isQr}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;justify-content:center;padding:6px 0">
+<div style="background:#FFFFFF;border-radius:16px;padding:16px;width:220px;height:220px;box-sizing:border-box">
+<svg viewBox="0 0 25 25" width="188" height="188" role="img" aria-label="QR" shape-rendering="crispEdges"><path d="{{b.qrD}}" fill="#0B0B0C"></path></svg>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{b.isSteps}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{b.steps}}" as="s" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:14px;background:var(--card);border-radius:14px;padding:12px 16px;min-height:56px;box-sizing:border-box;opacity:{{s.op}}">
+<span style="width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center">
+<sc-if value="{{s.isDone}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" style="animation:vTick calc(.3s*var(--spd)) cubic-bezier(.2,0,.2,1) both"><path d="{{s.chk}}"></path></svg></sc-if>
+<sc-if value="{{s.isBusy}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="animation:vSpin calc(.9s*var(--spd)) linear infinite"><circle cx="12" cy="12" r="9" fill="none" stroke="#FF393D" stroke-width="2.4" stroke-dasharray="20 37"></circle></svg></sc-if>
+<sc-if value="{{s.isTodo}}" hint-placeholder-val="{{false}}"><span style="width:10px;height:10px;border-radius:50%;background:var(--card2)"></span></sc-if>
+</span>
+<span style="font-size:15px;font-weight:600">{{s.label}}</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{b.isPlan}}" hint-placeholder-val="{{false}}">
+<button type="button" role="radio" aria-checked="{{b.aria}}" onClick="{{b.pick}}" style="{{b.planStyle}}">
+<span style="width:24px;height:24px;flex:none;display:flex;align-items:center;justify-content:center"><span style="{{b.rb}}"><span style="{{b.dot}}"></span></span></span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:16px;font-weight:600">{{b.label}}</span><span style="font-size:13px;font-weight:500;color:var(--ink2)">{{b.sub}}</span></span>
+<span style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span style="font-family:Arimo,Arial,sans-serif;font-size:16px;font-weight:700;white-space:nowrap">{{b.price}}</span><sc-if value="{{b.hasBadge}}" hint-placeholder-val="{{false}}"><span style="background:var(--acc);color:var(--onacc);font-size:11px;font-weight:700;border-radius:8px;padding:2px 8px;white-space:nowrap">{{b.badge}}</span></sc-if></span>
+</button>
+</sc-if>
+
+<sc-if value="{{b.isSeg}}" hint-placeholder-val="{{false}}">
+<div style="position:relative;display:flex;background:var(--card);border-radius:16px;padding:4px;height:52px;box-sizing:border-box">
+<div style="{{b.segInd}}"></div>
+<sc-for list="{{b.segs}}" as="g" hint-placeholder-count="3">
+<button type="button" onClick="{{g.pick}}" style="position:relative;flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-size:14px;font-weight:600;cursor:pointer;border-radius:12px;white-space:nowrap">{{g.label}}</button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{b.isBars}}" hint-placeholder-val="{{false}}">
+<div style="background:var(--card);border-radius:14px;padding:16px">
+<div style="display:flex;align-items:flex-end;gap:4px;height:120px">
+<sc-for list="{{b.bars}}" as="g" hint-placeholder-count="24"><div style="{{g.style}}"></div></sc-for>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:8px;font-family:Arimo,Arial,sans-serif;font-size:12px;color:var(--ink2)"><span>{{b.capL}}</span><span>{{b.capR}}</span></div>
+</div>
+</sc-if>
+
+<sc-if value="{{b.isDrop}}" hint-placeholder-val="{{false}}">
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;height:200px;border:2px dashed var(--ink2);border-radius:14px;color:var(--ink2);text-align:center;padding:0 24px;box-sizing:border-box">
+<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{b.d}}"></path></svg>
+<span style="font-size:14px;font-weight:500;line-height:1.4">{{b.text}}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{b.isBtn}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{b.go}}" style="{{b.btnStyle}}">
+<sc-if value="{{b.hasIcon}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{b.d}}"></path></svg></sc-if>
+<span>{{b.label}}</span>
+</button>
+</sc-if>
+
+</div>
+</sc-for>
+</div>
+</div>
+<sc-if value="{{gen.hasCta}}" hint-placeholder-val="{{false}}">
+<div style="{{gen.footStyle}}">
+<sc-if value="{{gen.hasPrimary}}" hint-placeholder-val="{{true}}"><button type="button" onClick="{{gen.ctaGo}}" style="display:flex;align-items:center;justify-content:center;width:100%;max-width:560px;min-height:52px;border:0;border-radius:14px;background:var(--acc);color:var(--onacc);font-size:16px;font-weight:600;cursor:pointer">{{gen.cta}}</button></sc-if>
+<sc-if value="{{gen.hasSec}}" hint-placeholder-val="{{false}}"><button type="button" onClick="{{gen.secGo}}" style="width:100%;max-width:560px;min-height:44px;border:0;border-radius:14px;background:transparent;color:var(--ink2);font-size:14px;font-weight:600;cursor:pointer">{{gen.sec}}</button></sc-if>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{hasToast}}" hint-placeholder-val="{{false}}">
+<div role="status" style="position:absolute;left:50%;bottom:{{toastBottom}}px;transform:translateX(-50%);z-index:15;background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 18px;font-size:14px;font-weight:600;white-space:nowrap;animation:vRise calc(.25s*var(--spd)) both">{{toast}}</div>
+</sc-if>
+
+<sc-if value="{{showNavBar}}" hint-placeholder-val="{{true}}">
+<nav aria-label="Main" style="{{navBarStyle}}">
+<sc-for list="{{nav}}" as="n" hint-placeholder-count="4">
+<button type="button" onClick="{{n.go}}" aria-current="{{n.aria}}" aria-label="{{n.label}}" style="{{n.cStyle}}">
+<span style="{{n.bar}}"></span>
+<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{n.d}}"></path></svg>
+</button>
+</sc-for>
+</nav>
+</sc-if>
+</div>
+
+<sc-if value="{{hasSheet}}" hint-placeholder-val="{{false}}">
+<div style="position:absolute;left:0;top:0;right:0;bottom:0;z-index:20">
+<button type="button" aria-label="{{t.close}}" onClick="{{closeSheet}}" style="{{scrimStyle}}"></button>
+<div style="{{wrapStyle}}">
+<div role="dialog" aria-label="{{sheetTitle}}" style="{{sheetStyle}}">
+<sc-if value="{{isCompact}}" hint-placeholder-val="{{true}}"><div style="width:44px;height:5px;border-radius:3px;background:var(--card2);margin:0 auto 14px"></div></sc-if>
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+<h2 style="margin:0;font-size:{{sheetTitleSize}}px;font-weight:600;line-height:1.2">{{sheetTitle}}</h2>
+<button type="button" aria-label="{{t.close}}" onClick="{{closeSheet}}" style="width:44px;height:44px;flex:none;margin:-8px -8px 0 0;border:0;border-radius:14px;background:transparent;color:var(--ink2);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.close}}"></path></svg></button>
+</div>
+<p style="margin:6px 0 16px;font-size:14px;font-weight:500;color:var(--ink2);line-height:1.45">{{sheetSub}}</p>
+<sc-if value="{{kindServers}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{openProtocols}}" style="display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;margin-bottom:16px;border:0;border-radius:14px;background:var(--ink);color:var(--bg);font-size:15px;font-weight:600;cursor:pointer">{{protoName}}
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.down}}"></path></svg></button>
+</sc-if>
+<sc-if value="{{kindList}}" hint-placeholder-val="{{true}}">
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{items}}" as="it" hint-placeholder-count="2">
+<div style="{{it.anim}}">
+<div style="display:flex;align-items:center;gap:4px;background:var(--card2);border-radius:14px">
+<button type="button" onClick="{{it.pick}}" style="flex:1;min-width:0;display:flex;align-items:center;gap:14px;min-height:60px;padding:12px 16px;border:0;background:transparent;color:var(--ink);text-align:left;cursor:pointer">
+<span style="width:24px;height:24px;flex:none;display:{{it.iconDisp}};align-items:center;justify-content:center">
+<sc-if value="{{it.isRadio}}" hint-placeholder-val="{{true}}"><span style="{{it.rb}}"><span style="{{it.dot}}"></span></span></sc-if>
+<sc-if value="{{it.isDl}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--ink2)" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{it.dlPath}}"></path></svg></sc-if>
+<sc-if value="{{it.isBusy}}" hint-placeholder-val="{{false}}"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" style="animation:vSpin calc(.9s*var(--spd)) linear infinite"><circle cx="12" cy="12" r="9" fill="none" stroke="#FF393D" stroke-width="2.4" stroke-dasharray="20 37"></circle></svg></sc-if>
+</span>
+<span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:16px;font-weight:600">{{it.title}}</span><span style="font-size:13px;font-weight:500;color:var(--ink2);line-height:1.4">{{it.sub}}</span></span>
+</button>
+<sc-if value="{{it.hasChev}}" hint-placeholder-val="{{false}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ink2)" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true" style="flex:none;margin-right:16px"><path d="{{it.chevPath}}"></path></svg></sc-if>
+<sc-if value="{{it.gear}}" hint-placeholder-val="{{false}}"><button type="button" aria-label="{{it.gearAria}}" onClick="{{it.gearGo}}" style="width:44px;height:44px;margin-right:6px;flex:none;border:0;border-radius:14px;background:transparent;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{it.gearPath}}"></path></svg></button></sc-if>
+</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{kindFull}}" hint-placeholder-val="{{false}}">
+<button type="button" onClick="{{closeSheet}}" style="width:100%;display:flex;align-items:center;justify-content:space-between;min-height:56px;padding:0 16px;border:0;border-radius:14px;background:var(--acc);color:var(--onacc);font-size:16px;font-weight:600;cursor:pointer">
+<span>{{t.btnShare}}</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true"><path d="{{ic.right}}"></path></svg>
+</button>
+</sc-if>
+</div>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":null,"default":"compact"},"platform":{"editor":null,"default":"ios"},"theme":{"editor":null,"default":"dark"},"lang":{"editor":null,"default":"ru"},"hinge":{"editor":null,"default":"none"},"w":{"editor":null,"default":393},"h":{"editor":null,"default":760},"safeTop":{"editor":null,"default":0},"safeBottom":{"editor":null,"default":0},"conn":{"editor":null,"default":"auto"},"sheet":{"editor":null,"default":"auto"},"screen":{"editor":null,"default":"auto"},"start":{"editor":null,"default":"home"},"server":{"editor":null,"default":"s1"},"mgr":{"editor":null,"default":"proto"},"ssh":{"editor":null,"default":"false"},"tabsel":{"editor":null,"default":"auto"},"pi":{"editor":null,"default":"awg"},"pm":{"editor":null,"default":"awg"},"step":{"editor":null,"default":"auto"},"speed":{"editor":null,"default":1},"reduce":{"editor":null,"default":"false"},"$preview":{"width":393,"height":760}}'>
+class Component extends DCLogic {
+  state = {
+    conn: 'idle', screen: null, hist: [], dir: 'tab', leaving: false, nc: 0, sheet: null, closing: false, tab: 'conn',
+    server: null, proto: 'awg', fmt: 'app', name: null, t: 0, k: 0, theme: null, lang: null, menu: false, toast: null, drop: null,
+    siteOn: true, siteMode: 'via', sites: ['intranet.corp.local', '192.168.10.0/24', 'github.com'], siteIn: '',
+    appOn: false, appMode: 'direct', apps: ['Telegram', 'Steam'], appIn: '',
+    step: 0, form: {}, selv: {},
+    tog: { auto: true, kill: true, login: false, lan: false, notif: true, obf: true, dnsleak: true, savelogs: false, upd: true, ssh: false, blockedC: false },
+    inst: { awg: 'done', wg: null, ovpn: null, ipsec: null }
+  };
+
+  componentDidMount() {
+    this._iv = setInterval(() => { this.setState({ t: this.state.t + 1, k: this.state.k + 1 }); }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this._iv); clearTimeout(this._to); clearTimeout(this._nt); clearTimeout(this._ti); }
+
+  startInstall(spd) {
+    clearTimeout(this._ti);
+    const tick = () => {
+      const s = this.state.step + 1;
+      this.setState({ step: s });
+      if (s >= 4) { this._ti = setTimeout(() => this._navTo && this._navTo('addDone', 'fwd'), 800 * spd); }
+      else { this._ti = setTimeout(tick, 1400 * spd); }
+    };
+    this.setState({ step: 0 });
+    this._ti = setTimeout(tick, 1400 * spd);
+  }
+
+  renderVals() {
+    const P = (k, f) => { const v = this.props[k]; return (v === undefined || v === null || v === '' || v === 'auto') ? f : v; };
+    const st = this.state;
+    const theme = st.theme || P('theme', 'dark');
+    const lang = st.lang || P('lang', 'ru');
+    const ru = lang === 'ru';
+    const L = (en, rus) => (ru ? rus : en);
+    const conn = P('conn', st.conn);
+    const curServer = st.server || P('server', 's1');
+    const startScreen = P('start', 'home');
+    const screen = P('screen', st.screen || startScreen);
+    const sheetRaw = P('sheet', st.sheet);
+    const sheet = (sheetRaw && sheetRaw !== 'none') ? sheetRaw : null;
+    const spd = Number(P('speed', 1)) || 1;
+    const w0 = Number(P('w', 393)); const layoutP = P('layout', 'compact'); const layout = layoutP === 'responsive' ? (w0 >= 720 ? 'wide' : 'compact') : layoutP;
+    const wide = layout === 'wide', rail = layout === 'rail';
+    const side = wide || rail;
+    const hinge = P('hinge', 'none') === 'vertical' && side;
+    const w = Number(P('w', 393)), h = Number(P('h', 760));
+    const sT = Number(P('safeTop', 0)), sB = Number(P('safeBottom', 0));
+    const platform = P('platform', 'ios');
+    const reduce = String(P('reduce', 'false')) === 'true' ? '1' : '0';
+    const tight = (h - sT - sB) < 640 && !side;
+    const dur = (s) => `calc(${s}s*var(--spd))`;
+    const railW = 72, hx = Math.round(w / 2), gut = 28;
+    const narrow = wide && w < 900;
+    const noop = () => {};
+    const TABS = ['home', 'share', 'settings', 'add'];
+
+    const vars = theme === 'light'
+      ? '--bg:#FFFFFF;--card:#F2F3F5;--card2:#E4E6EA;--ink:#0B0B0C;--ink2:#5B6068;--acc:#FF393D;--onacc:#0B0B0C;--accInk:#DB1E32;--ok:#177A44;--dim:#E4E6EA;--scrimA:.55;'
+      : '--bg:#0B0B0C;--card:#1B1C1F;--card2:#2A2B30;--ink:#FFFFFF;--ink2:#A8AAB2;--acc:#FF393D;--onacc:#0B0B0C;--accInk:#FF393D;--ok:#7DE0A0;--dim:#2A2B30;--scrimA:.78;';
+
+    const ic = {
+      home: 'M3 11l9-8 9 8M5 9.5V21h5v-6h4v6h5V9.5',
+      share: 'M17 3h4v4h-4zM3 10h4v4H3zM17 17h4v4h-4zM7 11l10-5M7 13l10 5',
+      sliders: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
+      plus: 'M12 4v16M4 12h16', down: 'M5 9l7 7 7-7', right: 'M9 5l7 7-7 7',
+      download: 'M12 3v13M6 11l6 6 6-6M4 21h16', check: 'M4 12l5 5 11-11',
+      search: 'M7 3h6l4 4v6l-4 4H7l-4-4V7zM16 16l5 5', split: 'M4 20L20 4M11 4h9v9',
+      shield: 'M12 2l8 3v7l-8 10-8-10V5z', close: 'M5 5l14 14M19 5L5 19',
+      server: 'M3 4h18v6H3zM3 14h18v6H3zM7 7h2M7 17h2',
+      qr: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2z',
+      back: 'M15 5l-7 7 7 7', info: 'M8 3h8l5 5v8l-5 5H8l-5-5V8zM12 11v6M12 7.5h.01',
+      warn: 'M12 3l10 18H2zM12 10v5M12 18h.01', lock: 'M6 11h12v10H6zM8 11V7h8v4', file: 'M6 2h9l5 5v15H6zM15 2v5h5',
+      camera: 'M3 7h4l2-3h6l2 3h4v13H3zM9 13h6v4H9z', copy: 'M8 8h12v12H8zM4 16V4h12', chart: 'M4 20V10M10 20V4M16 20v-8M22 20H2',
+      trash: 'M4 6h16M9 6V3h6v3M6 6v15h12V6M10 10v7M14 10v7', edit: 'M4 20h4L20 8l-4-4L4 16zM14 6l4 4',
+      bell: 'M6 17V10a6 6 0 0112 0v7l2 2H4zM10 21h4', refresh: 'M20 12a8 8 0 11-3-6M20 4v6h-6', link: 'M10 14l4-4M8 12l-3 3a3 3 0 004 4l3-3M16 12l3-3a3 3 0 00-4-4l-3 3',
+      user: 'M9 3h6v6H9zM4 21v-6h16v6', globe: 'M3 12h18M12 3v18M5 5h14v14H5z', empty: 'M3 8l9-5 9 5v9l-9 5-9-5zM3 8l9 5 9-5M12 13v9'
+    };
+
+    const t = {
+      navConnect: L('Connect', 'Подключение'), navShare: L('Share', 'Доступ'), navSettings: L('Settings', 'Настройки'), navAdd: L('Add server', 'Добавить'),
+      segConn: L('Connection', 'Подключение'), segUsers: L('Users', 'Пользователи'),
+      shareLead: L('Share VPN access without the ability to manage the server', 'Доступ к VPN без права управлять сервером'),
+      lblName: L('User name', 'Имя пользователя'), usersH: L('Users', 'Пользователи'), searchAria: L('Search users', 'Поиск пользователей'),
+      btnShare: L('Share', 'Поделиться'), close: L('Close', 'Закрыть'),
+      addLead: L('Choose how to add a connection', 'Выберите способ добавления'),
+      back: L('Back', 'Назад'), viaVpn: L('Via VPN', 'Через VPN'), directly: L('Directly', 'Напрямую'),
+      add: L('Add', 'Добавить'), more: L('More actions', 'Ещё'), pickApp: L('Choose an installed app', 'Выбрать установленное приложение')
+    };
+
+    const servers = [
+      { id: 's1', title: L('Amsterdam', 'Амстердам'), sub: '203.0.113.10' },
+      { id: 's2', title: L('Nearest entry', 'Ближайший вход'), sub: L('entries: Amsterdam, Tokyo → exit: Frankfurt', 'входы: Амстердам, Токио → выход: Франкфурт'), multi: true },
+      { id: 's3', title: L('Frankfurt', 'Франкфурт'), sub: '198.51.100.7' }
+    ];
+    const protos = [
+      { id: 'awg', title: 'AmneziaWG', sub: L('Based on WireGuard. High speed and stable operation in challenging networks.', 'На основе WireGuard. Высокая скорость и стабильная работа в сложных сетях.') },
+      { id: 'wg', title: 'WireGuard', sub: L('Popular protocol with high performance and low power consumption.', 'Популярный протокол: высокая скорость и низкое энергопотребление.') },
+      { id: 'ovpn', title: 'OpenVPN', sub: L('Flexible configuration. Uses SSL/TLS for key exchange.', 'Гибкая настройка. Обмен ключами по SSL/TLS.') },
+      { id: 'ipsec', title: 'IPsec', sub: L('IKEv2/IPsec. Restores the connection after signal loss.', 'IKEv2/IPsec. Восстанавливает соединение после потери сигнала.') }
+    ];
+    const fmts = [{ id: 'app', title: L('For the Veil app', 'Для приложения Veil') }];
+    const srv = servers.find(s => s.id === curServer) || servers[0];
+    const proto = protos.find(p => p.id === st.proto) || protos[0];
+    const fmt = fmts.find(f => f.id === st.fmt) || fmts[0];
+
+    const connected = conn === 'connected', disc = conn === 'disconnecting', connecting = conn === 'connecting';
+    const stepVal = Number(P('step', st.step));
+
+    // ---------- navigation with transitions ----------
+    const PARENT = {
+      servers: 'settings', serverInfo: 'servers', manager: 'serverInfo', sshLogin: 'manager', conn: 'settings', dnsPage: 'conn', killPage: 'conn',
+      splitSites: 'conn', splitApps: 'conn', catalog: 'splitSites', appPage: 'settings', logsPage: 'appPage', logView: 'logsPage', backup: 'settings',
+      aboutPage: 'settings', updateAvail: 'aboutPage', langPage: 'settings', deploy: 'add', installing: 'deploy', addDone: 'add', importFile: 'add', multiEntry: 'add',
+      entries: 'home', chain: 'manager', relayIssue: 'manager', nodeByKey: 'manager', protoInstall: 'manager', protoManage: 'manager', awgConn: 'protoManage',
+      protoClients: 'protoManage', trustCA: 'protoManage', shareResult: 'share', clientNew: 'share', clientDetail: 'share'
+    };
+    const navTo = (id, dir) => {
+      if (this.state.leaving) return;
+      const isTab = TABS.includes(id);
+      const d = dir || (isTab ? 'tab' : 'fwd');
+      this.setState({ leaving: true });
+      clearTimeout(this._nt);
+      this._nt = setTimeout(() => {
+        const cur = this.state.screen || startScreen;
+        const hist = d === 'back' ? this.state.hist.slice(0, -1) : (isTab ? [] : [...this.state.hist, cur]);
+        this.setState({ screen: id, hist, dir: d, leaving: false, nc: this.state.nc + 1, menu: false, drop: null });
+        if (id === 'installing') this.startInstall(spd);
+      }, 140 * spd);
+    };
+    this._navTo = navTo;
+    const goBack = () => {
+      const hh = st.hist;
+      if (hh.length) navTo(hh[hh.length - 1], 'back');
+      else navTo(PARENT[screen] || 'home', 'back');
+    };
+    const open = (k) => () => this.setState({ sheet: k, closing: false });
+    const closeSheet = () => {
+      if (this.state.closing) return;
+      this.setState({ closing: true });
+      setTimeout(() => this.setState({ sheet: null, closing: false }), 260 * spd);
+    };
+    const flash = (msg) => { this.setState({ toast: msg }); setTimeout(() => this.setState({ toast: null }), 1800 * spd); };
+    const setSel = (k, v) => () => this.setState({ selv: { ...this.state.selv, [k]: v } });
+    const getSel = (k, d) => (st.selv[k] !== undefined ? st.selv[k] : d);
+    const fv = (k, d) => (st.form[k] !== undefined ? st.form[k] : d);
+    const setF = (k) => (e) => this.setState({ form: { ...this.state.form, [k]: e.target.value } });
+    const tg = (k, d) => (st.tog[k] !== undefined ? st.tog[k] : d);
+    const flipT = (k) => () => this.setState({ tog: { ...this.state.tog, [k]: !this.state.tog[k] } });
+
+    const pageAnim = st.leaving ? `vPageOut ${dur(0.14)} ease both`
+      : `${st.dir === 'back' ? 'vSlideB' : (st.dir === 'fwd' ? 'vSlideF' : 'vRise')} ${dur(0.32)} cubic-bezier(.2,0,.2,1) both`;
+    const titleAnim = `${st.nc % 2 ? 'vTitleA' : 'vTitleB'} ${dur(0.28)} cubic-bezier(.2,0,.2,1) both`;
+
+    // ---------- connection ----------
+    const onConnect = () => {
+      const p = this.props.conn;
+      if (p && p !== 'auto') return;
+      clearTimeout(this._to);
+      if (conn === 'idle' || conn === 'error') {
+        this.setState({ conn: 'connecting' });
+        this._to = setTimeout(() => this.setState({ conn: 'connected', t: 0 }), 2000 * spd);
+      } else if (conn === 'connecting') {
+        this.setState({ conn: 'idle' });
+      } else if (conn === 'connected') {
+        this.setState({ conn: 'disconnecting' });
+        this._to = setTimeout(() => this.setState({ conn: 'idle' }), 800 * spd);
+      }
+    };
+
+    const ringS = narrow ? 168 : (wide ? 232 : (rail ? 200 : (tight ? 150 : 196)));
+    const labels = { idle: L('Connect', 'Подключить'), connecting: L('Connecting', 'Подключение'), connected: L('Connected', 'Подключено'), disconnecting: L('Disconnecting', 'Отключение'), error: L('Retry', 'Повторить') };
+    const ringLabel = labels[conn];
+    const baseFont = wide ? 24 : 22;
+    const usable = ringS * 0.62;
+    const fs = Math.max(11, Math.min(baseFont, Math.floor(usable / (ringLabel.length * 0.64))));
+    const labelStyle = `font-size:${fs}px;font-weight:600;white-space:nowrap;text-align:center;line-height:1.1`;
+    const shieldS = ringS < 160 ? 28 : 38;
+    const base = 'position:absolute;left:0;top:0;right:0;bottom:0;margin:0;padding:0;border-radius:50%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-family:inherit;';
+    let ringStyle = base;
+    if (conn === 'idle') ringStyle += `background:transparent;border:4px solid var(--ink);color:var(--ink);animation:vBreathe ${dur(4)} ease-in-out infinite;`;
+    else if (connecting) ringStyle += 'background:transparent;border:4px solid var(--dim);color:var(--ink);';
+    else if (connected) ringStyle += `background:var(--acc);border:4px solid var(--acc);color:var(--onacc);animation:vPop ${dur(0.5)} cubic-bezier(.2,0,.2,1) 1;`;
+    else if (disc) ringStyle += `background:var(--acc);border:4px solid var(--acc);color:var(--onacc);animation:vFade ${dur(0.7)} ease-in forwards;`;
+    else ringStyle += `background:transparent;border:4px dashed var(--accInk);color:var(--ink);animation:vShake ${dur(0.5)} ease 1;`;
+    const ripples = [];
+    if (connecting || connected) {
+      const d = connecting ? 1.8 : 4.2, n = connecting ? 3 : 2;
+      for (let i = 0; i < n; i++) ripples.push({ style: `position:absolute;left:0;top:0;right:0;bottom:0;border-radius:50%;box-sizing:border-box;border:2px solid var(--acc);opacity:0;pointer-events:none;animation:vRipple ${dur(d)} cubic-bezier(.2,0,.2,1) ${dur(d / n * i)} infinite;` });
+    }
+    const statusT = {
+      idle: L('Disconnected', 'Отключено'), connecting: L('Connecting…', 'Подключение…'), connected: L('Connected', 'Подключено'),
+      disconnecting: L('Disconnecting…', 'Отключение…'), error: L('Disconnected', 'Отключено')
+    };
+    const statusS = {
+      idle: L('Tap the button to connect', 'Нажмите кнопку, чтобы подключиться'),
+      connecting: L('Looking for the best route: IPv6 → IPv4, HTTP/3 → HTTP/2', 'Ищем лучший маршрут: IPv6 → IPv4, HTTP/3 → HTTP/2'),
+      get connected() { return srv.multi ? `${L('entry', 'вход')} ${L('Amsterdam', 'Амстердам')} (38 ${L('ms', 'мс')}) → ${L('exit', 'выход')} ${L('Frankfurt', 'Франкфурт')}` : `HTTP/3 · QUIC · IPv6 · ${timer}`; },
+      disconnecting: L('Closing the tunnel', 'Закрытие туннеля'),
+      error: L('Server unreachable', 'Сервер недоступен')
+    };
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const tt = st.t;
+    const timer = `${pad2(Math.floor(tt / 3600))}:${pad2(Math.floor(tt / 60) % 60)}:${pad2(tt % 60)}`;
+    const k = st.k;
+    const dl = (8 + 6 * Math.abs(Math.sin(k * 0.9))).toFixed(1);
+    const ul = (1.5 + 1.2 * Math.abs(Math.sin(k * 1.7))).toFixed(1);
+    const ping = Math.round(38 + 6 * Math.sin(k));
+    const on = connected;
+    const stats = [
+      { label: L('Download', 'Загрузка'), val: on ? dl : '—', unit: L('MB/s', 'МБ/с'), delta: on ? L('▼ incoming', '▼ входящий') : '' },
+      { label: L('Upload', 'Отдача'), val: on ? ul : '—', unit: L('MB/s', 'МБ/с'), delta: on ? L('▲ outgoing', '▲ исходящий') : '' },
+      { label: L('Latency', 'Задержка'), val: on ? String(ping) : '—', unit: L('ms', 'мс'), delta: on ? L('▲ stable', '▲ стабильно') : '' },
+      { label: L('Session', 'Сессия'), val: on ? timer : '—', unit: '', delta: '' }
+    ];
+
+    // ---------- nav ----------
+    const root = st.hist.length ? st.hist[0] : screen;
+    let rt = root; for (let i = 0; i < 8 && !TABS.includes(rt) && PARENT[rt]; i++) rt = PARENT[rt];
+    const activeNav = TABS.includes(rt) ? rt : 'home';
+    const navDefs = [['home', t.navConnect, ic.home], ['share', t.navShare, ic.share], ['settings', t.navSettings, ic.sliders], ['add', t.navAdd, ic.plus]];
+    const nav = navDefs.map(([id, label, d]) => {
+      const a = activeNav === id;
+      return {
+        id, label, d, aria: a ? 'page' : 'false', showLabel: !rail,
+        go: () => navTo(id, 'tab'),
+        cStyle: `position:relative;flex:1;min-width:0;height:56px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:${a ? 'var(--accInk)' : 'var(--ink2)'};cursor:pointer;transition:color ${dur(0.2)} ease`,
+        bar: `position:absolute;top:0;left:50%;margin-left:${a ? -14 : 0}px;width:${a ? 28 : 0}px;height:3px;border-radius:2px;background:var(--acc);transition:width ${dur(0.25)} cubic-bezier(.2,0,.2,1),margin ${dur(0.25)} cubic-bezier(.2,0,.2,1)`,
+        wStyle: `display:flex;align-items:center;justify-content:${rail ? 'center' : 'flex-start'};gap:12px;${rail ? 'width:56px;height:56px;' : 'height:48px;padding:0 12px;'}border:0;border-radius:11px;background:${a ? 'var(--card2)' : 'transparent'};color:${a ? 'var(--ink)' : 'var(--ink2)'};font-size:15px;font-weight:600;cursor:pointer;text-align:left;transition:background ${dur(0.2)} ease,color ${dur(0.2)} ease`
+      };
+    });
+
+    // ---------- items for sheets and dropdowns ----------
+    const radio = (sel) => ({
+      rb: `width:22px;height:22px;border-radius:50%;box-sizing:border-box;border:2px solid ${sel ? 'var(--accInk)' : 'var(--ink2)'};display:flex;align-items:center;justify-content:center;transition:border-color ${dur(0.2)} ease`,
+      dot: `width:10px;height:10px;border-radius:50%;background:var(--acc);transform:${sel ? 'scale(1)' : 'scale(0)'};transition:transform ${dur(0.2)} cubic-bezier(.2,0,.2,1)`
+    });
+    const common = { dlPath: ic.download, gearPath: ic.sliders, gearAria: L('Server settings', 'Настройки сервера'), iconDisp: 'flex', hasChev: false, chevPath: ic.right, gear: false, gearGo: noop };
+    const enOn = L('Enabled', 'Включено'), enOff = L('Disabled', 'Выключено');
+    const buildItems = (kind, after) => {
+      let items = [], title = '', sub = '';
+      if (kind === 'servers') {
+        title = L('Server', 'Сервер'); sub = L('Choose a server to connect through', 'Выберите сервер для подключения');
+        items = servers.map(s => ({ ...common, ...s, isRadio: true, isDl: false, isBusy: false, gear: true, sel: curServer === s.id, ...radio(curServer === s.id),
+          gearGo: () => { closeSheet(); setTimeout(() => navTo('serverInfo'), 280 * spd); },
+          pick: () => { this.setState({ server: s.id }); after(); } }));
+      } else if (kind === 'protocols') {
+        title = L('VPN protocol', 'Протокол VPN'); sub = L('Select an installed protocol or add a new one', 'Выберите установленный протокол или добавьте новый');
+        items = protos.map(p => {
+          const s = st.inst[p.id];
+          return { ...common, ...p, isRadio: s === 'done', isDl: !s, isBusy: s === 'busy', sel: st.proto === p.id, ...radio(st.proto === p.id),
+            pick: () => {
+              if (s === 'done') { this.setState({ proto: p.id }); after(); }
+              else if (s !== 'busy') {
+                this.setState({ inst: { ...this.state.inst, [p.id]: 'busy' } });
+                setTimeout(() => this.setState({ inst: { ...this.state.inst, [p.id]: 'done' } }), 1400 * spd);
+              }
+            } };
+        });
+      } else if (kind === 'format') {
+        title = L('Connection format', 'Формат подключения'); sub = L('Choose how the access file is delivered', 'Как передать файл доступа');
+        items = fmts.map(f => ({ ...common, ...f, sub: '', isRadio: true, isDl: false, isBusy: false, sel: st.fmt === f.id, ...radio(st.fmt === f.id), pick: () => { this.setState({ fmt: f.id }); after(); } }));
+      } else if (kind === 'split') {
+        title = L('Split tunneling', 'Раздельный доступ');
+        sub = L('Allows you to connect to some sites or applications through a VPN connection and bypass others', 'Позволяет часть сайтов и приложений направлять через VPN, а остальные — в обход');
+        const mk = (id, ttl, onF, n, target) => ({ ...common, id, title: ttl, sub: onF ? `${enOn} · ${n}` : enOff, isRadio: false, isDl: false, isBusy: false, iconDisp: 'none', hasChev: true, rb: '', dot: '',
+          pick: () => { closeSheet(); setTimeout(() => navTo(target), 280 * spd); } });
+        items = [
+          mk('sites', L('Site-based split tunneling', 'По сайтам'), st.siteOn, st.sites.length, 'splitSites'),
+          mk('apps', L('App-based split tunneling', 'По приложениям'), st.appOn, st.apps.length, 'splitApps')
+        ];
+      } else if (kind === 'full') {
+        title = L('Share full access to the server and VPN', 'Полный доступ к серверу и VPN');
+        sub = L('Use for your own devices, or share with those you trust to manage the server.', 'Для ваших устройств или тех, кому вы доверяете управление сервером.');
+      }
+      items = items.map((it, i) => ({ ...it, aria: it.sel ? 'true' : 'false', anim: `animation:vRise ${dur(0.32)} cubic-bezier(.2,0,.2,1) both;animation-delay:${dur(0.05 + i * 0.04)};` }));
+      return { items, title, sub };
+    };
+    const sk = sheet;
+    const sh = buildItems(sk, closeSheet);
+    const closing = st.closing;
+    const dialog = side;
+    const anim = dialog ? (closing ? 'vDialogOut' : 'vDialogIn') : (closing ? 'vSheetDown' : 'vSheetUp');
+    const dlgW = hinge ? w - hx - 40 : 460;
+    const sheetStyle = dialog
+      ? `position:relative;pointer-events:auto;width:${dlgW}px;max-width:92%;max-height:86%;overflow-y:auto;background:var(--card);border-radius:16px;padding:24px;box-sizing:border-box;box-shadow:0 4px 12px rgba(0,0,0,.18);animation:${anim} ${dur(0.3)} cubic-bezier(.2,0,.2,1) both`
+      : `position:relative;pointer-events:auto;width:100%;max-height:84%;overflow-y:auto;background:var(--card);border-radius:16px 16px 0 0;padding:12px 20px ${24 + sB}px;box-sizing:border-box;animation:${anim} ${dur(0.3)} cubic-bezier(.2,0,.2,1) both`;
+    const wrapStyle = `position:absolute;top:0;bottom:0;left:${hinge ? hx : 0}px;right:0;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:${dialog ? 'center' : 'flex-end'}`;
+
+    // ---------- switches ----------
+    const sw = (o) => ({
+      aria: String(o),
+      track: `position:relative;flex:none;width:48px;height:28px;border-radius:14px;background:${o ? 'var(--acc)' : 'var(--dim)'};transition:background ${dur(0.2)} ease`,
+      thumb: `position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:14px;background:${o ? 'var(--onacc)' : 'var(--ink)'};transform:translateX(${o ? 20 : 0}px);display:flex;align-items:center;justify-content:center;transition:transform ${dur(0.2)} cubic-bezier(.2,0,.2,1),background ${dur(0.2)} ease,width ${dur(0.12)} ease,margin ${dur(0.12)} ease`,
+      chk: `opacity:${o ? 1 : 0};transform:scale(${o ? 1 : 0.4});transition:opacity ${dur(0.2)} ease,transform ${dur(0.2)} cubic-bezier(.2,0,.2,1)`,
+      chkPath: ic.check
+    });
+    const stag = (i) => `animation:vRise ${dur(0.3)} cubic-bezier(.2,0,.2,1) both;animation-delay:${dur(0.03 + i * 0.035)};`;
+
+    // ---------- settings ----------
+    const platRow = platform === 'android' ? { label: L('Always-on VPN', 'Постоянный VPN'), sub: L('Reconnect after reboot', 'Подключаться после перезагрузки'), k: 'login' }
+      : (platform === 'ios' || platform === 'ipados') ? { label: L('Connect on demand', 'Подключение по требованию'), sub: L('Rules by network and app', 'Правила по сети и приложению'), k: 'login' }
+      : { label: L('Launch at login', 'Запуск при входе'), sub: L('Start with the system', 'Запускать вместе с системой'), k: 'login' };
+    const setRows = [];
+    const splitOn = st.siteOn || st.appOn;
+    const splitCount = (st.siteOn ? st.sites.length : 0) + (st.appOn ? st.apps.length : 0);
+    const openSplit = open('split');
+    const isDesk = platform === 'windows' || platform === 'macos' || platform === 'linux';
+    const linkRows = [
+      { label: L('Servers', 'Серверы'), sub: String(servers.length), go: () => navTo('servers') },
+      { label: L('Connection', 'Подключение'), sub: '', go: () => navTo('conn') },
+      { label: L('Application', 'Приложение'), sub: '', go: () => navTo('appPage') },
+      { label: L('Backup', 'Резервная копия'), sub: '', go: () => navTo('backup') },
+      { label: L('Theme', 'Тема'), sub: theme === 'light' ? L('Light', 'Светлая') : L('Dark', 'Тёмная'), go: () => this.setState({ theme: theme === 'light' ? 'dark' : 'light' }) },
+      { label: L('Language', 'Язык'), sub: ru ? 'Русский' : 'English', go: () => navTo('langPage') },
+      { label: L('About Veil', 'О Veil'), sub: '', go: () => navTo('aboutPage') },
+      ...(isDesk ? [{ label: L('Quit the app', 'Закрыть приложение'), sub: '', go: () => flash(L('The app closes', 'Приложение закроется')) }] : [])
+    ].map((r, i) => ({ ...r, chev: ic.right, anim: stag(i) }));
+    const addRows = [];
+
+    // ---------- share tab with dropdowns ----------
+    const tab = P('tabsel', st.tab);
+    const dropKind = st.drop;
+    const closeDrop = () => this.setState({ drop: null });
+    const fdef = [
+      { kind: 'servers', label: L('Server', 'Сервер'), value: srv.title },
+      { kind: 'format', label: L('Connection format', 'Формат подключения'), value: fmt.title }
+    ];
+    const fieldsAll = (tab === 'conn' ? fdef : fdef.slice(0, 1)).map(f => {
+      const isOpen = side && dropKind === f.kind;
+      const items = isOpen ? buildItems(f.kind, closeDrop).items.map(it => ({ ...it, gear: false })) : [];
+      return {
+        ...f, items, isOpen, exp: String(isOpen), z: isOpen ? 6 : 2,
+        chev: ic.down,
+        chevStyle: `transform:rotate(${isOpen ? 180 : 0}deg);transition:transform ${dur(0.22)} cubic-bezier(.2,0,.2,1)`,
+        go: side ? () => this.setState({ drop: isOpen ? null : f.kind }) : open(f.kind)
+      };
+    });
+    const users = [
+      { label: L("Ann's phone", 'Телефон Ани'), sub: `${L('auto', 'авто')} ${L('Amsterdam', 'Амстердам')} → ${L('Tokyo', 'Токио')} → ${L('Frankfurt', 'Франкфурт')} · 142 ${L('ms', 'мс')}\n↓ 1,2 ${L('GB', 'ГБ')}  ↑ 340 ${L('MB', 'МБ')}`, go: () => navTo('clientDetail') },
+      { label: L('Laptop', 'Ноутбук'), sub: `${L('exit on this server', 'выход на этом сервере')}\n↓ 4,8 ${L('GB', 'ГБ')}  ↑ 0,9 ${L('GB', 'ГБ')}`, go: () => navTo('clientDetail') },
+      { label: L('Router', 'Роутер'), sub: L('blocked · exit on this server', 'заблокирован · выход на этом сервере'), go: () => navTo('clientDetail') }
+    ].map((u, i) => ({ ...u, chev: ic.right, anim: stag(i) }));
+
+
+    // ---------- split tunneling screens ----------
+    const kindS = screen === 'splitSites' ? 'site' : (screen === 'splitApps' ? 'app' : null);
+    const desktopApp = platform === 'windows' || platform === 'macos' || platform === 'linux';
+    const unsupported = kindS === 'app' && (platform === 'ios' || platform === 'ipados');
+    let sp = {};
+    if (kindS) {
+      const isSite = kindS === 'site';
+      const key = isSite ? 'sites' : 'apps', inKey = isSite ? 'siteIn' : 'appIn', onKey = isSite ? 'siteOn' : 'appOn', modeKey = isSite ? 'siteMode' : 'appMode';
+      const list = st[key];
+      const onF = st[onKey];
+      const mode = isSite ? st.siteMode : (desktopApp ? 'direct' : st.appMode);
+      const viaDis = unsupported || (!isSite && desktopApp);
+      const add = () => {
+        const v = (st[inKey] || '').trim();
+        if (!v) return;
+        this.setState({ [key]: list.includes(v) ? list : [...list, v], [inKey]: '' });
+      };
+      const imported = ['vpn.example.org', '10.20.0.0/16'];
+      const pool = ['Firefox', 'Chrome', 'Slack', 'Zoom', 'Spotify'];
+      const menu = isSite ? [
+        { label: L('Add imported sites to existing ones', 'Добавить импортированные сайты к списку'), color: 'var(--ink)', go: () => { this.setState({ sites: [...list, ...imported.filter(x => !list.includes(x))], menu: false }); flash(L('Imported 2 sites', 'Импортировано сайтов: 2')); } },
+        { label: L('Replace site list', 'Заменить список сайтов'), color: 'var(--ink)', go: () => { this.setState({ sites: ['github.com', ...imported], menu: false }); flash(L('List replaced', 'Список заменён')); } },
+        { label: L('Save site list', 'Сохранить список сайтов'), color: 'var(--ink)', go: () => { this.setState({ menu: false }); flash(L('List saved to file', 'Список сохранён в файл')); } },
+        { label: L('Clear site list', 'Очистить список сайтов'), color: 'var(--accInk)', go: () => { this.setState({ sites: [], menu: false }); } }
+      ] : [];
+      const desc = isSite
+        ? (mode === 'via' ? L('Only the sites listed here will be accessed through the VPN', 'Только перечисленные сайты будут открываться через VPN') : L('Sites listed here will bypass the VPN', 'Перечисленные сайты будут открываться в обход VPN'))
+        : (mode === 'via' ? L('Only apps from the list will use the VPN', 'Только приложения из списка будут работать через VPN') : L('Apps from the list should not have access via VPN', 'Приложения из списка не будут работать через VPN'));
+      const note = unsupported
+        ? L('Per-app split tunneling is not available on iOS. Use site-based split tunneling instead.', 'Раздельный доступ по приложениям недоступен в iOS. Используйте режим по сайтам.')
+        : L('Only the "Apps from the list should not have access via VPN" mode is available on this platform', 'На этой платформе доступен только режим «Приложения из списка не работают через VPN»');
+      sp = {
+        ...sw(onF), unsupported, viaDis, viaOp: viaDis ? 0.45 : 1, opacity: unsupported ? 0.5 : 1,
+        toggleLabel: isSite ? L('Split tunneling', 'Раздельный доступ') : L('App split tunneling', 'Раздельный доступ по приложениям'),
+        flipOn: () => this.setState({ [onKey]: !onF }),
+        ind: `position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:12px;background:var(--card2);transform:translateX(${mode === 'via' ? 0 : 100}%);transition:transform ${dur(0.25)} cubic-bezier(.2,0,.2,1)`,
+        setVia: () => { if (!viaDis) this.setState({ [modeKey]: 'via' }); }, setDirect: () => this.setState({ [modeKey]: 'direct' }),
+        desc, showNote: unsupported || (!isSite && desktopApp), note, infoPath: ic.info,
+        empty: list.length === 0, emptyText: isSite ? L('No sites yet. Add a domain, IP address or subnet.', 'Сайтов пока нет. Добавьте домен, IP-адрес или подсеть.') : L('No apps yet. Add an app by name.', 'Приложений пока нет. Добавьте приложение по названию.'),
+        rows: list.map((text, i) => ({
+          text, rmPath: ic.close, rmAria: `${L('Remove', 'Удалить')} ${text}`,
+          rm: () => this.setState({ [key]: list.filter((_, j) => j !== i) }),
+          anim: stag(Math.min(i, 8))
+        })),
+        input: st[inKey], onInput: (e) => this.setState({ [inKey]: e.target.value }), add,
+        placeholder: isSite ? L('website or IP', 'сайт или IP') : L('application name', 'название приложения'),
+        hasMenu: isSite, menuOpen: isSite && st.menu, menuAria: String(!!st.menu), toggleMenu: () => this.setState({ menu: !this.state.menu }), menu,
+        hasPick: !isSite && !unsupported,
+        pick: () => { const nx = pool.find(x => !list.includes(x)); if (nx) this.setState({ apps: [...list, nx] }); }
+      };
+    }
+
+    // ---------- generic pages ----------
+    const FL = ['Hero', 'Lead', 'Heading', 'Row', 'Radio', 'Switch', 'Field', 'Area', 'Note', 'Kv', 'Qr', 'Steps', 'Plan', 'Seg', 'Bars', 'Btn', 'Drop', 'Space', 'Check', 'Prog', 'Log', 'Section'];
+    const BD = { hasDot: false, dotColor: 'var(--ink2)', lines: [], trackStyle: '', fillStyle: '', title: '', text: '', label: '', sub: '', value: '', d: '', color: 'var(--ink)', chev: ic.right, hasIcon: false, hasSub: false, hasValue: false, hasChev: false,
+      showMark: false, showIcon: false, iconStyle: '', go: noop, pick: noop, flip: noop, aria: 'false', track: '', thumb: '', chk: '', chkPath: ic.check, rb: '', dot: '',
+      input: '', onInput: noop, placeholder: '', inputType: 'text', qrD: '', steps: [], segs: [], segInd: '', bars: [], btnStyle: '', badge: '', hasBadge: false, price: '', planStyle: '', capL: '', capR: '' };
+    FL.forEach(f => { BD['is' + f] = false; });
+    const B = (type, o) => ({ ...BD, ['is' + type]: true, ...(o || {}) });
+    const hero = (kind, title, text) => B('Hero', { title, text, showMark: kind === 'mark', showIcon: kind !== 'mark', d: { check: ic.check, warn: ic.warn, shield: ic.shield, empty: ic.empty, lock: ic.lock }[kind] || ic.shield,
+      iconStyle: `width:96px;height:96px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;color:${kind === 'check' ? 'var(--ok)' : 'var(--accInk)'}` });
+    const lead = (text) => B('Lead', { text });
+    const heading = (title) => B('Heading', { title });
+    const row = (label, sub, go, o) => B('Row', { label, sub, hasSub: !!sub, go: go || noop, hasChev: !!go, ...(o || {}) });
+    const rowIcon = (label, sub, d, go, o) => row(label, sub, go, { d, hasIcon: true, ...(o || {}) });
+    const radioB = (label, sub, sel, pick) => B('Radio', { label, sub, hasSub: !!sub, pick, aria: String(sel), ...radio(sel) });
+    const switchB = (label, sub, k) => B('Switch', { label, sub, hasSub: !!sub, flip: flipT(k), ...sw(tg(k)) });
+    const field = (label, key, def, o) => B('Field', { label, input: fv(key, def), onInput: setF(key), ...(o || {}) });
+    const note = (text, d) => B('Note', { text, d: d || ic.info });
+    const kv = (label, value) => B('Kv', { label, value });
+    const btn = (label, kind, go, d) => B('Btn', { label, go, hasIcon: !!d, d: d || '',
+      btnStyle: `display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;border:0;border-radius:14px;background:${kind === 'primary' ? 'var(--acc)' : 'var(--card)'};color:${kind === 'primary' ? 'var(--onacc)' : (kind === 'danger' ? 'var(--accInk)' : 'var(--ink)')};font-size:15px;font-weight:600;cursor:pointer;width:100%` });
+    const segB = (key, def, labels) => {
+      const cur = getSel(key, def);
+      const idx = Math.max(0, labels.findIndex(([id]) => id === cur));
+      return B('Seg', { segs: labels.map(([id, label]) => ({ label, pick: setSel(key, id) })),
+        segInd: `position:absolute;top:4px;bottom:4px;left:4px;width:calc((100% - 8px) / ${labels.length});border-radius:12px;background:var(--card2);transform:translateX(${idx * 100}%);transition:transform ${dur(0.25)} cubic-bezier(.2,0,.2,1)` });
+    };
+    const qrPath = () => {
+      let d = '';
+      const fin = (x, y) => { const fx = x < 8 ? x : (x > 16 ? x - 18 : -1), fy = y < 8 ? y : (y > 16 ? y - 18 : -1); return fx >= 0 && fy >= 0 && (x < 8 || x > 16) && (y < 8 || y > 16) && !(x > 16 && y > 16) ? [fx, fy] : null; };
+      for (let y = 0; y < 25; y++) for (let x = 0; x < 25; x++) {
+        const f = fin(x, y);
+        let dark;
+        if (f) { const [a, b] = f; dark = a === 7 || b === 7 ? false : (a === 0 || a === 6 || b === 0 || b === 6 || (a >= 2 && a <= 4 && b >= 2 && b <= 4)); }
+        else dark = ((x * 31 + y * 17 + x * y * 7 + (x ^ y) * 3) % 5) < 2;
+        if (dark) d += `M${x} ${y}h1v1h-1z`;
+      }
+      return d;
+    };
+    const barsB = () => {
+      const bars = [];
+      for (let i = 0; i < 28; i++) {
+        const v = 18 + 70 * Math.abs(Math.sin(i * 0.55 + 1)) * (0.5 + 0.5 * Math.abs(Math.cos(i * 0.31)));
+        bars.push({ style: `flex:1;height:${Math.round(v)}%;background:${i % 7 === 6 ? 'var(--acc)' : 'var(--ink2)'};transform-origin:bottom;animation:vGrow ${dur(0.5)} cubic-bezier(.2,0,.2,1) both;animation-delay:${dur(i * 0.015)}` });
+      }
+      return B('Bars', { bars, capL: L('60 s ago', '60 с назад'), capR: L('now', 'сейчас') });
+    };
+    const stepsB = () => {
+      const labs = [L('Connecting over SSH', 'Подключение по SSH'), L('Installing the container runtime', 'Установка среды контейнеров'), L('Configuring the protocol', 'Настройка протокола'), L('Checking the tunnel', 'Проверка туннеля')];
+      return B('Steps', { steps: labs.map((label, i) => {
+        const s = stepVal > i ? 'done' : (stepVal === i ? 'busy' : 'todo');
+        return { label, isDone: s === 'done', isBusy: s === 'busy', isTodo: s === 'todo', op: s === 'todo' ? 0.6 : 1, chk: ic.check };
+      }) });
+    };
+    const planB = (label, sub, price, id, badge) => {
+      const sel = getSel('plan', 'year') === id;
+      return B('Plan', { label, sub, price, hasBadge: !!badge, badge: badge || '', pick: setSel('plan', id), aria: String(sel), ...radio(sel),
+        planStyle: `display:flex;align-items:center;gap:14px;min-height:76px;padding:12px 16px;border:0;border-radius:14px;background:${sel ? 'var(--card2)' : 'var(--card)'};color:var(--ink);text-align:left;cursor:pointer;width:100%;transition:background ${dur(0.2)} ease` });
+    };
+    const check = (label, sub, on, flip) => B('Check', { label, sub, hasSub: !!sub, aria: String(on), flip,
+      rb: `width:22px;height:22px;flex:none;border-radius:6px;box-sizing:border-box;border:2px solid ${on ? 'var(--acc)' : 'var(--ink2)'};background:${on ? 'var(--acc)' : 'transparent'};display:flex;align-items:center;justify-content:center;transition:background ${dur(0.2)} ease,border-color ${dur(0.2)} ease`,
+      chk: `opacity:${on ? 1 : 0};transform:scale(${on ? 1 : 0.4});transition:opacity ${dur(0.2)} ease,transform ${dur(0.2)} cubic-bezier(.2,0,.2,1)` });
+    const section = (title) => B('Section', { title });
+    const prog = (label, value, animate) => B('Prog', { label, value,
+      trackStyle: 'height:8px;border-radius:4px;background:var(--card2);overflow:hidden',
+      fillStyle: `height:100%;width:${animate ? '100%' : value};background:var(--acc);border-radius:4px;${animate ? `animation:vFill ${dur(2.6)} linear both;` : ''}` });
+    const logB = (lines) => B('Log', { lines: lines.map(l => ({ text: l[0], color: l[1] || 'var(--ink2)' })) });
+    const copyRow = (label, value) => B('Kv', { label, value });
+    const sshOk = !!st.tog.ssh || String(P('ssh', 'false')) === 'true';
+    const ms = L('ms', 'мс'), mb = L('MB', 'МБ'), gb = L('GB', 'ГБ');
+    const A = L('Amsterdam', 'Амстердам'), TK = L('Tokyo', 'Токио'), FR = L('Frankfurt', 'Франкфурт');
+    const pnames = { awg: 'AmneziaWG', wg: 'WireGuard', ovpn: 'OpenVPN', ipsec: 'IPsec' };
+    const pi = getSel('pi', P('pi', 'awg')), pm = getSel('pm', P('pm', 'awg'));
+    const sshLine = `root · 203.0.113.10 · ${L('port', 'порт')} 22 · ${L('password login', 'вход по паролю')}`;
+    const needSsh = () => [note(L('Settings of the cover site, domain and admin password are stored on the server. Sign in over SSH to open them.', 'Настройки сайта-прикрытия, домена и пароля админ-панели хранятся на сервере. Чтобы их открыть, войдите по SSH.'), ic.lock), btn(L('Sign in over SSH', 'Войти по SSH'), 'primary', () => navTo('sshLogin'), ic.lock)];
+    const svcGroups = [
+      [L('Neural networks', 'Нейросети'), [['chatgpt', 'ChatGPT', 24, 6], ['gemini', 'Gemini', 12, 4]]],
+      [L('Video', 'Видео'), [['twitch', 'Twitch', 16, 3], ['vimeo', 'Vimeo', 8, 2]]],
+      [L('Messengers', 'Мессенджеры'), [['tg', 'Telegram', 9, 2], ['discord', 'Discord', 31, 5]]],
+      ['YouTube', [['yt', 'YouTube', 58, 9]]],
+      [L('Games', 'Игры'), [['steam', 'Steam', 44, 8]]]
+    ];
+    const svcAll = svcGroups.flatMap(g => g[1]);
+    const svcOn = (id) => !!getSel('svc_' + id, false);
+    const svcCount = svcAll.filter(s => svcOn(s[0])).length;
+    const catState = getSel('cat', 'ready');
+    const allSel = svcCount === svcAll.length;
+    const setAllSvc = () => { const v = {}; svcAll.forEach(s => { v['svc_' + s[0]] = !allSel; }); this.setState({ selv: { ...this.state.selv, ...v } }); };
+    const loadCatalog = () => { this.setState({ selv: { ...this.state.selv, cat: 'loading' } }); setTimeout(() => this.setState({ selv: { ...this.state.selv, cat: 'ready' } }), 2700 * spd); };
+    const clientsList = [[L("Ann's phone", 'Телефон Ани'), `${L('auto', 'авто')} ${A} → ${TK} → ${FR} · 142 ${ms}`], [L('Laptop', 'Ноутбук'), L('exit on this server', 'выход на этом сервере')], [L('Router', 'Роутер'), L('blocked · exit on this server', 'заблокирован · выход на этом сервере')]];
+    const blockedC = tg('blockedC', false);
+
+    const PAGES = () => ({
+      add: { title: L('Add server', 'Добавить'), blocks: [
+        B('Field', { label: L('Connection key', 'Ключ подключения'), input: fv('key', ''), onInput: setF('key'), placeholder: 'veil://…' }),
+        btn(L('Paste', 'Вставить'), 'primary', () => navTo('importFile'), ic.copy),
+        note(L('Paste a key, add a configuration file or scan the QR code from the administrator app.', 'Вставьте ключ, добавьте файл конфигурации или отсканируйте QR-код из приложения администратора.'), ic.qr),
+        section(L('Other ways to connect', 'Другие способы подключения')),
+        rowIcon(L('Own server over SSH', 'Свой сервер по SSH'), L('Veil is installed on your server together with the cover site', 'Veil установится на ваш сервер вместе с сайтом-прикрытием'), ic.server, () => navTo('deploy')),
+        rowIcon(L('Configuration file', 'Файл с настройками подключения'), L('A .veil file issued by the admin panel', 'Файл .veil, выданный админ-панелью'), ic.file, () => navTo('importFile')),
+        rowIcon(L('Through the nearest entry', 'Через ближайший вход'), L('The exit is set explicitly, the nearest entry is chosen', 'Выход задаётся явно, вход выбирается ближайший'), ic.split, () => navTo('multiEntry'))
+      ] },
+      servers: { title: L('Servers', 'Серверы'), blocks: servers.map(s => row(s.title, s.sub, () => navTo('serverInfo'), { hasDot: true, dotColor: (connected && curServer === s.id) ? 'var(--ok)' : 'var(--ink2)' })) },
+      serverInfo: { title: srv.title, blocks: [
+        kv(L('Address', 'Адрес'), srv.multi ? L('3 nodes', '3 узла') : '203.0.113.10'), kv(L('Transport', 'Транспорт'), L('Auto: HTTP/3 → HTTP/2', 'Авто: HTTP/3 → HTTP/2')),
+        section(L('Admin panel', 'Админ-панель')), kv(L('Address', 'Адрес'), 'https://10.66.0.1/admin'), kv(L('Login', 'Логин'), 'admin'), kv(L('Password', 'Пароль'), '••••••••••••'),
+        btn(L('Open in browser', 'Открыть в браузере'), 'sec', () => flash(L('Connect to this server first', 'Сначала подключитесь к этому серверу')), ic.link),
+        note(L('The panel is available only through the VPN: connect to this server first. The browser will warn about the certificate.', 'Панель доступна только через VPN: сначала подключитесь к этому серверу. Браузер предупредит о сертификате.')),
+        btn(L('Manage the server', 'Управление сервером'), 'primary', () => navTo('manager'), ic.sliders),
+        btn(L('Remove the profile', 'Удалить профиль'), 'danger', () => flash(L('The server itself is not changed', 'Сам сервер не изменится')), ic.trash)] },
+      manager: { title: srv.title, blocks: (() => {
+        const tb = getSel('mgr', P('mgr', 'proto'));
+        const arr = [lead(sshLine), segB('mgr', P('mgr', 'proto'), [['proto', L('Protocol', 'Протокол')], ['svc', L('Services', 'Сервисы')], ['casc', L('Cascade', 'Каскад')], ['mgmt', L('Manage', 'Управление')]])];
+        if (tb === 'proto') {
+          arr.push(lead(L('WireGuard inside HTTPS: HTTP/3 (QUIC) with HTTP/2 fallback on port 443. To outsiders the server looks like an ordinary website.', 'WireGuard внутри HTTPS: HTTP/3 (QUIC) с запасным HTTP/2 на порту 443. Для посторонних сервер выглядит как обычный сайт.')),
+            kv(L('Server address', 'Адрес сервера'), '203.0.113.10'), kv(L('SSH access', 'Управление по SSH'), `root · ${L('port', 'порт')} 22`),
+            sshOk ? kv(L('Server version', 'Версия на сервере'), '0.5.x') : row(L('Server details', 'Сведения с сервера'), L('Version, cover site and clients: SSH sign-in required', 'Версия, сайт-прикрытие и клиенты — понадобится вход по SSH'), () => navTo('sshLogin')),
+            section(L('Other protocols', 'Другие протоколы')),
+            row('AmneziaWG', L('Installed · UDP 51820', 'Установлен · UDP 51820'), () => { this.setState({ selv: { ...this.state.selv, pm: 'awg' } }); navTo('protoManage'); }),
+            row('WireGuard', L('Not installed', 'Не установлен'), () => { this.setState({ selv: { ...this.state.selv, pi: 'wg' } }); navTo('protoInstall'); }),
+            row('OpenVPN', L('Installed · UDP 1194', 'Установлен · UDP 1194'), () => { this.setState({ selv: { ...this.state.selv, pm: 'ovpn' } }); navTo('protoManage'); }),
+            row('IPsec', L('Not installed', 'Не установлен'), () => { this.setState({ selv: { ...this.state.selv, pi: 'ipsec' } }); navTo('protoInstall'); }));
+        } else if (tb === 'svc') {
+          if (!sshOk) arr.push(...needSsh());
+          else arr.push(kv(L('Cover site', 'Сайт-прикрытие'), '[company]'), kv(L('Clients', 'Клиентов'), L('3 · online 1', '3 · онлайн 1')),
+            section(L('Domain', 'Домен')), lead(L('Enter a domain whose A/AAAA records point to this server. The cover site opens on it.', 'Укажите домен, A/AAAA-записи которого ведут на этот сервер. Сайт-прикрытие откроется по нему.')),
+            field(L('Domain', 'Домен'), 'domain', '', { placeholder: 'example.com' }), note(L('No domain set: clients connect by IP with a pinned certificate.', 'Домен не задан: клиенты подключаются по IP с закреплённым сертификатом.')),
+            btn(L('Save the domain', 'Сохранить домен'), 'sec', () => flash(L('Certificate requested', 'Сертификат запрошен'))),
+            section(L('Admin panel password', 'Пароль админ-панели')), field(L('New', 'Новый'), 'pw1', '', { inputType: 'password' }), field(L('Repeat', 'Ещё раз'), 'pw2', '', { inputType: 'password' }),
+            btn(L('Generate', 'Сгенерировать'), 'sec', () => flash(L('Password generated', 'Пароль сгенерирован')), ic.refresh), btn(L('Change the admin password', 'Сменить пароль админки'), 'primary', () => flash(L('Admin password changed', 'Пароль админки изменён'))),
+            btn(L('Update the server to 0.5.x', 'Обновить сервер до 0.5.x'), 'sec', () => flash(L('Updating the server…', 'Обновление сервера…')), ic.download));
+        } else if (tb === 'casc') {
+          if (!sshOk) arr.push(...needSsh());
+          else arr.push(section(L('Next nodes', 'Следующие узлы')), row(FR, L('[company] · clients 2', '[company] · клиентов 2'), () => flash(L('Disconnect the node?', 'Отключить узел?')), { hasDot: true, dotColor: 'var(--ok)' }),
+            btn(L('Link with your own server…', 'Связать со своим сервером…'), 'sec', () => navTo('chain'), ic.link), btn(L('Build a cascade of several servers…', 'Построить каскад из нескольких серверов…'), 'sec', () => navTo('chain'), ic.split),
+            btn(L('Connect through the nearest entry…', 'Подключение через ближайший вход…'), 'sec', () => navTo('multiEntry'), ic.split),
+            section(L('Latency to neighbors', 'Задержки до соседей')), kv(FR, `12,4 ${ms}`), kv(TK, `142,0 ${ms}`), kv(L('Seoul', 'Сеул'), L('no connection', 'нет связи')),
+            btn(L('Rebuild auto routes now', 'Перестроить автомаршруты сейчас'), 'primary', () => flash(L('Current routes are optimal', 'Текущие маршруты оптимальны')), ic.refresh),
+            btn(L('Add a node by cascade key…', 'Добавить узел по ключу каскада…'), 'sec', () => navTo('nodeByKey'), ic.copy),
+            section(L('Issued cascade keys', 'Выданные ключи каскада')), note(L('No keys issued.', 'Ключи не выдавались.')), btn(L('Issue a cascade key…', 'Выдать ключ каскада…'), 'sec', () => navTo('relayIssue'), ic.plus));
+        } else {
+          arr.push(row(L('Check the server', 'Проверить сервер'), L('Refresh version and clients', 'Обновить сведения о версии и клиентах'), () => flash(L('Server is reachable', 'Сервер доступен'))),
+            row(L('Update server packages', 'Обновить пакеты сервера'), L('Install system updates with the package manager', 'Установить обновления системы менеджером пакетов'), () => flash(L('Updating packages…', 'Обновление пакетов сервера…'))),
+            row(L('Restart the server', 'Перезагрузить сервер'), '', () => flash(L('VPN is unavailable during the restart', 'На время перезагрузки VPN недоступен')), { color: 'var(--accInk)' }),
+            row(L('Remove the server from the app', 'Удалить сервер из приложения'), '', () => flash(L('The server itself is not changed', 'Сам сервер не изменится')), { color: 'var(--accInk)' }),
+            row(L('Remove Veil from the server', 'Удалить Veil с сервера'), L('Stop the service and delete the program and settings on the server', 'Остановить службу и удалить программу и настройки на сервере'), () => flash(L('All clients will stop connecting', 'Все клиенты перестанут подключаться')), { color: 'var(--accInk)' }));
+        }
+        return arr; })() },
+      sshLogin: { title: `${L('Sign in to', 'Вход на')} «${srv.title}»`, blocks: [lead(L('The password is asked once and kept while the app is running.', 'Пароль запрашивается один раз и хранится, пока приложение запущено.')), field(L('SSH password', 'Пароль SSH'), 'sshpw', '', { inputType: 'password', placeholder: '••••••••' })],
+        cta: L('Sign in', 'Войти'), ctaGo: () => { this.setState({ tog: { ...this.state.tog, ssh: true } }); navTo('manager', 'back'); }, sec: L('Cancel', 'Отмена'), secGo: goBack },
+      chain: { title: L('Build a cascade', 'Построить каскад'), blocks: [
+        lead(L('Choose servers in the order the traffic passes: the first is the entry, the last is the exit.', 'Выберите серверы в порядке прохождения трафика: первый — вход, последний — выход.')),
+        field(L('Client name', 'Имя клиента'), 'cname', L('This device', 'Это устройство')),
+        row(`1. ${A}`, `${L('entry', 'вход')} · 203.0.113.10`, null), row(`2. ${TK}`, `${L('intermediate', 'промежуточный')} · 198.51.100.21`, null), row(`3. ${FR}`, `${L('exit', 'выход')} · 198.51.100.7`, null),
+        btn(L('Remove the last', 'Убрать последний'), 'sec', () => flash(L('Removed', 'Убрано')), ic.back), row(L('Add the next node…', 'Добавить следующий узел…'), L('No free servers left', 'Свободных серверов нет'), null)],
+        cta: L('Build and create the config', 'Построить и создать конфиг'), ctaGo: () => navTo('shareResult') },
+      relayIssue: { title: L('Cascade key', 'Ключ каскада'), blocks: [lead(L('The key is given to the previous node: it links itself to this server.', 'Ключ выдаётся предыдущему узлу: он сам свяжется с этим сервером.')), field(L('For the node', 'Для узла'), 'rname', '', { placeholder: L('Name of the previous node', 'Название предыдущего узла') })], cta: L('Issue', 'Выдать'), ctaGo: () => navTo('shareResult'), sec: L('Cancel', 'Отмена'), secGo: goBack },
+      nodeByKey: { title: L('Node by cascade key', 'Узел по ключу каскада'), blocks: [field(L('Name', 'Название'), 'nname', ''), field(L('Key', 'Ключ'), 'nkey', '', { placeholder: 'veil-relay://…' })], cta: L('Connect', 'Подключить'), ctaGo: () => { flash(L('Node linked', 'Узел связан')); navTo('manager', 'back'); }, sec: L('Cancel', 'Отмена'), secGo: goBack },
+      multiEntry: { title: L('Through the nearest entry', 'Через ближайший вход'), blocks: [
+        lead(L('The exit is the server where traffic leaves to the internet. The entries are tried in parallel and the fastest one wins.', 'Выход — сервер, через который трафик уходит в интернет, задаётся явно. Входы проверяются параллельно, выбирается самый быстрый.')),
+        field(L('Client name', 'Имя клиента'), 'mname', L('This device', 'Это устройство')), row(L('Exit', 'Выход'), FR, () => flash(FR), { hasValue: false }),
+        section(L('Entries', 'Входы')), check(A, '', getSel('e1', true), setSel('e1', !getSel('e1', true))), check(TK, '', getSel('e2', true), setSel('e2', !getSel('e2', true))),
+        check(L('The exit may also be an entry', 'Выход тоже может быть входом'), '', getSel('e3', false), setSel('e3', !getSel('e3', false))),
+        section(L('Path from entry to exit', 'Путь от входа до выхода')), radioB(L('Directly to the exit', 'Напрямую к выходу'), '', getSel('rmode', 'direct') === 'direct', setSel('rmode', 'direct')),
+        radioB(L('Through nodes, automatically by latency', 'Через узлы, автоматически по задержкам'), '', getSel('rmode', 'direct') === 'auto', setSel('rmode', 'auto')),
+        field(L('Intermediate nodes', 'Промежуточных узлов'), 'hops', L('all available', 'все доступные'))],
+        cta: L('Create the connection', 'Создать подключение'), ctaGo: () => navTo('shareResult') },
+      entries: { title: L('Entries', 'Входы'), blocks: [prog(L('Checking the entries…', 'Проверяем входы…'), '100%', false), kv(`${A}  ·  ${L('nearest', 'ближайший')}`, `38,2 ${ms}`), kv(TK, `142,0 ${ms}`), kv(L('Seoul', 'Сеул'), L('timeout', 'таймаут')),
+        note(`${L('The nearest entry', 'Ближайший вход')} «${A}» ${L('is saved. The connection switches to it.', 'сохранён. Подключение переключается на него.')}`)], cta: L('Done', 'Готово'), ctaGo: () => navTo('home', 'tab') },
+      deploy: { title: L('New server', 'Новый сервер'), blocks: [
+        field(L('Name', 'Название'), 'dname', '', { placeholder: L('For example: Amsterdam', 'Например: Амстердам') }),
+        row(L('Site language', 'Язык сайта'), L('Russian', 'Русский'), () => flash(L('Русский / English', 'Русский / English')), { hasValue: false }),
+        section(L('Transport', 'Транспорт')), radioB(L('Auto: HTTP/3 → HTTP/2', 'Авто: HTTP/3 → HTTP/2'), '', getSel('tr', 'auto') === 'auto', setSel('tr', 'auto')), radioB(L('HTTP/2 only (TCP)', 'Только HTTP/2 (TCP)'), '', getSel('tr', 'auto') === 'h2', setSel('tr', 'h2')),
+        section(L('Server', 'Сервер')), field('IPv6', 'v6', '', { placeholder: '2001:db8::10' }), field('IPv4', 'v4', '', { placeholder: '203.0.113.10' }), field(L('SSH port', 'SSH-порт'), 'sport', '22', { inputType: 'number' }), field(L('User', 'Пользователь'), 'suser', 'root'),
+        segB('auth', 'pass', [['pass', L('Password', 'Пароль')], ['key', L('SSH key', 'SSH-ключ')]]),
+        ...(getSel('auth', 'pass') === 'pass' ? [field(L('Password', 'Пароль'), 'spw', '', { inputType: 'password' })] : [field(L('SSH key', 'SSH-ключ'), 'skey', '', { placeholder: '~/.ssh/id_ed25519' }), field(L('Key passphrase', 'Пароль ключа'), 'sphrase', '', { inputType: 'password' })]),
+        note(L('The app connects over SSH, installs Veil (port 443, TCP and UDP) and generates a cover site.', 'Приложение подключится по SSH, установит Veil (порт 443, TCP и UDP) и сгенерирует сайт-визитку.'), ic.info)],
+        cta: L('Install and connect', 'Установить и подключить'), ctaGo: () => navTo('installing') },
+      installing: { bare: true, noBack: true, title: L('Installing', 'Установка'), blocks: [lead(L('This takes a few minutes. Keep the app open.', 'Это займёт несколько минут. Не закрывайте приложение.')), stepsB(),
+        logB([[`${L('Connecting to', 'Подключаемся к')} 203.0.113.10…`], [L('Installing veil-server as a systemd service', 'Ставим veil-server как systemd-службу')], [L('Opening 80 and 443 in ufw', 'Открываем 80 и 443 в ufw')], [stepVal >= 4 ? L('Done. The profile is saved.', 'Готово. Профиль сохранён.') : L('Generating the cover site…', 'Генерируем сайт-прикрытие…'), stepVal >= 4 ? 'var(--ok)' : 'var(--ink2)']])],
+        cta: '', sec: L('Cancel', 'Отменить'), secGo: () => navTo('add', 'tab') },
+      addDone: { bare: true, center: true, blocks: [hero('check', L('Server added', 'Сервер добавлен'), L('The profile is saved. You can connect now.', 'Профиль сохранён. Можно подключаться.')), kv(L('Server', 'Сервер'), '203.0.113.10')],
+        cta: L('Connect now', 'Подключиться'), ctaGo: () => navTo('home', 'tab') },
+      importFile: { title: L('Import configuration', 'Импорт конфигурации'), blocks: [lead(L('Paste a veil://… link or open the .veil file issued by your administrator.', 'Вставьте ссылку veil://… или откройте файл .veil, который выдала админ-панель вашего сервера.')),
+        field(L('Link', 'Ссылка'), 'ilink', '', { placeholder: 'veil://…' }), field(L('Name (optional)', 'Название (необязательно)'), 'iname', ''),
+        btn(L('Open a file…', 'Открыть файл…'), 'sec', () => flash('veil-ams.veil'), ic.file), btn(L('Paste', 'Вставить'), 'sec', () => flash(L('Clipboard is empty', 'Буфер пуст')), ic.copy),
+        kv('✓', `${L('Server', 'Сервер')} 203.0.113.10`)], cta: L('Add the server', 'Добавить сервер'), ctaGo: () => navTo('addDone') },
+      protoInstall: { title: `${L('Install', 'Установка')} ${pnames[pi]}`, blocks: (() => {
+        const arr = [];
+        if (pi === 'awg') arr.push(note(L('AmneziaWG is based on WireGuard with traffic masking. It is installed over SSH (Ubuntu/Debian).', 'AmneziaWG — протокол на основе WireGuard с маскировкой трафика. Устанавливается на сервер по SSH (Ubuntu/Debian).')),
+          field(L('Subnet', 'Подсеть'), 'asub', '10.8.2.0/24'), field(L('Port (UDP)', 'Порт (UDP)'), 'aport', '51820', { inputType: 'number' }), field(L('Jc: junk packet count', 'Jc — число мусорных пакетов'), 'jc', '4', { inputType: 'number' }),
+          field(L('Jmin: minimum junk size', 'Jmin — минимальный размер мусорного пакета'), 'jmin', '10', { inputType: 'number' }), field(L('Jmax: maximum junk size', 'Jmax — максимальный размер мусорного пакета'), 'jmax', '50', { inputType: 'number' }),
+          field(L('S1: first packet padding', 'S1 — добавка к размеру первого пакета'), 's1', '15', { inputType: 'number' }), field(L('S2: reply packet padding', 'S2 — добавка к размеру ответного пакета'), 's2', '23', { inputType: 'number' }),
+          note(L('Headers H1–H4 are generated randomly. The parameters are the same on the server and clients.', 'Заголовки H1–H4 генерируются случайно. Параметры одинаковы у сервера и клиентов.')));
+        else if (pi === 'wg') arr.push(note(L('WireGuard is a popular VPN protocol with high performance, speed and low power consumption.', 'WireGuard — популярный VPN-протокол с высокой производительностью, скоростью и низким энергопотреблением.')), field(L('Subnet', 'Подсеть'), 'wsub', '10.8.1.0/24'), field(L('Port (UDP)', 'Порт (UDP)'), 'wport', '51821', { inputType: 'number' }));
+        else if (pi === 'ovpn') arr.push(note(L('OpenVPN is the most popular VPN protocol with flexible settings and its own SSL/TLS protection.', 'OpenVPN — самый популярный VPN-протокол с гибкими настройками; своя защита на SSL/TLS.')),
+          radioB('UDP', '', getSel('ovp', 'udp') === 'udp', setSel('ovp', 'udp')), radioB('TCP', '', getSel('ovp', 'udp') === 'tcp', setSel('ovp', 'tcp')), field(L('Port', 'Порт'), 'oport', '1194', { inputType: 'number' }), note(L('UDP is faster; TCP on port 443 passes restrictive networks more often.', 'UDP быстрее; TCP на порту 443 чаще проходит через ограничивающие сети.')));
+        else arr.push(note(L('IKEv2/IPsec is a modern stable protocol that restores the connection after signal loss.', 'IKEv2/IPsec — современный стабильный протокол, восстанавливает соединение после потери сигнала.')),
+          radioB(L('Login and password (EAP)', 'Логин и пароль (EAP)'), '', getSel('ipa', 'eap') === 'eap', setSel('ipa', 'eap')), radioB(L('Certificate', 'Сертификат'), '', getSel('ipa', 'eap') === 'cert', setSel('ipa', 'cert')));
+        return arr; })(), cta: L('Install', 'Установить'), ctaGo: () => navTo('installing') },
+      protoManage: { title: pnames[pm], blocks: [
+        row(L('Connection settings', 'Настройки подключения'), pm === 'awg' ? L('MTU, Jc, Jmin, Jmax, signature packets I1–I3', 'MTU, Jc, Jmin, Jmax, сигнатурные пакеты I1–I3') : '', () => navTo('awgConn')),
+        row(L('Configuration of this device', 'Конфигурация этого устройства'), pm === 'ovpn' ? L('.ovpn file for OpenVPN on another device', 'Файл .ovpn для приложения OpenVPN на другом устройстве') : L('QR code and .conf file', 'QR-код и файл .conf'), () => navTo('shareResult')),
+        row(L('Add a client', 'Добавить клиента'), L('Issue a new key and configuration for another device', 'Выдать новый ключ и конфигурацию для другого устройства'), () => navTo('clientNew')),
+        ...(pm !== 'awg' ? [row(L('Clients on the server', 'Клиенты на сервере'), L('List of certificates; revoke access', 'Список сертификатов; отзыв доступа'), () => navTo('protoClients')), row(L('Trust the CA certificate on this computer', 'Доверие сертификату центра на этом компьютере'), L('Not allowed: the connection will fail until the certificate is trusted', 'Не разрешено: подключение не удастся, пока сертификат не добавлен в доверенные'), () => navTo('trustCA'))] : []),
+        B('Space'), row(`${L('Remove', 'Удалить')} ${pnames[pm]} ${L('from the server', 'с сервера')}`, L('Stop the service and delete settings and all clients on the server', 'Остановить службу и удалить настройки и всех клиентов на сервере'), () => flash(L('All clients will stop connecting', 'Все клиенты перестанут подключаться')), { color: 'var(--accInk)' }),
+        row(L('Remove the profile from the app', 'Удалить профиль из приложения'), L('The server is not changed', 'Сервер не изменится'), () => flash(L('The server is not changed', 'Сервер не изменится')), { color: 'var(--accInk)' })] },
+      awgConn: { title: L('Connection settings', 'Настройки подключения'), blocks: [field('MTU', 'mtu', '1280', { inputType: 'number' }), field('Jc', 'jc2', '4', { inputType: 'number' }), field('Jmin', 'jmin2', '10', { inputType: 'number' }), field('Jmax', 'jmax2', '50', { inputType: 'number' }),
+        field('I1', 'i1', ''), field('I2', 'i2', ''), field('I3', 'i3', ''), note(L('The parameters apply on this device. If the server does not answer, restore the values issued at installation.', 'Параметры действуют на этом устройстве. Если сервер не отвечает, верните значения, выданные при установке.'))],
+        cta: L('Save', 'Сохранить'), ctaGo: () => { flash(L('Saved', 'Сохранено')); navTo('protoManage', 'back'); } },
+      protoClients: { title: `${L('Clients', 'Клиенты')} ${pnames[pm]}`, blocks: ['laptop', 'phone-ann'].map(n => row(n, L('Tap to revoke access', 'Нажмите, чтобы отозвать доступ'), () => flash(L('Access revoked', 'Доступ отозван')), { hasIcon: true, d: ic.trash })) },
+      trustCA: { bare: true, center: true, blocks: [hero('shield', L('CA certificate', 'Сертификат центра сертификации'), L('To connect from this computer, the Veil CA certificate must be added to the trusted root store. It only verifies your server, but any trusted authority can issue certificates, so allow it only for your own server.', 'Чтобы подключаться к серверу с этого компьютера, сертификат центра сертификации Veil нужно добавить в доверенные корневые. Он нужен только для проверки вашего сервера, но любой доверенный центр может выпускать сертификаты, поэтому разрешайте это только для своего сервера.'))],
+        cta: L('Allow', 'Разрешить'), ctaGo: () => { flash(L('Allowed', 'Разрешено')); goBack(); }, sec: L('Cancel', 'Отмена'), secGo: goBack },
+      conn: { title: L('Connection', 'Подключение'), blocks: [
+        row(L('DNS servers', 'DNS-серверы'), L('Replace the DNS servers from the server profile', 'Заменяют DNS-серверы из профиля сервера'), () => navTo('dnsPage')),
+        row(L('Split tunneling by sites', 'Раздельное туннелирование по сайтам'), L('Choose which sites go through the VPN and which go directly', 'Позволяет выбрать, какие сайты открывать через VPN, а какие напрямую'), () => navTo('splitSites')),
+        row(L('Split tunneling by apps', 'Раздельное туннелирование по приложениям'), L('Choose which apps use the VPN', 'Выбрать, какие приложения используют VPN'), () => navTo('splitApps')),
+        row('KillSwitch', L('Blocks network connections if the VPN drops', 'Блокирует сетевые соединения, если VPN оборвался'), () => navTo('killPage'))] },
+      dnsPage: { title: L('DNS servers', 'DNS-серверы'), blocks: [note(L('Used when the server does not provide its own DNS. Empty fields use the values from the profile. Applied at the next connection.', 'Используются, когда сервер не предоставляет свои DNS. Пустые поля — значения из профиля. Применяется при следующем подключении.')),
+        field(L('Primary DNS', 'Основной DNS'), 'dns1', '1.1.1.1'), field(L('Secondary DNS', 'Запасной DNS'), 'dns2', '9.9.9.9'), btn(L('Restore defaults', 'Вернуть по умолчанию'), 'sec', () => flash(L('Defaults restored', 'Значения по умолчанию')), ic.refresh)],
+        cta: L('Save', 'Сохранить'), ctaGo: () => { flash(L('Saved', 'Сохранено')); goBack(); } },
+      killPage: { title: 'KillSwitch', blocks: [
+        switchB('KillSwitch', L('Turn on so traffic does not leave to the open network if the VPN drops', 'Включите, чтобы трафик не уходил в открытую сеть, если VPN оборвётся'), 'kill'),
+        row(L('Soft KillSwitch', 'Мягкий KillSwitch'), L('The internet is blocked if the VPN disconnected unexpectedly. A normal disconnect does not block.', 'Интернет блокируется, если VPN отключился неожиданно. При обычном отключении блокировки нет.'), null),
+        platform === 'macos' ? note(L('Not supported on macOS: routes have no metrics there.', 'В macOS не поддерживается: у маршрутов нет метрик.')) : B('Space'),
+        note(L('A block is active: the previous session ended abnormally. Connect again or remove the block.', 'Сейчас действует блокировка: прошлый сеанс завершился аварийно. Подключитесь снова или снимите блокировку.'), ic.warn),
+        btn(L('Remove the internet block', 'Снять блокировку интернета'), 'danger', () => flash(L('Block removed', 'Блокировка снята')), ic.check)] },
+      appPage: { title: L('Application', 'Приложение'), blocks: [
+        switchB(L('Autostart', 'Автозапуск'), L('Start the app when the device starts', 'Запускать приложение при включении устройства'), 'login'),
+        switchB(L('Start minimized', 'Запускать свёрнутым'), L('Start in the tray (needs autostart)', 'Запускать приложение в трее (работает при включённом автозапуске)'), 'lan'),
+        switchB(L('Auto-connect', 'Автоподключение'), L('Connect to the VPN when the app starts', 'Подключаться к VPN при запуске приложения'), 'auto'),
+        switchB(L('Check for updates', 'Проверять обновления'), L('Look for a new version at startup', 'Проверять наличие новой версии при запуске'), 'upd'),
+        row(L('Logs', 'Журналы'), tg('savelogs') ? L('Enabled', 'Включено') : L('Disabled', 'Отключено'), () => navTo('logsPage')),
+        row(L('Reset settings and delete all app data', 'Сбросить настройки и удалить все данные приложения'), '', () => flash(L('All data will be deleted', 'Будут удалены профили, списки адресов, настройки и журналы')), { color: 'var(--accInk)' })] },
+      logsPage: { title: L('Logs', 'Журналы'), blocks: [note(L('Logs help to find out what went wrong.', 'Журналы помогают разобраться, что пошло не так.')),
+        switchB(L('Record logs', 'Записывать журналы'), L('Recording stops after 14 days and the logs are deleted', 'Запись отключится через 14 дней, журналы будут удалены'), 'savelogs'),
+        section(L('Logs', 'Журналы')), row(L('Tunnel', 'Туннель'), `${L('Connection events', 'События подключения')} · 12,4 ${L('KB', 'КБ')}`, () => navTo('logView')), row(L('Application', 'Приложение'), `${L('Application events', 'События приложения')} · 3,1 ${L('KB', 'КБ')}`, () => navTo('logView')),
+        row(L('Save all logs', 'Сохранить все журналы'), L('A .zip archive with both logs', 'Архив .zip с обоими журналами'), () => flash(L('Archive saved', 'Архив сохранён')), { hasIcon: true, d: ic.download }),
+        row(L('Clear all logs', 'Очистить все журналы'), '', () => flash(L('Logs cleared', 'Журналы очищены')), { color: 'var(--accInk)' })] },
+      logView: { title: L('Tunnel log', 'Журнал туннеля'), blocks: [logB([['12:04:11 ' + L('connecting to «Amsterdam»', 'подключение к «Амстердам»')], ['12:04:12 ' + L('connected: HTTP/3 IPv6', 'подключено: HTTP/3 IPv6')], ['12:19:40 ' + L('smooth connection change', 'плавная смена соединения')], ['12:41:05 ' + L('disconnected', 'отключено')]])] },
+      backup: { title: L('Backup', 'Резервная копия'), blocks: [note(L('Save the settings to a file to restore them after the next installation of the app.', 'Сохраните настройки в файл, чтобы восстановить их при следующей установке приложения.')),
+        lead(L('The copy contains passwords and private keys of all added servers. Keep it in a safe place.', 'Копия содержит пароли и приватные ключи всех добавленных серверов. Храните её в надёжном месте.')),
+        btn(L('Make a backup', 'Сделать резервную копию'), 'primary', () => flash(L('Copy saved (files: 6)', 'Копия сохранена (файлов: 6)')), ic.download), btn(L('Restore from a backup', 'Восстановить из копии'), 'sec', () => flash(L('Restored files: 6', 'Восстановлено файлов: 6')), ic.refresh)] },
+      aboutPage: { title: L('About Veil', 'О Veil'), blocks: [hero('mark', 'Veil', L('Version 0.5.x', 'Версия 0.5.x')),
+        lead(L('A VPN disguised as HTTPS: a WireGuard core inside HTTP/3 and HTTP/2 on port 443. Free open-source software.', 'VPN с маскировкой под HTTPS: ядро WireGuard внутри HTTP/3 и HTTP/2 на порту 443. Свободное приложение с открытым кодом.')),
+        btn(L('Check for updates', 'Проверить обновления'), 'primary', () => navTo('updateAvail'), ic.refresh), section(L('Contacts', 'Контакты')), row('GitHub', L('Source code and bug reports', 'Исходный код и сообщения об ошибках'), () => flash('github.com'), {}), row(`${L('Version', 'Версия')} 0.5.x`, '', null)] },
+      updateAvail: { bare: true, center: true, blocks: [hero('check', L('An update is available', 'Доступно обновление'), L('Version 0.6.0 is out (you have 0.5.x). Open the download page?', 'Вышла версия 0.6.0 (у вас 0.5.x). Открыть страницу загрузки?'))],
+        cta: L('Open the download page', 'Открыть страницу загрузки'), ctaGo: () => { flash('github.com/…/releases'); goBack(); }, sec: L('Later', 'Позже'), secGo: goBack },
+      langPage: { title: L('Language', 'Язык'), blocks: [lead(L('The interface switches immediately.', 'Интерфейс переключается сразу.')),
+        radioB('Русский', '', ru, () => this.setState({ lang: 'ru' })), radioB('English', '', !ru, () => this.setState({ lang: 'en' }))] },
+      catalog: { title: L('Address catalog', 'Каталог адресов'), blocks: (() => {
+        const arr = [B('Field', { label: L('Search by name or domain', 'Поиск по названию или домену'), input: fv('catq', ''), onInput: setF('catq'), placeholder: 'youtube' })];
+        if (catState === 'none') arr.push(note(L('The catalog is not loaded. Tap “Load the catalog”: about 45 MB, it may take a few minutes.', 'Каталог не загружен. Нажмите «Загрузить каталог»: это около 45 МБ, скачивание может занять несколько минут.')), btn(L('Load the catalog', 'Загрузить каталог'), 'primary', loadCatalog, ic.download));
+        else if (catState === 'loading') arr.push(prog(L('Downloading the catalog…', 'Скачиваем каталог…'), '', true), lead(L('The addresses are merged into subnets as the file is parsed.', 'Адреса объединяются в подсети по мере разбора файла.')));
+        else {
+          arr.push(lead(L('Loaded: 9 services. The addresses are merged into subnets. Reload to update.', 'Загружен каталог: 9 сервисов. Адреса объединены в подсети. Обновить можно повторной загрузкой.')),
+            btn(allSel ? L('Clear the selection', 'Снять выбор') : L('Select all', 'Выбрать все'), 'sec', setAllSvc, ic.check));
+          svcGroups.forEach(g => { arr.push(section(g[0])); g[1].forEach(s => arr.push(check(s[1], `${s[2]} ${L('subnets', 'подсетей')}, ${s[3]} ${L('domains', 'доменов')}`, svcOn(s[0]), setSel('svc_' + s[0], !svcOn(s[0]))))); });
+        }
+        return arr; })(), cta: catState === 'ready' ? (svcCount ? `${L('Add selected', 'Добавить выбранное')} (${svcCount})` : L('Add selected', 'Добавить выбранное')) : '',
+        ctaGo: () => { const names = svcAll.filter(s => svcOn(s[0])).map(s => s[1]); this.setState({ sites: [...st.sites, ...names.filter(n => !st.sites.includes(n))] }); flash(`${L('Added', 'Добавлено')}: ${names.length}`); goBack(); } },
+      clientNew: { title: L('New client', 'Новый клиент'), blocks: [field(L('Name', 'Имя'), 'cn', '', { placeholder: L("For example: Ann's phone", 'Например: телефон Ани') }), field(L('Note', 'Заметка'), 'cnote', ''),
+        section(L('Route', 'Маршрут')), row(L('Exit on this server', 'Выход на этом сервере'), '', null), row(L('Next through…', 'Дальше через…'), TK, () => flash(TK)), btn(L('Remove the last node', 'Убрать последний узел'), 'sec', () => flash(L('Removed', 'Убрано')), ic.back)],
+        cta: L('Create', 'Создать'), ctaGo: () => navTo('shareResult'), sec: L('Cancel', 'Отмена'), secGo: goBack },
+      shareResult: { title: `${L('Client', 'Клиент')} «${st.name === null ? L('New client', 'Новый клиент') : st.name}»`, blocks: [note(L('Scan the QR in the Veil app on the client device, or send the link or file.', 'Отсканируйте QR в приложении Veil на устройстве клиента, отправьте ссылку или файл.'), ic.qr), B('Qr', { qrD: qrPath() }),
+        kv(L('Route', 'Маршрут'), L('exit on this server', 'выход на этом сервере')), kv(L('Link', 'Ссылка'), 'veil://eyJob3N0…'),
+        btn(L('Copy', 'Скопировать'), 'primary', () => flash(L('Link copied', 'Ссылка скопирована')), ic.copy), btn(L('File…', 'Файл…'), 'sec', () => flash(L('File saved', 'Файл сохранён')), ic.download),
+        btn(L('Add to this device', 'Добавить на это устройство'), 'sec', () => flash(L('Server added to the app', 'Сервер добавлен в приложение')), ic.plus),
+        note(L('The link and file contain a private key and are shown once.', 'Ссылка и файл содержат приватный ключ и показываются один раз.'), ic.lock)] },
+      clientDetail: { title: clientsList[0][0], blocks: [kv(L('Route', 'Маршрут'), clientsList[0][1]), kv(L('Traffic', 'Трафик'), `↓ 1,2 ${gb}  ↑ 340 ${mb}`), kv(L('Note', 'Заметка'), L('Ann’s phone', 'Телефон Ани')),
+        row(L('New config', 'Новый конфиг'), L('The old one stops working', 'Старый перестанет работать'), () => navTo('shareResult')), row(L('Name and note', 'Имя и заметка'), '', () => navTo('clientNew')),
+        row(blockedC ? L('Unblock', 'Разблокировать') : L('Block', 'Заблокировать'), L('A blocked client fails transport authentication immediately', 'Заблокированный клиент не проходит аутентификацию сразу'), flipT('blockedC')),
+        row(L('Delete', 'Удалить'), L('The client connections will be terminated', 'Его подключения будут разорваны'), () => { flash(L('Client deleted', 'Клиент удалён')); goBack(); }, { color: 'var(--accInk)' })] }
+    });
+    const pageDef = PAGES()[screen] || null;
+    let gen = { blocks: [], hasPrimary: false, hasCta: false, hasSec: false, cta: '', sec: '', ctaGo: noop, secGo: noop, footStyle: '' };
+    if (pageDef) {
+      gen = {
+        blocks: pageDef.blocks.map((b, i) => ({ ...b, anim: stag(i) })),
+        hasPrimary: !!pageDef.cta, hasCta: !!(pageDef.cta || pageDef.sec), hasSec: !!pageDef.sec, cta: pageDef.cta || '', sec: pageDef.sec || '', ctaGo: pageDef.ctaGo || noop, secGo: pageDef.secGo || noop,
+        footStyle: `flex:none;display:flex;flex-direction:column;align-items:${side ? 'flex-start' : 'center'};gap:4px;padding:8px ${side ? 24 : 16}px ${12 + (side ? 0 : (pageDef.bare ? sB : 0))}px ${side ? pagePadL() : 16}px;box-sizing:border-box;width:100%`
+      };
+      if (!pageDef.cta && pageDef.sec) gen.hasCta = true;
+    }
+    function pagePadL() { return hinge ? (hx + gut - railW) : 24; }
+
+    const pageStyle = `flex:1;min-height:0;overflow-y:auto;padding:${side ? `8px 24px 24px ${pagePadL()}px` : '4px 16px 16px'};display:flex;justify-content:${side && w <= 1200 ? 'flex-start' : 'center'};align-items:flex-start;box-sizing:border-box;animation:${pageAnim}`;
+    const genScroll = `flex:1;min-height:0;overflow-y:auto;padding:${side ? `8px 24px 12px ${pagePadL()}px` : '4px 16px 12px'};display:flex;justify-content:${side && w <= 1200 ? 'flex-start' : 'center'};align-items:${pageDef && pageDef.center ? 'center' : 'flex-start'};box-sizing:border-box`;
+    const genOuter = `flex:1;min-height:0;display:flex;flex-direction:column;animation:${pageAnim}`;
+    const splitTitles = { splitSites: L('Site split tunneling', 'Раздельный доступ: сайты'), splitApps: L('App split tunneling', 'Раздельный доступ: приложения') };
+    const tabTitles = { home: t.navConnect, share: L('Share VPN access', 'Доступ к VPN'), settings: t.navSettings, add: L('Add server', 'Новый сервер') };
+    const title = pageDef ? (pageDef.title || '') : (splitTitles[screen] || tabTitles[screen] || '');
+    const isHome = screen === 'home';
+    const showLogo = !side && isHome;
+    const showTitle = !showLogo && !!title;
+    const noBack = TABS.includes(screen) || screen === 'installing' || screen === 'addDone';
+    const showBack = !noBack && !(pageDef && pageDef.noBack) && (st.hist.length > 0 || !!PARENT[screen] || kindS !== null);
+    const gap = tight ? 14 : 24;
+    const bare = !!(pageDef && pageDef.bare);
+    const heroW = hx - gut - railW;
+    const sideW = w - 24 - (hx + gut);
+
+    const sheetKinds = ['servers', 'protocols', 'format', 'split'];
+    return {
+      statsCols: narrow ? 4 : 2, statsGap: narrow ? 8 : 12, statsFont: narrow ? 17 : 22,
+      traffic: connected ? `↓ ${(0.4 + tt * 0.9).toFixed(1)} ${L('MB', 'МБ')}     ↑ ${(0.1 + tt * 0.12).toFixed(1)} ${L('MB', 'МБ')}` : '',
+      showRecheck: !!srv.multi, recheckText: L('Recheck the nearest entry', 'Перепроверить ближайший вход'), recheck: () => navTo('entries'),
+      openRoute: () => navTo('clientNew'), routeText: L('Set a route through the cascade…', 'Задать маршрут через каскад…'),
+      ic, nav, ripples, stats, fields: fieldsAll, users, setRows, linkRows, addRows, ringS, ringStyle, timer, t, labelStyle, shieldS, gen, sp,
+      items: sh.items, sheetTitle: sh.title, sheetSub: sh.sub,
+      reduce, isSide: side, isCompact: !side, onConnect, closeSheet, hasSheet: !!sheet, sheetStyle, wrapStyle,
+      sheetTitleSize: sk === 'full' ? 20 : 22, showNavText: wide,
+      kindServers: false, kindList: sheetKinds.includes(sk), kindFull: sk === 'full',
+      protoName: proto.title, openProtocols: open('protocols'), openServers: open('servers'), openSplit, openTraffic: () => navTo('traffic'),
+      hasDrop: !!dropKind && side, closeDrop,
+      scrimStyle: `position:absolute;left:0;top:0;width:100%;height:100%;border:0;padding:0;background:#0B0B0C;opacity:${theme === 'light' ? 0.55 : 0.78};cursor:default;animation:${closing ? 'vScrimOut' : 'vScrimIn'} ${dur(0.25)} ease both`,
+      rootStyle: `width:${w}px;height:${h}px;position:relative;overflow:hidden;background:var(--bg);color:var(--ink);font-family:Montserrat,system-ui,sans-serif;display:flex;flex-direction:${side ? 'row' : 'column'};box-sizing:border-box;--spd:${spd};${vars}`,
+      sideBarStyle: `width:${rail ? railW : (narrow ? 200 : 232)}px;flex:none;background:var(--card);padding:${rail ? '24px 8px' : '24px 16px'};box-sizing:border-box;display:flex;flex-direction:column;align-items:${rail ? 'center' : 'stretch'};gap:28px`,
+      topPad: `flex:none;height:${sT}px`,
+      hdrStyle: `position:relative;flex:none;height:${side ? 72 : 56}px;padding:0 ${side ? 24 : 20}px;display:flex;align-items:center;justify-content:${(side || showLogo) ? 'space-between' : 'center'};box-sizing:border-box`,
+      showLogo, showTitle, title, titleSize: side ? 24 : 17, titleAnim, showBack, goBack, backLeft: side ? 16 : 8, titleML: (showBack && side) ? 44 : 0, titleMax: side ? 640 : w - 130,
+      showPill: side || isHome,
+      dotStyle: `width:10px;height:10px;flex:none;border-radius:50%;box-sizing:border-box;background:${connected ? 'var(--ok)' : 'transparent'};border:2px solid ${connected ? 'var(--ok)' : 'var(--ink2)'};transition:background ${dur(0.3)} ease`,
+      pillText: connected ? statusT.connected : statusT.idle,
+      showHome: screen === 'home', showShare: screen === 'share', showSettings: screen === 'settings', showAdd: false,
+      showSplitScr: !!kindS, showGen: !!pageDef,
+      showAside: hinge && screen !== 'home',
+      asideStyle: `position:absolute;left:${railW}px;top:${sT + 72}px;bottom:0;width:${heroW}px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px`,
+      homeStyle: side ? `${w > 1200 ? 'max-width:1000px;width:100%;align-self:center;' : ''}flex:1;min-height:0;display:flex;flex-direction:${narrow ? 'column' : 'row'};gap:${narrow ? 12 : (hinge ? gut * 2 : 24)}px;padding:${narrow ? '0 24px 16px 24px' : '0 24px 24px 0'};box-sizing:border-box;animation:${pageAnim}`
+        : `flex:1;min-height:0;display:flex;flex-direction:column;animation:${pageAnim}`,
+      heroStyle: `${hinge ? `width:${heroW}px;flex:none;` : 'flex:1;'}min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${gap}px`,
+      sideStyle: side ? `${narrow ? 'width:100%;' : (hinge ? `width:${sideW}px;` : 'width:300px;')}flex:none;display:flex;flex-direction:column;gap:12px;justify-content:center`
+        : `flex:none;background:var(--card);border-radius:16px 16px 0 0;padding:12px 20px 20px;display:flex;flex-direction:column;box-sizing:border-box`,
+      srvStyle: `display:flex;flex-direction:column;gap:6px;align-items:${side ? 'flex-start' : 'center'};width:100%;border:0;border-radius:14px;background:${side ? 'var(--card)' : 'transparent'};color:var(--ink);padding:${side ? '16px' : '8px 0'};min-height:44px;cursor:pointer;font-family:inherit;text-align:${side ? 'left' : 'center'}`,
+      srvFont: side ? 20 : (tight ? 22 : 28), srvName: srv.title,
+      srvInfo: `${proto.title} (${L('version', 'версия')} 3.1) | ${srv.sub}`,
+      ringAria: connected ? L('Disconnect', 'Отключить') : (connecting ? L('Cancel connecting', 'Отменить подключение') : L('Connect', 'Подключить')),
+      showSpin: connecting, showShield: connected || disc, showTimer: connected, ringLabel,
+      statusTitle: statusT[conn], statusSub: statusS[conn],
+      splitText: splitOn ? `${L('Split tunneling', 'Раздельный доступ')} · ${splitCount}` : L('Split tunneling disabled', 'Раздельный доступ выключен'),
+      pageStyle, genOuter, genScroll, tabConn: tab === 'conn', tabUsers: tab === 'users',
+      splitPageStyle: `flex:1;min-height:0;display:flex;justify-content:${side && w <= 1200 ? 'flex-start' : 'center'};padding:${side ? `8px 24px 16px ${pagePadL()}px` : '4px 16px 12px'};box-sizing:border-box;animation:${pageAnim}`,
+      hasToast: !!st.toast, toast: st.toast, toastBottom: side ? 24 : sB + 84,
+      segInd: `position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:12px;background:var(--card2);transform:translateX(${tab === 'conn' ? 0 : 100}%);transition:transform ${dur(0.25)} cubic-bezier(.2,0,.2,1)`,
+      tabToConn: () => this.setState({ tab: 'conn', drop: null }), tabToUsers: () => this.setState({ tab: 'users', drop: null }),
+      name: st.name === null ? L('New client', 'Новый клиент') : st.name, onName: (e) => this.setState({ name: e.target.value }),
+      onShare: () => navTo('shareResult'),
+      showNavBar: !side && !bare,
+      navBarStyle: `flex:none;display:flex;background:var(--card);padding:0 8px ${sB}px;box-sizing:border-box;position:relative`
+    };
+  }
+}
+</script>
+</body>
+</html>

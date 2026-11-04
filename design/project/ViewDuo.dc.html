@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Veil all screens on iPhone Duo</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+<style>body{margin:0}button{font-family:inherit}button:focus-visible{outline:2px solid #FF393D;outline-offset:2px}</style>
+</helmet>
+<div style="width:1860px;height:1220px;overflow:hidden;box-sizing:border-box;padding:40px;background:{{c.ground}};color:{{c.ink}};font-family:Montserrat,system-ui,sans-serif;display:flex;gap:32px">
+<div style="width:340px;flex:none;display:flex;flex-direction:column;gap:6px;overflow-y:auto;padding-right:6px">
+<sc-for list="{{items}}" as="it" hint-placeholder-count="12">
+<sc-if value="{{it.isHead}}" hint-placeholder-val="{{false}}"><div style="margin:12px 4px 2px;font-size:11px;font-weight:700;letter-spacing:.04em;color:{{c.ink2}}">{{it.label}}</div></sc-if>
+<sc-if value="{{it.isItem}}" hint-placeholder-val="{{true}}"><button type="button" onClick="{{it.go}}" style="{{it.style}}">{{it.label}}</button></sc-if>
+</sc-for>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:baseline;gap:12px"><h1 style="margin:0;font-size:24px;font-weight:600">Все экраны · iPhone Duo</h1><span style="font-size:14px;font-weight:600;color:{{c.ink2}}">{{caption}}</span></div>
+<div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:84px">Внутренний экран</span><sc-for list="{{modeOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:84px">Тема</span><sc-for list="{{themeOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:{{c.ink2}};min-width:84px">Язык</span><sc-for list="{{langOpts}}" as="o" hint-placeholder-count="3"><button type="button" onClick="{{o.go}}" style="{{o.style}}">{{o.label}}</button></sc-for></div><div style="display:flex;gap:8px"><button type="button" onClick="{{prev}}" style="{{navStyle}}">← Предыдущий</button><button type="button" onClick="{{next}}" style="{{navStyle}}">Следующий →</button></div></div>
+<div style="display:flex;gap:28px;align-items:flex-start">
+<div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:600;color:{{c.ink2}}">Внешний экран · сложен</span>
+<div style="width:376px;height:796px;box-sizing:border-box;padding:8px;background:#01040F;border-radius:52px;flex:none"><div style="position:relative;width:360px;height:780px;border-radius:44px;overflow:hidden"><dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="ios" layout="compact" w="360" h="780" safe-top="48" safe-bottom="28" screen="{{scr.screen}}" conn="{{scr.conn}}" server="{{scr.server}}" mgr="{{scr.mgr}}" ssh="{{scr.ssh}}" tabsel="{{scr.tabsel}}" step="{{scr.step}}" sheet="none" hint-size="360px,780px"></dc-import><div style="position:absolute;left:50%;top:16px;margin-left:-8px;width:16px;height:16px;border-radius:50%;background:#01040F" aria-hidden="true"></div></div></div></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:600;color:{{c.ink2}}">Внутренний экран · {{modeName}}</span>
+<sc-if value="{{isBook}}" hint-placeholder-val="{{true}}">
+<div style="width:876px;height:656px;box-sizing:border-box;padding:8px;background:#01040F;border-radius:38px;flex:none"><div style="position:relative;width:860px;height:640px;border-radius:30px;overflow:hidden"><dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="ios" layout="rail" hinge="vertical" w="860" h="640" safe-top="0" safe-bottom="0" screen="{{scr.screen}}" conn="{{scr.conn}}" server="{{scr.server}}" mgr="{{scr.mgr}}" ssh="{{scr.ssh}}" tabsel="{{scr.tabsel}}" step="{{scr.step}}" sheet="none" hint-size="860px,640px"></dc-import><div style="position:absolute;left:421px;top:0;width:18px;height:640px;pointer-events:none;display:flex;justify-content:space-between" aria-hidden="true"><span style="width:1px;height:100%;background:#01040F;opacity:.35"></span><span style="width:6px;height:100%;background:#01040F;opacity:.28"></span><span style="width:1px;height:100%;background:#01040F;opacity:.35"></span></div></div></div>
+</sc-if>
+<sc-if value="{{isSplit}}" hint-placeholder-val="{{false}}">
+<div style="width:876px;height:656px;box-sizing:border-box;padding:8px;background:#01040F;border-radius:38px;flex:none"><div style="position:relative;width:860px;height:640px;border-radius:30px;overflow:hidden"><div style="display:flex;gap:6px;background:#01040F;width:860px;height:640px"><div style="width:427px;height:640px;overflow:hidden"><dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="ios" layout="compact" w="427" h="640" safe-top="0" safe-bottom="8" screen="{{scr.screen}}" conn="{{scr.conn}}" server="{{scr.server}}" mgr="{{scr.mgr}}" ssh="{{scr.ssh}}" tabsel="{{scr.tabsel}}" step="{{scr.step}}" sheet="none" hint-size="427px,640px"></dc-import></div><div style="width:427px;height:640px;overflow:hidden"><dc-import name="App" theme="{{theme}}" lang="{{lang}}" platform="ios" layout="compact" w="427" h="640" safe-top="0" safe-bottom="8" hint-size="427px,640px"></dc-import></div></div></div></div>
+</sc-if>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":1860,"height":1220}}'>
+class Component extends DCLogic {
+  state = { sel: 1, theme: null, lang: null, mode: 'book' };
+  renderVals() {
+    const st = this.state;
+    const theme = st.theme || this.props.theme || 'dark';
+    const lang = st.lang || this.props.lang || 'ru';
+    const lt = theme === 'light';
+    const c = lt
+      ? { ground: '#E4E6EA', card: '#FFFFFF', card2: '#C9CCD2', ink: '#0B0B0C', ink2: '#5B6068', acc: '#FF393D', onacc: '#0B0B0C' }
+      : { ground: '#1B1C1F', card: '#0B0B0C', card2: '#2A2B30', ink: '#FFFFFF', ink2: '#A8AAB2', acc: '#FF393D', onacc: '#0B0B0C' };
+    const SCREENS = [["Вкладки",null],["Главная: отключено","home"],["Главная: подключено","home",{"conn":"connected"}],["Главная: ближайший вход","home",{"conn":"connected","server":"s2"}],["Проверка входов","entries"],["Поделиться: подключение","share"],["Поделиться: пользователи","share",{"tabsel":"users"}],["Настройки","settings"],["Добавить","add"],["Серверы",null],["Серверы","servers"],["Сервер","serverInfo"],["Управление: протокол","manager"],["Управление: сервисы","manager",{"mgr":"svc","ssh":"true"}],["Управление: каскад","manager",{"mgr":"casc","ssh":"true"}],["Управление: управление","manager",{"mgr":"mgmt"}],["Вход по SSH","sshLogin"],["Каскад и ближайший вход",null],["Построить каскад","chain"],["Ключ каскада","relayIssue"],["Узел по ключу","nodeByKey"],["Через ближайший вход","multiEntry"],["Новый сервер",null],["Свой сервер по SSH","deploy"],["Установка","installing",{"step":"2"}],["Сервер добавлен","addDone"],["Импорт конфигурации","importFile"],["Протоколы",null],["Установка протокола","protoInstall"],["Протокол установлен","protoManage"],["Настройки подключения","awgConn"],["Клиенты протокола","protoClients"],["Сертификат центра","trustCA"],["Подключение",null],["Подключение","conn"],["DNS-серверы","dnsPage"],["KillSwitch","killPage"],["Раздельное: сайты","splitSites"],["Раздельное: приложения","splitApps"],["Каталог адресов","catalog"],["Приложение",null],["Приложение","appPage"],["Журналы","logsPage"],["Журнал туннеля","logView"],["Резервная копия","backup"],["О Veil","aboutPage"],["Обновление","updateAvail"],["Язык","langPage"],["Клиенты",null],["Новый клиент","clientNew"],["Клиент","clientDetail"],["Доступ: QR и ссылка","shareResult"]];
+    const items = SCREENS.map((s, i) => s[1] === null
+      ? { isHead: true, isItem: false, label: s[0], style: '' }
+      : { isHead: false, isItem: true, label: s[0], go: () => this.setState({ sel: i }),
+          style: 'display:block;width:100%;min-height:36px;padding:6px 12px;border:0;border-radius:11px;text-align:left;font-size:13px;font-weight:600;cursor:pointer;background:' + (st.sel === i ? c.acc : 'transparent') + ';color:' + (st.sel === i ? c.onacc : c.ink) });
+    const cur = SCREENS[st.sel];
+    const ex = cur[2] || {};
+    const chip = (on, label, go) => ({ label, go, style: 'min-height:36px;padding:0 14px;border:0;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;background:' + (on ? c.acc : c.card) + ';color:' + (on ? c.onacc : c.ink) });
+    const seg = (key, opts) => opts.map(([v, l]) => chip((st[key] || opts[0][0]) === v, l, () => this.setState({ [key]: v })));
+    const themeOpts = [['dark', 'Тёмная'], ['light', 'Светлая']].map(([v, l]) => chip(theme === v, l, () => this.setState({ theme: v })));
+    const langOpts = [['ru', 'Русский'], ['en', 'English']].map(([v, l]) => chip(lang === v, l, () => this.setState({ lang: v })));
+    const scr = { screen: cur[1], conn: ex.conn || 'idle', server: ex.server || 's1', mgr: ex.mgr || 'proto', ssh: ex.ssh || 'false', tabsel: ex.tabsel || 'auto', step: ex.step || 'auto' };
+    const next = () => { let i = st.sel; do { i = (i + 1) % SCREENS.length; } while (SCREENS[i][1] === null); this.setState({ sel: i }); };
+    const prev = () => { let i = st.sel; do { i = (i - 1 + SCREENS.length) % SCREENS.length; } while (SCREENS[i][1] === null); this.setState({ sel: i }); };
+    return { c, theme, lang, items, scr, themeOpts, langOpts, caption: cur[0], pid: cur[1], next, prev, modeOpts: seg('mode', [['book', 'Книжный, шарнир по центру'], ['split', 'Split View, два окна']]), isBook: (st.mode || 'book') === 'book', isSplit: st.mode === 'split', modeName: st.mode === 'split' ? 'Split View' : 'книжный режим',
+    navStyle: 'min-height:36px;padding:0 14px;border:0;border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;background:' + c.card + ';color:' + c.ink };
+  }
+}
+</script>
+</body>
+</html>
