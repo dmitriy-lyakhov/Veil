@@ -142,7 +142,7 @@ func (u *ui) settingsPage() fyne.CanvasObject {
 		navRow(L("About Veil", "О Veil"), "", u.openAbout),
 		navRow(L("Quit application", "Закрыть приложение"), "", u.quit),
 	)
-	return u.tabPage(L("Settings", "Настройки"), scrolled(rows))
+	return u.tabPageAt(L("Settings", "Настройки"), scrolled(rows), 96)
 }
 
 func (u *ui) openServersPage() {
@@ -640,11 +640,9 @@ func (u *ui) checkUpdates(parent fyne.Window, verbose bool) {
 // ---------- страница «Добавить» ----------
 
 func (u *ui) addPage() fyne.CanvasObject {
-	key := widget.NewMultiLineEntry()
-	key.Wrapping = fyne.TextWrapBreak
-	key.SetMinRowsVisible(2)
-	key.SetPlaceHolder(L("Paste a veil:// key…", "Вставьте ключ veil://…"))
-	insert := widget.NewButton(L("Paste", "Вставить"), func() {
+	key := widget.NewEntry()
+	key.SetPlaceHolder("veil://…")
+	insert := bigButton(L("Paste", "Вставить"), "", true, func() {
 		if strings.TrimSpace(key.Text) == "" {
 			key.SetText(strings.TrimSpace(u.app.Clipboard().Content()))
 		}
@@ -667,11 +665,10 @@ func (u *ui) addPage() fyne.CanvasObject {
 		u.selectProfile(p.Name)
 		u.showPage(0)
 	})
-	insert.Importance = widget.HighImportance
+	info := container.NewStack(infoBG(), container.New(layout.NewCustomPaddedLayout(10, 10, 16, 16), prose(L("Paste a key, add a configuration file, or scan the QR code from the administrator app.", "Вставьте ключ, добавьте файл конфигурации или отсканируйте QR-код из приложения администратора."))))
 	rows := container.NewVBox(
-		note(L("Paste a key, add a configuration file, or scan the QR code from the administrator app.", "Вставьте ключ, добавьте файл конфигурации или отсканируйте QR-код из приложения администратора.")),
-		key, insert,
-		sectionLabel(L("Other ways to connect", "Другие способы подключения")),
+		fieldEntry(L("Connection key", "Ключ подключения"), key), insert, info,
+		text(L("Other ways to connect", "Другие способы подключения"), 16, colText, true),
 		navRow(L("Your own server via SSH", "Свой сервер по SSH"), L("Veil is installed on your server together with a cover website", "Veil установится на ваш сервер вместе с сайтом-прикрытием"), u.showDeployForm),
 		navRow(L("Connection settings file", "Файл с настройками подключения"), L(".veil file issued by the admin panel", "Файл .veil, выданный админ-панелью"), u.showImport),
 		navRow(L("Via the nearest entry", "Через ближайший вход"), L("The exit is set explicitly, the nearest entry is chosen", "Выход задаётся явно, вход выбирается ближайший"), u.openMultiEntryBuilder),

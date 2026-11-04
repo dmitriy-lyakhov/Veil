@@ -239,7 +239,10 @@ func (l *vstackLayout) MinSize(objs []fyne.CanvasObject) fyne.Size {
 
 // pageFrame — рамка вкладки: на широком экране заголовок слева и плашка статуса справа (72 px),
 // содержимое колонкой до 560 px; на узком — заголовок по центру.
-type pageFrame struct{ title, pill, body fyne.CanvasObject }
+type pageFrame struct {
+	title, pill, body fyne.CanvasObject
+	top               float32
+}
 
 func (l *pageFrame) MinSize([]fyne.CanvasObject) fyne.Size { return fyne.NewSize(300, 240) }
 
@@ -254,8 +257,8 @@ func (l *pageFrame) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 		l.title.Resize(ts)
 		l.title.Move(fyne.NewPos(24, (hdr-ts.Height)/2))
 		w := min(560, s.Width-48)
-		l.body.Resize(fyne.NewSize(w, s.Height-96-24))
-		l.body.Move(fyne.NewPos(24, 96))
+		l.body.Resize(fyne.NewSize(w, s.Height-l.top-24))
+		l.body.Move(fyne.NewPos(24, l.top))
 		return
 	}
 	l.pill.Hide()
@@ -267,9 +270,13 @@ func (l *pageFrame) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 
 // tabPage собирает страницу вкладки по рамке выше.
 func (u *ui) tabPage(title string, body fyne.CanvasObject) fyne.CanvasObject {
+	return u.tabPageAt(title, body, 80)
+}
+
+func (u *ui) tabPageAt(title string, body fyne.CanvasObject, top float32) fyne.CanvasObject {
 	t := text(title, 24, colText, true)
 	pill := u.statusPill()
-	return container.New(&pageFrame{title: t, pill: pill, body: body}, t, pill, body)
+	return container.New(&pageFrame{title: t, pill: pill, body: body, top: top}, t, pill, body)
 }
 
 // fixedHeight задаёт строке фиксированную высоту, содержимое выравнивается по центру.

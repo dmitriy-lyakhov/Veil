@@ -188,7 +188,7 @@ func rowText(title, sub string, titleColor fyne.ThemeColorName) fyne.CanvasObjec
 	if sub == "" {
 		return t
 	}
-	return container.New(tightVBox{gap: -12}, t, prose(sub))
+	return container.New(tightVBox{gap: -18}, t, prose(sub))
 }
 
 // listRow — строка списка в стиле референса: заголовок, описание, элемент справа, разделитель снизу.
@@ -229,7 +229,7 @@ func newSegmented(options []string, selected int, changed func(int)) fyne.Canvas
 	apply := func(sel int) {
 		for i, b := range btns {
 			if i == sel {
-				b.Importance = widget.HighImportance
+				b.Importance = widget.MediumImportance
 			} else {
 				b.Importance = widget.LowImportance
 			}
@@ -246,8 +246,9 @@ func newSegmented(options []string, selected int, changed func(int)) fyne.Canvas
 	}
 	apply(selected)
 	bg := canvas.NewRectangle(colCard)
-	bg.CornerRadius = 14
-	return container.NewStack(bg, container.NewPadded(grid))
+	bg.CornerRadius = 16
+	bg.SetMinSize(fyne.NewSize(1, 52))
+	return container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(4, 4, 4, 4), grid))
 }
 
 func sectionLabel(s string) fyne.CanvasObject {

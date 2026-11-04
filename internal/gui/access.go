@@ -19,7 +19,7 @@ type shareState struct {
 	tab    int
 	server string
 	filter string
-	sel    *widget.Select
+	names  []string
 	body   *fyne.Container
 	mgrs   map[string]*manager
 	name   string // введённое имя нового клиента (сохраняется между перерисовками)
@@ -33,12 +33,8 @@ func (u *ui) sharePage() fyne.CanvasObject {
 		s.tab = i
 		s.render()
 	})
-	s.sel = widget.NewSelect(nil, func(v string) {
-		s.server = v
-		s.render()
-	})
 	s.body = newVBoxFit()
-	top := container.NewVBox(seg, lead(text(L("Server", "Сервер"), 12, colMuted, false)), s.sel)
+	top := container.NewVBox(seg)
 	s.refreshServers()
 	return u.tabPage(L("Share VPN access", "Доступ к VPN"), container.NewBorder(top, nil, nil, nil, container.NewVScroll(s.body)))
 }
@@ -56,7 +52,7 @@ func (u *ui) managedNames() []string {
 
 func (s *shareState) refreshServers() {
 	names := s.u.managedNames()
-	s.sel.Options = names
+	s.names = names
 	found := false
 	for _, n := range names {
 		if n == s.server {
@@ -74,8 +70,6 @@ func (s *shareState) refreshServers() {
 			}
 		}
 	}
-	s.sel.Selected = s.server
-	s.sel.Refresh()
 	s.render()
 }
 
@@ -121,14 +115,12 @@ func (s *shareState) render() {
 }
 
 func (s *shareState) renderConnection(m *manager) {
-	s.body.Add(note(L("Share VPN access without the ability to manage the server.", "Поделитесь доступом к VPN без возможности управлять сервером.")))
+	s.body.Add(prose(L("Share VPN access without the ability to manage the server", "Доступ к VPN без права управлять сервером")))
 	name := widget.NewEntry()
 	name.SetText(s.name)
 	name.OnChanged = func(v string) { s.name = v }
 	fmtApp := L("For the Veil app", "Для приложения Veil")
-	format := widget.NewSelect([]string{fmtApp}, nil)
-	format.SetSelected(fmtApp)
-	share := widget.NewButtonWithIcon(L("Share", "Поделиться"), theme.MailForwardIcon(), func() {
+	share := bigButton(L("Share", "Поделиться"), "share", true, func() {
 		n := strings.TrimSpace(s.name)
 		if n == "" {
 			showError(fmt.Errorf("%s", L("enter a user name", "укажите имя пользователя")), s.u.win)
@@ -148,15 +140,16 @@ func (s *shareState) renderConnection(m *manager) {
 			})
 		}, nil)
 	})
-	share.Importance = widget.HighImportance
-	route := widget.NewButtonWithIcon(L("Set route via cascade…", "Задать маршрут через каскад…"), theme.ListIcon(), func() {
+	route := bigButton(L("Set route via cascade…", "Задать маршрут через каскад…"), "", false, func() {
 		m.ensureSession(m.addClient, nil)
 	})
-	route.Importance = widget.LowImportance
-	s.body.Add(lead(text(L("User name", "Имя пользователя"), 12, colMuted, false)))
-	s.body.Add(name)
-	s.body.Add(lead(text(L("Connection format", "Формат подключения"), 12, colMuted, false)))
-	s.body.Add(format)
+	s.body.Add(fieldEntry(L("User name", "Имя пользователя"), name))
+	s.body.Add(s.u.fieldSelect(L("Server", "Сервер"), s.server, s.names, func(v string) {
+		s.server = v
+		s.render()
+	}))
+	s.body.Add(s.u.fieldSelect(L("Connection format", "Формат подключения"), fmtApp, []string{fmtApp}, func(string) {}))
+	s.body.Add(spacerH(8))
 	s.body.Add(share)
 	s.body.Add(route)
 }
