@@ -15,7 +15,6 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -290,29 +289,17 @@ func (u *ui) showImport() {
 }
 
 func (u *ui) showDetails(p *config.Profile) {
-	var d modal
-	rows := container.NewVBox(text(p.Name, 18, colText, true), text(addresses(p), 12, colMuted, false))
+	var w *subPage
+	w = u.newSubPage(p.Name)
+	rows := container.NewVBox(infoRow(L("Address", "Адрес"), addresses(p), nil))
 	if p.Via != "" {
-		v := widget.NewLabel(L("Cascade: ", "Каскад: ") + p.Via)
-		v.Wrapping = fyne.TextWrapWord
-		rows.Add(v)
+		rows.Add(infoRow(L("Cascade", "Каскад"), p.Via, nil))
 	}
-	if managed(p) {
-		mg := widget.NewButtonWithIcon(L("Server management", "Управление сервером"), theme.SettingsIcon(), func() {
-			d.Hide()
-			u.openManager(p)
-		})
-		mg.Importance = widget.HighImportance
-		rows.Add(mg)
-	}
-
-	mode := widget.NewRadioGroup([]string{transportAuto(), transportH2()}, nil)
+	cur := transportAuto()
 	if len(p.Transports) == 1 && p.Transports[0] == "h2" {
-		mode.SetSelected(transportH2())
-	} else {
-		mode.SetSelected(transportAuto())
+		cur = transportH2()
 	}
-	mode.OnChanged = func(s string) {
+	rows.Add(u.optionRow(L("Transport", "Транспорт"), cur, []string{transportAuto(), transportH2()}, func(s string) {
 		p.Transports = nil
 		if s == transportH2() {
 			p.Transports = []string{"h2"}
@@ -320,42 +307,39 @@ func (u *ui) showDetails(p *config.Profile) {
 		if err := saveProfile(p); err != nil {
 			showError(err, u.win)
 		}
-	}
-	rows.Add(widget.NewSeparator())
-	rows.Add(text(L("Transport", "Транспорт"), 14, colText, true))
-	rows.Add(mode)
+	}))
 
 	if p.AdminURL != "" {
-		rows.Add(widget.NewSeparator())
-		rows.Add(text(L("Admin panel", "Админ-панель"), 14, colText, true))
-		copyRow := func(label, value string) fyne.CanvasObject {
-			btn := widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() { u.app.Clipboard().SetContent(value) })
-			btn.Importance = widget.LowImportance
-			return container.NewBorder(nil, nil, text(label, 12, colMuted, false), btn, widget.NewLabel(value))
-		}
-		rows.Add(copyRow(L("Address", "Адрес"), p.AdminURL))
+		rows.Add(sectionLabel(L("Admin panel", "Админ-панель")))
+		rows.Add(infoRow(L("Address", "Адрес"), p.AdminURL, func() { u.app.Clipboard().SetContent(p.AdminURL) }))
 		if p.AdminUser != "" {
-			rows.Add(copyRow(L("Login", "Логин"), p.AdminUser))
+			rows.Add(infoRow(L("Login", "Логин"), p.AdminUser, func() { u.app.Clipboard().SetContent(p.AdminUser) }))
 		}
 		if p.AdminPassword != "" {
-			rows.Add(copyRow(L("Password", "Пароль"), p.AdminPassword))
+			rows.Add(infoRow(L("Password", "Пароль"), strings.Repeat("•", 12), func() { u.app.Clipboard().SetContent(p.AdminPassword) }))
 		}
-		openBtn := widget.NewButtonWithIcon(L("Open in browser", "Открыть в браузере"), theme.ComputerIcon(), func() {
+		rows.Add(bigButton(L("Open in browser", "Открыть в браузере"), "", false, func() {
+			if p.Name != u.active || !u.connected {
+				showError(errors.New(L("connect to this server first", "сначала подключитесь к этому серверу")), u.win)
+				return
+			}
 			if target, err := url.Parse(p.AdminURL); err == nil {
 				_ = u.app.OpenURL(target)
 			}
-		})
-		note := L("The panel is only available over VPN: connect to this server first. The browser will warn about a self-signed certificate — this is expected.", "Панель доступна только через VPN: сначала подключитесь к этому серверу. Браузер предупредит о самоподписанном сертификате — это ожидаемо.")
-		if p.Name != u.active || !u.connected {
-			openBtn.Disable()
-		}
-		hint := widget.NewLabel(note)
-		hint.Wrapping = fyne.TextWrapWord
-		rows.Add(openBtn)
-		rows.Add(hint)
+		}))
+		rows.Add(infoNote(L("The panel is only available over VPN: connect to this server first. The browser will warn about a self-signed certificate — this is expected.", "Панель доступна только через VPN: сначала подключитесь к этому серверу. Браузер предупредит о самоподписанном сертификате — это ожидаемо.")))
 	}
-
-	remove := widget.NewButtonWithIcon(L("Delete profile", "Удалить профиль"), theme.DeleteIcon(), func() {
+	if managed(p) {
+		rows.Add(bigButton(L("Server management", "Управление сервером"), "", true, func() {
+			w.Close()
+			u.openManager(p)
+		}))
+	}
+	rows.Add(dangerButton(L("Delete profile", "Удалить профиль"), func() {
+		if p.Name == u.active {
+			showError(errors.New(L("disconnect first", "сначала отключитесь")), u.win)
+			return
+		}
 		showConfirm(L("Delete profile", "Удалить профиль"), fmt.Sprintf(L("Delete “%s” from this device? The server will not change.", "Удалить «%s» с этого устройства? Сервер не изменится."), p.Name), func(ok bool) {
 			if !ok {
 				return
@@ -363,18 +347,12 @@ func (u *ui) showDetails(p *config.Profile) {
 			if path, err := config.ProfilePath(p.Name); err == nil {
 				_ = os.Remove(path)
 			}
-			d.Hide()
+			w.Close()
 			u.reload()
 		}, u.win)
-	})
-	remove.Importance = widget.DangerImportance
-	if p.Name == u.active {
-		remove.Disable()
-	}
-	rows.Add(layout.NewSpacer())
-	rows.Add(remove)
-	d = newCustom(L("Server", "Сервер"), L("Close", "Закрыть"), container.NewGridWrap(fyne.NewSize(360, 480), container.NewVScroll(rows)), u.win)
-	d.Show()
+	}))
+	w.SetContent(container.NewPadded(scrolled(rows)))
+	w.Show()
 }
 
 func (u *ui) profileExists(name string) bool {

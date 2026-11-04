@@ -77,6 +77,10 @@ func init() {
 					u.openSplit()
 				case "splitsheet":
 					u.openSplitSheet()
+				case "details":
+					if p := u.current(); p != nil {
+						u.showDetails(p)
+					}
 				case "serversheet":
 					u.openServerSheet()
 				case "killswitch":

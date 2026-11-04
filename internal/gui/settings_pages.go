@@ -345,7 +345,7 @@ func (u *ui) openLogging() {
 	var rebuild func()
 	rebuild = func() {
 		body.RemoveAll()
-		body.Add(note(L("Logs help figure out what went wrong.", "Журналы помогают разобраться, что пошло не так.")))
+		body.Add(infoNote(L("Logs help figure out what went wrong.", "Журналы помогают разобраться, что пошло не так.")))
 		row, _ := switchRow(L("Record logs", "Записывать журналы"), L("Recording turns off after 14 days and logs are deleted", "Запись отключится через 14 дней, журналы будут удалены"), u.st.LogEnabled, func(on bool) {
 			u.st.LogEnabled = on
 			if on {
@@ -421,14 +421,13 @@ func (u *ui) openLogView(title, path string) {
 
 func (u *ui) openBackup() {
 	w := u.newSubPage(L("Backup", "Резервная копия"))
-	info := card(container.NewBorder(nil, nil, widget.NewIcon(theme.InfoIcon()), nil,
-		prose(L("The backup contains passwords and private keys of all added servers. Keep it in a safe place.", "Копия содержит пароли и приватные ключи всех добавленных серверов. Храните её в надёжном месте."))))
-	make := widget.NewButton(L("Create backup", "Сделать резервную копию"), func() { u.makeBackup(w) })
-	make.Importance = widget.HighImportance
-	restore := widget.NewButton(L("Restore from backup", "Восстановить из копии"), func() { u.restoreBackup(w) })
-	body := container.NewBorder(
-		container.NewVBox(note(L("Save your settings to a file to restore them on the next install of the app.", "Сохраните настройки в файл, чтобы восстановить их при следующей установке приложения.")), info),
-		container.NewVBox(make, restore), nil, nil)
+	warn := container.NewBorder(nil, nil, container.NewCenter(iconImg("warn", colMuted, 22)), nil,
+		prose(L("The backup contains passwords and private keys of all added servers. Keep it in a safe place.", "Копия содержит пароли и приватные ключи всех добавленных серверов. Храните её в надёжном месте.")))
+	make := bigButton(L("Create backup", "Сделать резервную копию"), "", true, func() { u.makeBackup(w) })
+	restore := bigButton(L("Restore from backup", "Восстановить из копии"), "", false, func() { u.restoreBackup(w) })
+	body := container.NewVBox(
+		infoNote(L("Save your settings to a file to restore them on the next install of the app.", "Сохраните настройки в файл, чтобы восстановить их при следующей установке приложения.")),
+		warn, make, restore)
 	w.SetContent(container.NewPadded(body))
 	w.Show()
 }
@@ -567,7 +566,7 @@ func (u *ui) openAbout() {
 	logo := canvas.NewImageFromResource(bundledIcon())
 	logo.FillMode = canvas.ImageFillContain
 	logo.SetMinSize(fyne.NewSize(96, 96))
-	name := text("Veil", 26, colText, true)
+	name := text("Veil", 24, colText, true)
 	name.Alignment = fyne.TextAlignCenter
 	desc := prose(L("A VPN disguised as HTTPS: the WireGuard core inside HTTP/3 and HTTP/2 on port 443. Free, open-source application.", "VPN с маскировкой под HTTPS: ядро WireGuard внутри HTTP/3 и HTTP/2 на порту 443. Свободное приложение с открытым исходным кодом."))
 	open := func(link string) func() {
@@ -579,15 +578,15 @@ func (u *ui) openAbout() {
 	}
 	copyVer := widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() { u.app.Clipboard().SetContent(appVersion) })
 	copyVer.Importance = widget.LowImportance
-	check := widget.NewButton(L("Check for updates", "Проверить обновления"), func() { u.checkUpdates(w, true) })
-	check.Importance = widget.LowImportance
+	check := bigButton(L("Check for updates", "Проверить обновления"), "", true, func() { u.checkUpdates(w, true) })
+	ver := text(L("Version ", "Версия ")+appVersion, 14, colMuted, false)
+	ver.Alignment = fyne.TextAlignCenter
 	body := container.NewVBox(
 		container.NewCenter(container.NewGridWrap(fyne.NewSize(96, 96), logo)),
-		name, desc,
+		name, ver, desc, check,
 		sectionLabel(L("Contacts", "Контакты")),
 		listRow("GitHub", L("Source code and bug reports", "Исходный код и сообщения об ошибках"), widget.NewIcon(theme.NavigateNextIcon()), open(repoURL)),
 		listRow(L("Version ", "Версия ")+appVersion, "", copyVer, nil),
-		check,
 	)
 	w.SetContent(container.NewPadded(scrolled(body)))
 	w.Show()

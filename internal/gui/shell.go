@@ -14,7 +14,7 @@ import (
 const (
 	wideBreakpoint = 720 // от этой ширины вместо нижней панели — боковая
 	sidebarWidth   = 232
-	bottomBarH     = 64
+	bottomBarH     = 56
 )
 
 // navEntry — пункт навигации: иконка и подпись.
@@ -101,6 +101,7 @@ func (r *navRenderer) Layout(s fyne.Size) {
 	const is = 22
 	r.ico.Resize(fyne.NewSize(is, is))
 	if r.n.wide {
+		r.lbl.Show()
 		r.bar.Resize(fyne.NewSize(0, 0))
 		r.ico.Move(fyne.NewPos(12, (s.Height-is)/2))
 		r.lbl.Move(fyne.NewPos(12+is+12, (s.Height-ls.Height)/2))
@@ -108,10 +109,8 @@ func (r *navRenderer) Layout(s fyne.Size) {
 	}
 	r.bar.Resize(fyne.NewSize(24, 3))
 	r.bar.Move(fyne.NewPos((s.Width-24)/2, 0))
-	gap := float32(3)
-	top := (s.Height - is - gap - ls.Height) / 2
-	r.ico.Move(fyne.NewPos((s.Width-is)/2, top))
-	r.lbl.Move(fyne.NewPos((s.Width-ls.Width)/2, top+is+gap))
+	r.lbl.Hide()
+	r.ico.Move(fyne.NewPos((s.Width-is)/2, (s.Height-is)/2))
 }
 
 func (r *navRenderer) Refresh() {
