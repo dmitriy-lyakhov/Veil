@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -293,7 +294,10 @@ func headlessUI(t *testing.T, lang string, dark bool, profiles []*config.Profile
 		}
 	}
 	a := test.NewApp()
-	t.Cleanup(func() { test.NewApp() })
+	t.Cleanup(func() {
+		time.Sleep(600 * time.Millisecond)
+		test.NewApp()
+	})
 	a.Settings().SetTheme(veilTheme{})
 	u := &ui{app: a, win: a.NewWindow("Veil"), selected: "", sessions: map[string]*deploy.Session{}}
 	u.st = &settings.Settings{Lang: lang}
