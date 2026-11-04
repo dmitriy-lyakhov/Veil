@@ -37,3 +37,18 @@ func TestLogExpired(t *testing.T) {
 		t.Fatal("выключено")
 	}
 }
+
+func TestAppearanceDefaults(t *testing.T) {
+	s := &Settings{}
+	if !s.Dark() || s.Language() != "ru" {
+		t.Fatal("по умолчанию: тёмная тема и русский")
+	}
+	s.Theme, s.Lang = "light", "en"
+	if s.Dark() || s.Language() != "en" {
+		t.Fatal("светлая тема и английский")
+	}
+	s.Lang = "xx"
+	if s.Language() != "ru" {
+		t.Fatal("неизвестный язык должен давать русский")
+	}
+}

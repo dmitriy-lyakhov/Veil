@@ -32,17 +32,17 @@ const (
 	pollInterval = time.Second
 	readyTimeout = 3 * time.Minute
 	prefSelected = "selected"
-	winWidth     = 420
-	winHeight    = 780
-	winMinWidth  = 400
-	winMinHeight = 760
+	winWidth     = 1000
+	winHeight    = 700
+	winMinWidth  = 360
+	winMinHeight = 560
 )
 
 type ui struct {
 	app      fyne.App
 	win      fyne.Window
 	pages    *fyne.Container
-	navBtns  []*widget.Button
+	navItems []*navItem
 	profiles []*config.Profile
 	selected string
 
@@ -92,41 +92,18 @@ func Run() {
 	}
 	u := &ui{app: a, win: a.NewWindow("Veil"), selected: a.Preferences().String(prefSelected), sessions: map[string]*deploy.Session{}}
 	u.loadSettings()
+	applyPalette(u.st.Dark())
+	curLang = u.st.Language()
 	u.curtain = canvas.NewRectangle(color.Transparent)
 	u.serversView = u.serversPage()
 	u.pages = container.NewStack(u.homePage(), u.sharePage(), u.settingsPage(), u.addPage(), u.curtain)
-	minSize := canvas.NewRectangle(color.Transparent)
-	minSize.SetMinSize(fyne.NewSize(winMinWidth, winMinHeight))
-	u.win.SetContent(container.NewStack(minSize, container.NewBorder(nil, u.navBar(theme.HomeIcon(), theme.AccountIcon(), theme.SettingsIcon(), theme.ContentAddIcon()), nil, nil, u.pages)))
+	u.win.SetContent(u.buildShell())
 	u.showPage(0)
 	u.reload()
 	u.win.SetCloseIntercept(u.quit)
 	u.afterStart()
 	u.win.Resize(fyne.NewSize(winWidth, winHeight))
 	u.win.ShowAndRun()
-}
-
-const (
-	navButtonSize = 52
-	navGap        = 28
-)
-
-func (u *ui) navBar(icons ...fyne.Resource) fyne.CanvasObject {
-	row := container.NewHBox(layout.NewSpacer())
-	for i, ic := range icons {
-		if i > 0 {
-			gap := canvas.NewRectangle(color.Transparent)
-			gap.SetMinSize(fyne.NewSize(navGap, 1))
-			row.Add(gap)
-		}
-		b := widget.NewButtonWithIcon("", ic, func() { u.showPage(i) })
-		u.navBtns = append(u.navBtns, b)
-		row.Add(container.NewGridWrap(fyne.NewSize(navButtonSize, navButtonSize), b))
-	}
-	row.Add(layout.NewSpacer())
-	line := canvas.NewRectangle(colLine)
-	line.SetMinSize(fyne.NewSize(1, 1))
-	return container.NewVBox(line, container.NewPadded(row))
 }
 
 func (u *ui) showPage(i int) {
@@ -144,14 +121,7 @@ func (u *ui) showPage(i int) {
 		}
 	}
 	u.pageShown, u.curPage = true, i
-	for n, b := range u.navBtns {
-		if n == i {
-			b.Importance = widget.HighImportance
-		} else {
-			b.Importance = widget.LowImportance
-		}
-		b.Refresh()
-	}
+	u.setActiveNav(i)
 	if !first {
 		u.animatePage(pages[i], prev, i)
 	}
@@ -280,7 +250,7 @@ func (u *ui) toggle() {
 	}
 	u.logf("подключение к «%s»", p.Name)
 	u.power.SetState(powerBusy)
-// открытые SSH-сессии установлены без привязки к физическому интерфейсу:	// после подъёма туннеля их пакеты ушли бы внутрь него	for n := range u.sessions {		u.dropSession(n)	}
+	// открытые SSH-сессии установлены без привязки к физическому интерфейсу:	// после подъёма туннеля их пакеты ушли бы внутрь него	for n := range u.sessions {		u.dropSession(n)	}
 	u.setStatus("Подключение…", "Подтвердите права администратора", "")
 	name := p.Name
 	go func() {

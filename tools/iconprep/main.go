@@ -1,47 +1,40 @@
-// iconprep: обрезает прозрачные поля у иконки и уменьшает её (для заголовка окна Windows).
+// iconprep: рисует значок приложения (знак Veil на тёмной плитке) в PNG.
+// Запуск: go run ./tools/iconprep internal/gui/icon.png 256
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/png"
 	"os"
+	"strconv"
+	"strings"
 
-	"golang.org/x/image/draw"
+	"github.com/srwiley/oksvg"
+	"github.com/srwiley/rasterx"
 )
 
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96"><rect width="96" height="96" rx="22" fill="#0B0B0C"/><path d="M25.25 27h14l15.75 40.25h-14z" fill="#FF393D"/><path d="M70.75 27h-14l-15.75 40.25h14z" fill="#6B6F78"/><path d="M48 49.4L41 67.25h14z" fill="#D9DBE0"/></svg>`
+
 func main() {
-	in, _ := os.Open(os.Args[1])
-	img, err := png.Decode(in)
+	out := os.Args[1]
+	size := 256
+	if len(os.Args) > 2 {
+		size, _ = strconv.Atoi(os.Args[2])
+	}
+	icon, err := oksvg.ReadIconStream(strings.NewReader(svg))
 	if err != nil {
 		panic(err)
 	}
-	b := img.Bounds()
-	minX, minY, maxX, maxY := b.Max.X, b.Max.Y, b.Min.X, b.Min.Y
-	for y := b.Min.Y; y < b.Max.Y; y++ {
-		for x := b.Min.X; x < b.Max.X; x++ {
-			if _, _, _, a := img.At(x, y).RGBA(); a > 0x2000 {
-				if x < minX {
-					minX = x
-				}
-				if y < minY {
-					minY = y
-				}
-				if x > maxX {
-					maxX = x
-				}
-				if y > maxY {
-					maxY = y
-				}
-			}
-		}
+	icon.SetTarget(0, 0, float64(size), float64(size))
+	img := image.NewRGBA(image.Rect(0, 0, size, size))
+	scanner := rasterx.NewScannerGV(size, size, img, img.Bounds())
+	icon.Draw(rasterx.NewDasher(size, size, scanner), 1)
+	f, err := os.Create(out)
+	if err != nil {
+		panic(err)
 	}
-	fmt.Println("bbox", minX, minY, maxX, maxY)
-	crop := image.Rect(minX, minY, maxX+1, maxY+1)
-	side := max(crop.Dx(), crop.Dy())
-	dst := image.NewNRGBA(image.Rect(0, 0, 256, 256))
-	draw.CatmullRom.Scale(dst, dst.Bounds(), img, image.Rect(crop.Min.X, crop.Min.Y, crop.Min.X+side, crop.Min.Y+side), draw.Over, nil)
-	out, _ := os.Create(os.Args[2])
-	defer out.Close()
-	_ = png.Encode(out, dst)
+	defer f.Close()
+	if err := png.Encode(f, img); err != nil {
+		panic(err)
+	}
 }

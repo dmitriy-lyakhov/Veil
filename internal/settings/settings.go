@@ -19,6 +19,8 @@ type Settings struct {
 	NoUpdateCheck  bool      `json:"no_update_check,omitempty"`
 	LogEnabled     bool      `json:"log_enabled,omitempty"`
 	LogSince       time.Time `json:"log_since,omitempty"`
+	Theme          string    `json:"theme,omitempty"` // "dark" (по умолчанию) или "light"
+	Lang           string    `json:"lang,omitempty"`  // "ru" (по умолчанию) или "en"
 }
 
 // LogLifetime — через сколько дней запись журналов выключается сама.
@@ -84,4 +86,15 @@ func (s *Settings) DNSAddrs() []netip.Addr {
 // LogExpired — включённая запись журналов просрочена и должна быть выключена.
 func (s *Settings) LogExpired(now time.Time) bool {
 	return s.LogEnabled && !s.LogSince.IsZero() && now.Sub(s.LogSince) > LogLifetime
+}
+
+// Dark — включена ли тёмная тема (по умолчанию да).
+func (s *Settings) Dark() bool { return s.Theme != "light" }
+
+// Language — язык интерфейса: "ru" или "en".
+func (s *Settings) Language() string {
+	if s.Lang == "en" {
+		return "en"
+	}
+	return "ru"
 }

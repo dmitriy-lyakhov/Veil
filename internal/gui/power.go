@@ -47,7 +47,7 @@ func newPowerButton(tap func()) *powerButton {
 	p.ring = canvas.NewCircle(color.Transparent)
 	p.ring.StrokeWidth = ringWidth
 	p.face = canvas.NewCircle(colBackground)
-	p.label = text("Подключить", 20, colText, false)
+	p.label = text(L("Connect", "Подключить"), 20, colText, false)
 	p.label.Alignment = fyne.TextAlignCenter
 	p.pulse = fyne.NewAnimation(pulseCycle, func(f float32) {
 		a := uint8(70 + 185*f)
@@ -88,16 +88,16 @@ func (p *powerButton) apply() {
 		p.ring.StrokeColor = colAccent
 		p.glow1.FillColor = rgba(colAccent, 0x30)
 		p.glow2.FillColor = rgba(colAccent, 0x14)
-		p.label.Text, p.label.Color = "Отключить", colText
+		p.label.Text, p.label.Color = L("Disconnect", "Отключить"), colText
 	case powerBusy:
 		p.glow2.FillColor = rgba(colAccent, 0x0a)
-		p.label.Text, p.label.Color = "Подключение…", colMuted
+		p.label.Text, p.label.Color = L("Connecting…", "Подключение…"), colMuted
 		p.pulse.Start()
 	default:
 		p.ring.StrokeColor = colText
 		p.glow1.FillColor = rgba(colText, 0x26)
 		p.glow2.FillColor = rgba(colText, 0x0e)
-		p.label.Text, p.label.Color = "Подключить", colText
+		p.label.Text, p.label.Color = L("Connect", "Подключить"), colText
 		if p.disabled {
 			p.ring.StrokeColor = colIdle
 			p.glow1.FillColor = color.Transparent

@@ -1,6 +1,7 @@
 package gui
 
 import (
+	_ "embed"
 	"image/color"
 
 	"fyne.io/fyne/v2"
@@ -12,21 +13,77 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+// Шрифты: Montserrat (SIL Open Font License, см. fonts/OFL.txt).
 var (
-	colBackground = color.NRGBA{0x0f, 0x10, 0x14, 0xff}
-	colCard       = color.NRGBA{0x1a, 0x1b, 0x21, 0xff}
-	colCard2      = color.NRGBA{0x24, 0x25, 0x2d, 0xff}
-	colLine       = color.NRGBA{0x2e, 0x2f, 0x39, 0xff}
-	colText       = color.NRGBA{0xec, 0xec, 0xf1, 0xff}
-	colMuted      = color.NRGBA{0x8b, 0x8d, 0x98, 0xff}
-	colAccent     = color.NRGBA{0x63, 0x66, 0xf1, 0xff}
-	colAccentDark = color.NRGBA{0xff, 0xff, 0xff, 0xff} // текст и ползунок на акцентном фоне
-	colOK         = color.NRGBA{0x4a, 0xde, 0x80, 0xff}
-	colBad        = color.NRGBA{0xf8, 0x71, 0x71, 0xff}
-	colIdle       = color.NRGBA{0x3a, 0x3c, 0x47, 0xff}
-	colCardHover  = color.NRGBA{0x22, 0x23, 0x2b, 0xff}
-	colCard2Hover = color.NRGBA{0x2e, 0x30, 0x3a, 0xff}
+	//go:embed fonts/Montserrat-Medium.ttf
+	fontMedium []byte
+	//go:embed fonts/Montserrat-SemiBold.ttf
+	fontSemiBold []byte
+	//go:embed fonts/Montserrat-Bold.ttf
+	fontBold []byte
+
+	resMedium   = fyne.NewStaticResource("Montserrat-Medium.ttf", fontMedium)
+	resSemiBold = fyne.NewStaticResource("Montserrat-SemiBold.ttf", fontSemiBold)
+	resBold     = fyne.NewStaticResource("Montserrat-Bold.ttf", fontBold)
 )
+
+// Цвета дизайн-системы Veil (токены из макета). Переменные, потому что тема переключается на лету:
+// applyPalette перезаписывает их, после чего интерфейс пересобирается.
+var (
+	colBackground color.NRGBA // surface
+	colCard       color.NRGBA // surface-raised
+	colCard2      color.NRGBA // surface-high
+	colLine       color.NRGBA // разделители
+	colText       color.NRGBA // ink
+	colMuted      color.NRGBA // ink-muted
+	colAccent     color.NRGBA // accent
+	colAccentDark color.NRGBA // on-accent: текст и значок на акцентной заливке
+	colAccentInk  color.NRGBA // accent-ink: акцент как текст или тонкий значок
+	colOK         color.NRGBA // success-ink
+	colBad        color.NRGBA // ошибка (accent-ink)
+	colIdle       color.NRGBA // выключенное кольцо, дорожка
+	colCardHover  color.NRGBA
+	colCard2Hover color.NRGBA
+	colBar        color.NRGBA // заголовок окна / панели
+	colScrim      color.NRGBA
+	paletteDark   bool
+)
+
+func nrgba(hex uint32) color.NRGBA {
+	return color.NRGBA{uint8(hex >> 16), uint8(hex >> 8), uint8(hex), 0xff}
+}
+
+// mix смешивает два цвета: t=0 — a, t=1 — b.
+func mix(a, b color.NRGBA, t float32) color.NRGBA {
+	m := func(x, y uint8) uint8 { return uint8(float32(x)*(1-t) + float32(y)*t) }
+	return color.NRGBA{m(a.R, b.R), m(a.G, b.G), m(a.B, b.B), 0xff}
+}
+
+func init() { applyPalette(true) }
+
+func applyPalette(dark bool) {
+	paletteDark = dark
+	colAccent = nrgba(0xFF393D)
+	colAccentDark = nrgba(0x0B0B0C)
+	if dark {
+		colBackground, colCard, colCard2 = nrgba(0x0B0B0C), nrgba(0x1B1C1F), nrgba(0x2A2B30)
+		colText, colMuted = nrgba(0xFFFFFF), nrgba(0xA8AAB2)
+		colAccentInk, colOK = nrgba(0xFF393D), nrgba(0x7DE0A0)
+		colBar = nrgba(0x1B1C1F)
+		colScrim = color.NRGBA{0x0B, 0x0B, 0x0C, 0xC7}
+	} else {
+		colBackground, colCard, colCard2 = nrgba(0xFFFFFF), nrgba(0xF2F3F5), nrgba(0xE4E6EA)
+		colText, colMuted = nrgba(0x0B0B0C), nrgba(0x5B6068)
+		colAccentInk, colOK = nrgba(0xDB1E32), nrgba(0x177A44)
+		colBar = nrgba(0xF2F3F5)
+		colScrim = color.NRGBA{0x0B, 0x0B, 0x0C, 0x8C}
+	}
+	colLine = colCard2
+	colBad = colAccentInk
+	colIdle = colCard2
+	colCardHover = mix(colCard, colText, 0.04)
+	colCard2Hover = mix(colCard2, colText, 0.06)
+}
 
 type veilTheme struct{}
 
@@ -44,8 +101,10 @@ func (veilTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
 		return colText
 	case theme.ColorNamePlaceHolder, theme.ColorNameDisabled:
 		return colMuted
-	case theme.ColorNamePrimary, theme.ColorNameFocus, theme.ColorNameHyperlink:
+	case theme.ColorNamePrimary, theme.ColorNameHyperlink:
 		return colAccent
+	case theme.ColorNameFocus:
+		return colAccentInk
 	case theme.ColorNameForegroundOnPrimary:
 		return colAccentDark
 	case theme.ColorNameInputBorder, theme.ColorNameSeparator:
@@ -53,43 +112,53 @@ func (veilTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
 	case theme.ColorNameSelection:
 		return color.NRGBA{colAccent.R, colAccent.G, colAccent.B, 0x55}
 	case theme.ColorNameHover:
-		return color.NRGBA{0xff, 0xff, 0xff, 0x0f}
+		return color.NRGBA{colText.R, colText.G, colText.B, 0x10}
 	case theme.ColorNamePressed:
-		return color.NRGBA{0xff, 0xff, 0xff, 0x1a}
+		return color.NRGBA{colText.R, colText.G, colText.B, 0x1a}
 	case theme.ColorNameSuccess:
 		return colOK
 	case theme.ColorNameError:
-		return colBad
+		return colAccentInk
 	case theme.ColorNameShadow:
-		return color.NRGBA{0, 0, 0, 0x66}
+		return color.NRGBA{0, 0, 0, 0x2e}
 	}
 	return theme.DefaultTheme().Color(n, theme.VariantDark)
 }
 
-func (veilTheme) Font(s fyne.TextStyle) fyne.Resource { return theme.DefaultTheme().Font(s) }
+// Font: Montserrat 500 для текста, 600 для заголовков и строк (полужирный стиль Fyne);
+// моноширинный стиль занят под цифры, которые тикают: жирное начертание.
+func (veilTheme) Font(s fyne.TextStyle) fyne.Resource {
+	switch {
+	case s.Monospace:
+		return resBold
+	case s.Bold:
+		return resSemiBold
+	}
+	return resMedium
+}
 
 func (veilTheme) Icon(n fyne.ThemeIconName) fyne.Resource { return theme.DefaultTheme().Icon(n) }
 
 func (veilTheme) Size(n fyne.ThemeSizeName) float32 {
 	switch n {
 	case theme.SizeNameInputRadius, theme.SizeNameButtonRadius, theme.SizeNameSelectionRadius:
-		return 12
+		return 14 // radius-md
 	case theme.SizeNameDialogRadius, theme.SizeNameCardRadius, theme.SizeNamePopupRadius, theme.SizeNameMenuRadius:
-		return 18
+		return 16 // radius-lg
 	case theme.SizeNameInputBorder:
 		return 1
 	case theme.SizeNamePadding:
-		return 6
+		return 8 // space-2
 	case theme.SizeNameInnerPadding:
-		return 10
-	case theme.SizeNameCaptionText:
-		return 12
+		return 12 // space-3
 	case theme.SizeNameText:
-		return 14
-	case theme.SizeNameHeadingText:
-		return 22
+		return 15
+	case theme.SizeNameCaptionText:
+		return 13
 	case theme.SizeNameSubHeadingText:
-		return 17
+		return 16 // body: заголовки строк
+	case theme.SizeNameHeadingText:
+		return 20 // heading
 	}
 	return theme.DefaultTheme().Size(n)
 }
