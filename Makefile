@@ -1,14 +1,16 @@
 GO      ?= go
-VERSION := 0.5.0
+VERSION := 0.7.0
 DIST    := dist
 APP     := $(DIST)/Veil.app
 DMG     := $(DIST)/Veil-$(VERSION).dmg
+PORTABLE := $(DIST)/Veil-$(VERSION)-portable.zip
+PORTDIR := $(DIST)/Veil-$(VERSION)-portable
 ICONSET := $(DIST)/Veil.iconset
 LDFLAGS := -s -w
 
 WINDIR  := $(DIST)/windows
 
-.PHONY: all server app app-universal icns macos-app dmg windows test clean
+.PHONY: all server app app-universal icns macos-app dmg portable macos-release windows test clean
 
 all: server app
 
@@ -50,6 +52,16 @@ dmg: macos-app
 	cp packaging/macos/README.txt "$(DIST)/dmg/Прочтите.txt"
 	hdiutil create -volname "Veil $(VERSION)" -srcfolder $(DIST)/dmg -fs HFS+ -format UDZO -imagekey zlib-level=9 -ov $(DMG)
 	rm -rf $(DIST)/dmg
+
+portable: macos-app
+	rm -rf $(PORTDIR) $(PORTABLE)
+	mkdir -p $(PORTDIR)
+	cp -R $(APP) $(PORTDIR)/
+	cp packaging/macos/PORTABLE.txt "$(PORTDIR)/Прочтите.txt"
+	ditto -c -k --sequesterRsrc --keepParent $(PORTDIR) $(PORTABLE)
+	rm -rf $(PORTDIR)
+
+macos-release: dmg portable
 
 test:
 	$(GO) test ./...

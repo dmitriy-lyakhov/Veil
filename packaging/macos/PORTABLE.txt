@@ -1,0 +1,27 @@
+Veil — портативная версия для macOS / portable version for macOS
+
+Установка не нужна: распакуйте архив в любую папку (хоть на флешку) и запустите Veil.app.
+No installation: unpack the archive anywhere (even a USB drive) and run Veil.app.
+
+ПЕРВЫЙ ЗАПУСК / FIRST LAUNCH
+Приложение не подписано сертификатом Apple, поэтому macOS его заблокирует.
+The app is not signed with an Apple certificate, so macOS will block it.
+  1. Нажмите на Veil.app правой кнопкой → «Открыть» → «Открыть».
+     Right-click Veil.app → Open → Open.
+  2. Если архив скачан из интернета и кнопки «Открыть» нет, выполните в Терминале:
+     If the archive was downloaded and there is no Open button, run in Terminal:
+         xattr -dr com.apple.quarantine /путь/к/Veil.app
+     (или: Системные настройки → Конфиденциальность и безопасность → «Всё равно открыть»)
+
+ПОДКЛЮЧЕНИЕ / CONNECTING
+При подключении Veil попросит пароль администратора: он нужен, чтобы создать VPN-интерфейс и маршруты.
+Veil asks for the administrator password when connecting: it is needed to create the VPN interface and routes.
+
+ГДЕ ХРАНЯТСЯ ДАННЫЕ / WHERE DATA LIVES
+Профили серверов и настройки лежат не в папке приложения, а в
+~/Library/Application Support/Veil — при переносе приложения на другой Mac профили
+нужно перенести отдельно (страница «Резервная копия» в настройках).
+Server profiles and settings are stored in ~/Library/Application Support/Veil, not next to the app;
+use "Backup" in Settings to move them to another Mac.
+
+Mac с Intel и Apple Silicon, macOS 13 Ventura и новее / Intel and Apple Silicon, macOS 13+.

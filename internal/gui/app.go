@@ -28,7 +28,7 @@ import (
 
 const (
 	appID        = "net.veil.client"
-	appVersion   = "0.6.0"
+	appVersion   = "0.7.0"
 	pollInterval = time.Second
 	readyTimeout = 3 * time.Minute
 	prefSelected = "selected"
