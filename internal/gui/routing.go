@@ -15,16 +15,15 @@ import (
 	"veil/internal/routing"
 )
 
-var groupTitles = map[string]string{
-	"ai": "Нейросети", "anime": "Аниме", "art": "Искусство", "casino": "Казино", "discord": "Discord",
-	"education": "Образование", "finance": "Финансы", "games": "Игры", "hosting": "Хостинг",
-	"jetbrains": "JetBrains", "messengers": "Мессенджеры", "music": "Музыка", "news": "Новости",
-	"porn": "18+", "shop": "Магазины", "socials": "Соцсети", "tools": "Инструменты",
-	"torrent": "Торренты", "video": "Видео", "youtube": "YouTube", "other": "Прочее",
-}
-
 func groupTitle(g string) string {
-	if t, ok := groupTitles[g]; ok {
+	titles := map[string]string{
+		"ai": L("AI", "Нейросети"), "anime": L("Anime", "Аниме"), "art": L("Art", "Искусство"), "casino": L("Casino", "Казино"), "discord": "Discord",
+		"education": L("Education", "Образование"), "finance": L("Finance", "Финансы"), "games": L("Games", "Игры"), "hosting": L("Hosting", "Хостинг"),
+		"jetbrains": "JetBrains", "messengers": L("Messengers", "Мессенджеры"), "music": L("Music", "Музыка"), "news": L("News", "Новости"),
+		"porn": "18+", "shop": L("Shops", "Магазины"), "socials": L("Social media", "Соцсети"), "tools": L("Tools", "Инструменты"),
+		"torrent": L("Torrents", "Торренты"), "video": L("Video", "Видео"), "youtube": "YouTube", "other": L("Other", "Прочее"),
+	}
+	if t, ok := titles[g]; ok {
 		return t
 	}
 	return g
@@ -34,7 +33,7 @@ func groupTitle(g string) string {
 
 func (u *ui) openCatalog(target *routing.List, added func()) {
 	cachePath, _ := routing.CatalogPath()
-	w := u.newSubPage("Каталог адресов")
+	w := u.newSubPage(L("Address catalog", "Каталог адресов"))
 	ctx, cancel := context.WithCancel(context.Background())
 	w.OnClosed = cancel
 
@@ -53,13 +52,13 @@ func (u *ui) openCatalog(target *routing.List, added func()) {
 	barBox := container.NewPadded(bar)
 	barBox.Hide()
 	filter := widget.NewEntry()
-	filter.SetPlaceHolder("Поиск по названию или домену")
+	filter.SetPlaceHolder(L("Search by name or domain", "Поиск по названию или домену"))
 	groupsBox := newVBoxFit()
-	add := widget.NewButtonWithIcon("Добавить выбранное", theme.ConfirmIcon(), nil)
+	add := widget.NewButtonWithIcon(L("Add selected", "Добавить выбранное"), theme.ConfirmIcon(), nil)
 	add.Importance = widget.HighImportance
 	add.Disable()
-	load := widget.NewButtonWithIcon("Загрузить каталог", theme.DownloadIcon(), nil)
-	selectAll := widget.NewButtonWithIcon("Выбрать все", theme.CheckButtonCheckedIcon(), nil)
+	load := widget.NewButtonWithIcon(L("Load catalog", "Загрузить каталог"), theme.DownloadIcon(), nil)
+	selectAll := widget.NewButtonWithIcon(L("Select all", "Выбрать все"), theme.CheckButtonCheckedIcon(), nil)
 	selectAll.Importance = widget.LowImportance
 	selectAll.Disable()
 
@@ -68,10 +67,10 @@ func (u *ui) openCatalog(target *routing.List, added func()) {
 	var updateSelect func()
 	updateAdd := func() {
 		if n := len(selected); n > 0 {
-			add.SetText(fmt.Sprintf("Добавить выбранное (%d)", n))
+			add.SetText(fmt.Sprintf(L("Add selected (%d)", "Добавить выбранное (%d)"), n))
 			add.Enable()
 		} else {
-			add.SetText("Добавить выбранное")
+			add.SetText(L("Add selected", "Добавить выбранное"))
 			add.Disable()
 		}
 		if updateSelect != nil {
@@ -108,7 +107,7 @@ func (u *ui) openCatalog(target *routing.List, added func()) {
 		vis := visible()
 		if len(vis) == 0 {
 			selectAll.Disable()
-			selectAll.SetText("Выбрать все")
+			selectAll.SetText(L("Select all", "Выбрать все"))
 			return
 		}
 		selectAll.Enable()
@@ -120,9 +119,9 @@ func (u *ui) openCatalog(target *routing.List, added func()) {
 			}
 		}
 		if all {
-			selectAll.SetText("Снять выбор")
+			selectAll.SetText(L("Deselect all", "Снять выбор"))
 		} else {
-			selectAll.SetText("Выбрать все")
+			selectAll.SetText(L("Select all", "Выбрать все"))
 		}
 	}
 	selectAll.OnTapped = func() {
@@ -168,7 +167,7 @@ func (u *ui) openCatalog(target *routing.List, added func()) {
 			byLabel := map[string]routing.Service{}
 			var sel []string
 			for i, s := range vis {
-				labels[i] = fmt.Sprintf("%s · %d подсетей, %d доменов", s.Name, len(s.Prefixes), len(s.Domains))
+				labels[i] = fmt.Sprintf(L("%s · %d subnets, %d domains", "%s · %d подсетей, %d доменов"), s.Name, len(s.Prefixes), len(s.Domains))
 				byLabel[labels[i]] = s
 				if _, ok := selected[s.Name]; ok {
 					sel = append(sel, labels[i])
@@ -195,7 +194,7 @@ func (u *ui) openCatalog(target *routing.List, added func()) {
 			items = append(items, it)
 		}
 		if len(items) == 0 {
-			groupsBox.Add(richText("Ничего не найдено", true, false))
+			groupsBox.Add(richText(L("Nothing found", "Ничего не найдено"), true, false))
 		} else {
 			groupsBox.Add(widget.NewAccordion(items...))
 		}
@@ -206,10 +205,10 @@ func (u *ui) openCatalog(target *routing.List, added func()) {
 
 	describe := func() {
 		if cat == nil {
-			setStatus("Каталог не загружен. Нажмите «Загрузить каталог»: это около 45 МБ, скачивание может занять несколько минут (список большой и отдаётся медленно). Он сохраняется на этом устройстве.")
+			setStatus(L("The catalog is not loaded. Press \"Load catalog\": it is about 45 MB and may take several minutes (the list is large and served slowly). It is stored on this device.", "Каталог не загружен. Нажмите «Загрузить каталог»: это около 45 МБ, скачивание может занять несколько минут (список большой и отдаётся медленно). Он сохраняется на этом устройстве."))
 			return
 		}
-		setStatus(fmt.Sprintf("Загружен %s: %d сервисов. Адреса объединены в подсети. Обновить можно повторной загрузкой.", cat.Fetched.Format("02.01.2006 15:04"), len(cat.Services)))
+		setStatus(fmt.Sprintf(L("Loaded %s: %d services. Addresses are merged into subnets. Reload to update.", "Загружен %s: %d сервисов. Адреса объединены в подсети. Обновить можно повторной загрузкой."), cat.Fetched.Format("02.01.2006 15:04"), len(cat.Services)))
 	}
 	if c, err := routing.LoadCatalog(cachePath); err == nil {
 		cat = c
@@ -222,16 +221,16 @@ func (u *ui) openCatalog(target *routing.List, added func()) {
 		load.Disable()
 		barBox.Show()
 		bar.Start()
-		setStatus("Скачиваем каталог…")
+		setStatus(L("Downloading catalog…", "Скачиваем каталог…"))
 		url := strings.Join(strings.Fields(urlEntry.Text), "")
 		go func() {
 			start := time.Now()
 			c, err := routing.FetchCatalog(ctx, url, func(read, total int64) {
-				msg := "Скачано " + humanBytes(uint64(read))
+				msg := L("Downloaded ", "Скачано ") + humanBytes(uint64(read))
 				if total > 0 {
-					msg += " из " + humanBytes(uint64(total))
+					msg += L(" of ", " из ") + humanBytes(uint64(total))
 				}
-				msg += fmt.Sprintf(" · %d с", int(time.Since(start).Seconds()))
+				msg += fmt.Sprintf(L(" · %d s", " · %d с"), int(time.Since(start).Seconds()))
 				fyne.Do(func() { setStatus(msg) })
 			})
 			if err == nil {
@@ -243,7 +242,7 @@ func (u *ui) openCatalog(target *routing.List, added func()) {
 				load.Enable()
 				if err != nil {
 					if ctx.Err() == nil {
-						setStatus("Не удалось загрузить каталог: " + err.Error())
+						setStatus(L("Failed to load the catalog: ", "Не удалось загрузить каталог: ") + err.Error())
 					}
 					return
 				}
@@ -267,7 +266,7 @@ func (u *ui) openCatalog(target *routing.List, added func()) {
 	body := newVBoxFit()
 	body.Add(status)
 	body.Add(barBox)
-	body.Add(lead(text("Адрес каталога", 12, colMuted, false)))
+	body.Add(lead(text(L("Catalog address", "Адрес каталога"), 12, colMuted, false)))
 	body.Add(urlEntry)
 	body.Add(load)
 	body.Add(filter)

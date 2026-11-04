@@ -132,22 +132,22 @@ func note(s string) fyne.CanvasObject { return lead(prose(s)) }
 // ---------- вкладка «Настройки» ----------
 
 func (u *ui) settingsPage() fyne.CanvasObject {
-	title := text("Настройки", 20, colText, false)
+	title := text(L("Settings", "Настройки"), 20, colText, false)
 	title.Alignment = fyne.TextAlignCenter
 	rows := container.NewVBox(
-		navRow("Серверы", "", u.openServersPage),
-		navRow("Подключение", "", u.openConnection),
+		navRow(L("Servers", "Серверы"), "", u.openServersPage),
+		navRow(L("Connection", "Подключение"), "", u.openConnection),
 		navRow(L("Appearance", "Внешний вид"), "", u.openAppearance),
-			navRow("Приложение", "", u.openApplication),
-		navRow("Резервная копия", "", u.openBackup),
-		navRow("О Veil", "", u.openAbout),
-		navRow("Закрыть приложение", "", u.quit),
+		navRow(L("Application", "Приложение"), "", u.openApplication),
+		navRow(L("Backup", "Резервная копия"), "", u.openBackup),
+		navRow(L("About Veil", "О Veil"), "", u.openAbout),
+		navRow(L("Quit application", "Закрыть приложение"), "", u.quit),
 	)
 	return container.NewPadded(container.NewBorder(container.NewVBox(container.NewPadded(title)), nil, nil, nil, scrolled(rows)))
 }
 
 func (u *ui) openServersPage() {
-	u.openPage("Серверы", u.serversView)
+	u.openPage(L("Servers", "Серверы"), u.serversView)
 }
 
 func (u *ui) cleanup() {
@@ -166,11 +166,11 @@ func (u *ui) quit() {
 
 func (u *ui) openConnection() {
 	rows := container.NewVBox(
-		navRow("DNS-серверы", "Заменяют DNS-серверы из профиля сервера", u.openDNS),
-		navRow("Раздельное туннелирование по сайтам", "Позволяет выбрать, какие сайты открывать через VPN, а какие напрямую", u.openSplit),
-		navRow("KillSwitch", "Блокирует сетевые соединения, если VPN оборвался", u.openKillSwitch),
+		navRow(L("DNS servers", "DNS-серверы"), L("Replace the DNS servers from the server profile", "Заменяют DNS-серверы из профиля сервера"), u.openDNS),
+		navRow(L("Split tunneling by site", "Раздельное туннелирование по сайтам"), L("Choose which sites go through the VPN and which connect directly", "Позволяет выбрать, какие сайты открывать через VPN, а какие напрямую"), u.openSplit),
+		navRow("KillSwitch", L("Blocks network connections if the VPN drops", "Блокирует сетевые соединения, если VPN оборвался"), u.openKillSwitch),
 	)
-	u.openPage("Подключение", scrolled(rows))
+	u.openPage(L("Connection", "Подключение"), scrolled(rows))
 }
 
 func (u *ui) defaultDNSHint() (string, string) {
@@ -196,8 +196,8 @@ func (u *ui) openDNS() {
 	if len(u.st.DNS) > 1 {
 		secondary.SetText(u.st.DNS[1])
 	}
-	w := u.newSubPage("DNS-серверы")
-	save := widget.NewButton("Сохранить", func() {
+	w := u.newSubPage(L("DNS servers", "DNS-серверы"))
+	save := widget.NewButton(L("Save", "Сохранить"), func() {
 		var list []string
 		for _, e := range []*widget.Entry{primary, secondary} {
 			v := strings.TrimSpace(e.Text)
@@ -205,7 +205,7 @@ func (u *ui) openDNS() {
 				continue
 			}
 			if _, err := netip.ParseAddr(v); err != nil {
-				showError(fmt.Errorf("«%s» — не IP-адрес", v), w)
+				showError(fmt.Errorf(L("\"%s\" is not an IP address", "«%s» — не IP-адрес"), v), w)
 				return
 			}
 			list = append(list, v)
@@ -216,16 +216,16 @@ func (u *ui) openDNS() {
 		w.Close()
 	})
 	save.Importance = widget.HighImportance
-	restore := widget.NewButton("Вернуть по умолчанию", func() {
+	restore := widget.NewButton(L("Restore defaults", "Вернуть по умолчанию"), func() {
 		primary.SetText("")
 		secondary.SetText("")
 		u.st.DNS = nil
 		u.saveSettings()
 	})
 	body := container.NewVBox(
-		note("Используются, когда сервер не предоставляет свои DNS. Пустые поля — значения из профиля. Применяется при следующем подключении."),
-		lead(text("Основной DNS", 12, colMuted, false)), primary,
-		lead(text("Запасной DNS", 12, colMuted, false)), secondary,
+		note(L("Used when the server does not provide its own DNS. Empty fields use the profile values. Applies on the next connection.", "Используются, когда сервер не предоставляет свои DNS. Пустые поля — значения из профиля. Применяется при следующем подключении.")),
+		lead(text(L("Primary DNS", "Основной DNS"), 12, colMuted, false)), primary,
+		lead(text(L("Secondary DNS", "Запасной DNS"), 12, colMuted, false)), secondary,
 	)
 	w.SetContent(container.NewPadded(container.NewBorder(nil, container.NewVBox(restore, save), nil, nil, scrolled(body))))
 	w.Show()
@@ -234,12 +234,12 @@ func (u *ui) openDNS() {
 func (u *ui) openKillSwitch() {
 	w := u.newSubPage("KillSwitch")
 	status := prose("")
-	unblock := widget.NewButtonWithIcon("Снять блокировку интернета", theme.ConfirmIcon(), nil)
+	unblock := widget.NewButtonWithIcon(L("Remove internet block", "Снять блокировку интернета"), theme.ConfirmIcon(), nil)
 	unblock.Importance = widget.DangerImportance
 	refresh := func() {
 		if client.Blocked() {
 			unblock.Show()
-			status.Segments[0].(*widget.TextSegment).Text = "Сейчас действует блокировка: прошлый сеанс завершился аварийно. Подключитесь снова или снимите блокировку."
+			status.Segments[0].(*widget.TextSegment).Text = L("A block is active: the previous session ended abnormally. Reconnect or remove the block.", "Сейчас действует блокировка: прошлый сеанс завершился аварийно. Подключитесь снова или снимите блокировку.")
 		} else {
 			unblock.Hide()
 			status.Segments[0].(*widget.TextSegment).Text = ""
@@ -258,12 +258,12 @@ func (u *ui) openKillSwitch() {
 			})
 		}()
 	}
-	row, _ := switchRow("KillSwitch", "Включите, чтобы трафик не уходил в открытую сеть, если VPN оборвётся", u.st.KillSwitch, func(on bool) {
+	row, _ := switchRow("KillSwitch", L("Enable to keep traffic off the open network if the VPN drops", "Включите, чтобы трафик не уходил в открытую сеть, если VPN оборвётся"), u.st.KillSwitch, func(on bool) {
 		u.st.KillSwitch = on
 		u.saveSettings()
 		u.logf("KillSwitch: %v", on)
 	})
-	mode := listRow("Мягкий KillSwitch", "Интернет блокируется, если VPN отключился неожиданно. При обычном отключении блокировки нет. Действует со следующего подключения.", widget.NewIcon(theme.RadioButtonCheckedIcon()), nil)
+	mode := listRow(L("Soft KillSwitch", "Мягкий KillSwitch"), L("The internet is blocked if the VPN disconnects unexpectedly. A normal disconnect does not block. Takes effect on the next connection.", "Интернет блокируется, если VPN отключился неожиданно. При обычном отключении блокировки нет. Действует со следующего подключения."), widget.NewIcon(theme.RadioButtonCheckedIcon()), nil)
 	body := container.NewVBox(row, mode, status, unblock)
 	refresh()
 	w.SetContent(container.NewPadded(scrolled(body)))
@@ -274,7 +274,7 @@ func (u *ui) openKillSwitch() {
 
 func (u *ui) openApplication() {
 	var minimized *switchWidget
-	autoRow, _ := switchRow("Автозапуск", "Запускать приложение при включении устройства", u.st.AutoStart, func(on bool) {
+	autoRow, _ := switchRow(L("Autostart", "Автозапуск"), L("Launch the app when the device starts", "Запускать приложение при включении устройства"), u.st.AutoStart, func(on bool) {
 		if err := setAutostart(on); err != nil {
 			showError(err, u.win)
 			return
@@ -287,34 +287,34 @@ func (u *ui) openApplication() {
 		minimized.SetDisabled(!on)
 		u.saveSettings()
 	})
-	minRow, mw := switchRow("Запускать свёрнутым", "Запускать приложение в трее (работает при включённом автозапуске)", u.st.StartMinimized, func(on bool) {
+	minRow, mw := switchRow(L("Start minimized", "Запускать свёрнутым"), L("Start the app in the tray (works when autostart is on)", "Запускать приложение в трее (работает при включённом автозапуске)"), u.st.StartMinimized, func(on bool) {
 		u.st.StartMinimized = on
 		u.saveSettings()
 	})
 	minimized = mw
 	minimized.SetDisabled(!u.st.AutoStart)
-	connRow, _ := switchRow("Автоподключение", "Подключаться к VPN при запуске приложения", u.st.AutoConnect, func(on bool) {
+	connRow, _ := switchRow(L("Auto-connect", "Автоподключение"), L("Connect to the VPN when the app starts", "Подключаться к VPN при запуске приложения"), u.st.AutoConnect, func(on bool) {
 		u.st.AutoConnect = on
 		u.saveSettings()
 	})
-	updRow, _ := switchRow("Проверять обновления", "Проверять наличие новой версии при запуске", !u.st.NoUpdateCheck, func(on bool) {
+	updRow, _ := switchRow(L("Check for updates", "Проверять обновления"), L("Check for a new version on launch", "Проверять наличие новой версии при запуске"), !u.st.NoUpdateCheck, func(on bool) {
 		u.st.NoUpdateCheck = !on
 		u.saveSettings()
 	})
-	logState := "Отключено"
+	logState := L("Off", "Отключено")
 	if u.st.LogEnabled {
-		logState = "Включено"
+		logState = L("On", "Включено")
 	}
 	rows := container.NewVBox(
 		autoRow, connRow, minRow, updRow,
-		navRow("Журналы", logState, u.openLogging),
-		listRowColored("Сбросить настройки и удалить все данные приложения", "", theme.ColorNameError, widget.NewIcon(theme.NavigateNextIcon()), u.confirmReset),
+		navRow(L("Logs", "Журналы"), logState, u.openLogging),
+		listRowColored(L("Reset settings and delete all app data", "Сбросить настройки и удалить все данные приложения"), "", theme.ColorNameError, widget.NewIcon(theme.NavigateNextIcon()), u.confirmReset),
 	)
-	u.openPage("Приложение", scrolled(rows))
+	u.openPage(L("Application", "Приложение"), scrolled(rows))
 }
 
 func (u *ui) confirmReset() {
-	showConfirm("Сброс", "Будут удалены все профили серверов, списки адресов, каталог, настройки и журналы с этого устройства. Серверы не изменятся. Продолжить?", func(ok bool) {
+	showConfirm(L("Reset", "Сброс"), L("All server profiles, address lists, the catalog, settings and logs will be deleted from this device. The servers themselves are not changed. Continue?", "Будут удалены все профили серверов, списки адресов, каталог, настройки и журналы с этого устройства. Серверы не изменятся. Продолжить?"), func(ok bool) {
 		if !ok {
 			return
 		}
@@ -333,21 +333,21 @@ func (u *ui) confirmReset() {
 		u.reload()
 		u.refreshSplitLink()
 		u.showPage(0)
-		showInfo("Готово", "Данные приложения удалены.", u.win)
+		showInfo(L("Done", "Готово"), L("App data deleted.", "Данные приложения удалены."), u.win)
 	}, u.win)
 }
 
 // ---------- журналы ----------
 
 func (u *ui) openLogging() {
-	w := u.newSubPage("Журналы")
+	w := u.newSubPage(L("Logs", "Журналы"))
 	tunnelPath, appPath := u.logFiles()
 	body := container.NewVBox()
 	var rebuild func()
 	rebuild = func() {
 		body.RemoveAll()
-		body.Add(note("Журналы помогают разобраться, что пошло не так."))
-		row, _ := switchRow("Записывать журналы", "Запись отключится через 14 дней, журналы будут удалены", u.st.LogEnabled, func(on bool) {
+		body.Add(note(L("Logs help figure out what went wrong.", "Журналы помогают разобраться, что пошло не так.")))
+		row, _ := switchRow(L("Record logs", "Записывать журналы"), L("Recording turns off after 14 days and logs are deleted", "Запись отключится через 14 дней, журналы будут удалены"), u.st.LogEnabled, func(on bool) {
 			u.st.LogEnabled = on
 			if on {
 				u.st.LogSince = time.Now()
@@ -355,11 +355,11 @@ func (u *ui) openLogging() {
 			u.saveSettings()
 		})
 		body.Add(row)
-		body.Add(sectionLabel("Журналы"))
-		body.Add(navRow("Туннель", fmt.Sprintf("События подключения · %s", humanBytes(uint64(fileSize(tunnelPath)))), func() { u.openLogView("Журнал туннеля", tunnelPath) }))
-		body.Add(navRow("Приложение", fmt.Sprintf("События приложения · %s", humanBytes(uint64(fileSize(appPath)))), func() { u.openLogView("Журнал приложения", appPath) }))
-		body.Add(listRow("Сохранить все журналы", "Архив .zip с обоими журналами", widget.NewIcon(theme.DocumentSaveIcon()), func() { u.saveLogs(w) }))
-		body.Add(listRowColored("Очистить все журналы", "", theme.ColorNameError, widget.NewIcon(theme.DeleteIcon()), func() {
+		body.Add(sectionLabel(L("Logs", "Журналы")))
+		body.Add(navRow(L("Tunnel", "Туннель"), fmt.Sprintf(L("Connection events · %s", "События подключения · %s"), humanBytes(uint64(fileSize(tunnelPath)))), func() { u.openLogView(L("Tunnel log", "Журнал туннеля"), tunnelPath) }))
+		body.Add(navRow(L("Application", "Приложение"), fmt.Sprintf(L("App events · %s", "События приложения · %s"), humanBytes(uint64(fileSize(appPath)))), func() { u.openLogView(L("App log", "Журнал приложения"), appPath) }))
+		body.Add(listRow(L("Save all logs", "Сохранить все журналы"), L(".zip archive with both logs", "Архив .zip с обоими журналами"), widget.NewIcon(theme.DocumentSaveIcon()), func() { u.saveLogs(w) }))
+		body.Add(listRowColored(L("Clear all logs", "Очистить все журналы"), "", theme.ColorNameError, widget.NewIcon(theme.DeleteIcon()), func() {
 			u.clearLogs()
 			rebuild()
 		}))
@@ -398,7 +398,7 @@ func (u *ui) saveLogs(parent fyne.Window) {
 
 func (u *ui) openLogView(title, path string) {
 	w := u.newSubPage(title)
-	text := "Журнал пуст."
+	text := L("The log is empty.", "Журнал пуст.")
 	if f, err := os.Open(path); err == nil {
 		defer f.Close()
 		if st, err := f.Stat(); err == nil && st.Size() > maxLogView {
@@ -421,14 +421,14 @@ func (u *ui) openLogView(title, path string) {
 // ---------- резервная копия ----------
 
 func (u *ui) openBackup() {
-	w := u.newSubPage("Резервная копия")
+	w := u.newSubPage(L("Backup", "Резервная копия"))
 	info := card(container.NewBorder(nil, nil, widget.NewIcon(theme.InfoIcon()), nil,
-		prose("Копия содержит пароли и приватные ключи всех добавленных серверов. Храните её в надёжном месте.")))
-	make := widget.NewButton("Сделать резервную копию", func() { u.makeBackup(w) })
+		prose(L("The backup contains passwords and private keys of all added servers. Keep it in a safe place.", "Копия содержит пароли и приватные ключи всех добавленных серверов. Храните её в надёжном месте."))))
+	make := widget.NewButton(L("Create backup", "Сделать резервную копию"), func() { u.makeBackup(w) })
 	make.Importance = widget.HighImportance
-	restore := widget.NewButton("Восстановить из копии", func() { u.restoreBackup(w) })
+	restore := widget.NewButton(L("Restore from backup", "Восстановить из копии"), func() { u.restoreBackup(w) })
 	body := container.NewBorder(
-		container.NewVBox(note("Сохраните настройки в файл, чтобы восстановить их при следующей установке приложения."), info),
+		container.NewVBox(note(L("Save your settings to a file to restore them on the next install of the app.", "Сохраните настройки в файл, чтобы восстановить их при следующей установке приложения.")), info),
 		container.NewVBox(make, restore), nil, nil)
 	w.SetContent(container.NewPadded(body))
 	w.Show()
@@ -480,7 +480,7 @@ func (u *ui) makeBackup(parent fyne.Window) {
 			showError(err, parent)
 			return
 		}
-		showInfo("Готово", fmt.Sprintf("Копия сохранена (файлов: %d).", len(files)), parent)
+		showInfo(L("Done", "Готово"), fmt.Sprintf(L("Backup saved (files: %d).", "Копия сохранена (файлов: %d)."), len(files)), parent)
 	}, parent)
 	fd.SetFileName("veil-" + time.Now().Format("20060102") + backupExt)
 	fd.Show()
@@ -497,7 +497,7 @@ func (u *ui) restoreBackup(parent fyne.Window) {
 			showError(err, parent)
 			return
 		}
-		showConfirm("Восстановление", "Профили и настройки из копии будут добавлены к текущим; совпадающие заменятся. Продолжить?", func(ok bool) {
+		showConfirm(L("Restore", "Восстановление"), L("Profiles and settings from the backup will be added to the current ones; matching ones will be replaced. Continue?", "Профили и настройки из копии будут добавлены к текущим; совпадающие заменятся. Продолжить?"), func(ok bool) {
 			if !ok {
 				return
 			}
@@ -509,7 +509,7 @@ func (u *ui) restoreBackup(parent fyne.Window) {
 			u.loadSettings()
 			u.reload()
 			u.refreshSplitLink()
-			showInfo("Готово", fmt.Sprintf("Восстановлено файлов: %d.", n), parent)
+			showInfo(L("Done", "Готово"), fmt.Sprintf(L("Files restored: %d.", "Восстановлено файлов: %d."), n), parent)
 		}, parent)
 	}, parent)
 	fd.SetFilter(storage.NewExtensionFileFilter([]string{backupExt, ".zip"}))
@@ -520,7 +520,7 @@ func (u *ui) restoreBackup(parent fyne.Window) {
 func restoreFromZip(data []byte) (int, error) {
 	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
-		return 0, fmt.Errorf("это не резервная копия Veil: %w", err)
+		return 0, fmt.Errorf(L("this is not a Veil backup: %w", "это не резервная копия Veil: %w"), err)
 	}
 	dir, err := settings.Dir()
 	if err != nil {
@@ -556,7 +556,7 @@ func restoreFromZip(data []byte) (int, error) {
 		n++
 	}
 	if n == 0 {
-		return 0, fmt.Errorf("в архиве нет данных Veil")
+		return 0, fmt.Errorf("%s", L("the archive contains no Veil data", "в архиве нет данных Veil"))
 	}
 	return n, nil
 }
@@ -564,13 +564,13 @@ func restoreFromZip(data []byte) (int, error) {
 // ---------- о приложении ----------
 
 func (u *ui) openAbout() {
-	w := u.newSubPage("О Veil")
+	w := u.newSubPage(L("About Veil", "О Veil"))
 	logo := canvas.NewImageFromResource(bundledIcon())
 	logo.FillMode = canvas.ImageFillContain
 	logo.SetMinSize(fyne.NewSize(96, 96))
 	name := text("Veil", 26, colText, true)
 	name.Alignment = fyne.TextAlignCenter
-	desc := prose("VPN с маскировкой под HTTPS: ядро WireGuard внутри HTTP/3 и HTTP/2 на порту 443. Свободное приложение с открытым исходным кодом.")
+	desc := prose(L("A VPN disguised as HTTPS: the WireGuard core inside HTTP/3 and HTTP/2 on port 443. Free, open-source application.", "VPN с маскировкой под HTTPS: ядро WireGuard внутри HTTP/3 и HTTP/2 на порту 443. Свободное приложение с открытым исходным кодом."))
 	open := func(link string) func() {
 		return func() {
 			if uu, err := url.Parse(link); err == nil {
@@ -580,14 +580,14 @@ func (u *ui) openAbout() {
 	}
 	copyVer := widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() { u.app.Clipboard().SetContent(appVersion) })
 	copyVer.Importance = widget.LowImportance
-	check := widget.NewButton("Проверить обновления", func() { u.checkUpdates(w, true) })
+	check := widget.NewButton(L("Check for updates", "Проверить обновления"), func() { u.checkUpdates(w, true) })
 	check.Importance = widget.LowImportance
 	body := container.NewVBox(
 		container.NewCenter(container.NewGridWrap(fyne.NewSize(96, 96), logo)),
 		name, desc,
-		sectionLabel("Контакты"),
-		listRow("GitHub", "Исходный код и сообщения об ошибках", widget.NewIcon(theme.NavigateNextIcon()), open(repoURL)),
-		listRow("Версия "+appVersion, "", copyVer, nil),
+		sectionLabel(L("Contacts", "Контакты")),
+		listRow("GitHub", L("Source code and bug reports", "Исходный код и сообщения об ошибках"), widget.NewIcon(theme.NavigateNextIcon()), open(repoURL)),
+		listRow(L("Version ", "Версия ")+appVersion, "", copyVer, nil),
 		check,
 	)
 	w.SetContent(container.NewPadded(scrolled(body)))
@@ -624,7 +624,7 @@ func (u *ui) checkUpdates(parent fyne.Window, verbose bool) {
 					showError(err, parent)
 				}
 			case newerVersion(latest, appVersion):
-				showConfirm("Доступно обновление", fmt.Sprintf("Вышла версия %s (у вас %s). Открыть страницу загрузки?", latest, appVersion), func(ok bool) {
+				showConfirm(L("Update available", "Доступно обновление"), fmt.Sprintf(L("Version %s is out (you have %s). Open the download page?", "Вышла версия %s (у вас %s). Открыть страницу загрузки?"), latest, appVersion), func(ok bool) {
 					if ok {
 						if uu, err := url.Parse(link); err == nil {
 							_ = u.app.OpenURL(uu)
@@ -632,7 +632,7 @@ func (u *ui) checkUpdates(parent fyne.Window, verbose bool) {
 					}
 				}, parent)
 			case verbose:
-				showInfo("Обновлений нет", "Установлена последняя версия: "+appVersion, parent)
+				showInfo(L("No updates", "Обновлений нет"), L("You have the latest version: ", "Установлена последняя версия: ")+appVersion, parent)
 			}
 		})
 	}()
@@ -641,13 +641,13 @@ func (u *ui) checkUpdates(parent fyne.Window, verbose bool) {
 // ---------- страница «Добавить» ----------
 
 func (u *ui) addPage() fyne.CanvasObject {
-	title := text("Подключение", 20, colText, false)
+	title := text(L("Connection", "Подключение"), 20, colText, false)
 	title.Alignment = fyne.TextAlignCenter
 	key := widget.NewMultiLineEntry()
 	key.Wrapping = fyne.TextWrapBreak
 	key.SetMinRowsVisible(2)
-	key.SetPlaceHolder("Вставьте ключ veil://…")
-	insert := widget.NewButton("Вставить", func() {
+	key.SetPlaceHolder(L("Paste a veil:// key…", "Вставьте ключ veil://…"))
+	insert := widget.NewButton(L("Paste", "Вставить"), func() {
 		if strings.TrimSpace(key.Text) == "" {
 			key.SetText(strings.TrimSpace(u.app.Clipboard().Content()))
 		}
@@ -672,12 +672,12 @@ func (u *ui) addPage() fyne.CanvasObject {
 	})
 	insert.Importance = widget.HighImportance
 	rows := container.NewVBox(
-		note("Вставьте ключ, добавьте файл конфигурации или отсканируйте QR-код из приложения администратора."),
+		note(L("Paste a key, add a configuration file, or scan the QR code from the administrator app.", "Вставьте ключ, добавьте файл конфигурации или отсканируйте QR-код из приложения администратора.")),
 		key, insert,
-		sectionLabel("Другие способы подключения"),
-		navRow("Свой сервер по SSH", "Veil установится на ваш сервер вместе с сайтом-прикрытием", u.showDeployForm),
-		navRow("Файл с настройками подключения", "Файл .veil, выданный админ-панелью", u.showImport),
-		navRow("Через ближайший вход", "Выход задаётся явно, вход выбирается ближайший", u.openMultiEntryBuilder),
+		sectionLabel(L("Other ways to connect", "Другие способы подключения")),
+		navRow(L("Your own server via SSH", "Свой сервер по SSH"), L("Veil is installed on your server together with a cover website", "Veil установится на ваш сервер вместе с сайтом-прикрытием"), u.showDeployForm),
+		navRow(L("Connection settings file", "Файл с настройками подключения"), L(".veil file issued by the admin panel", "Файл .veil, выданный админ-панелью"), u.showImport),
+		navRow(L("Via the nearest entry", "Через ближайший вход"), L("The exit is set explicitly, the nearest entry is chosen", "Выход задаётся явно, вход выбирается ближайший"), u.openMultiEntryBuilder),
 	)
 	return container.NewPadded(container.NewBorder(container.NewVBox(container.NewPadded(title)), nil, nil, nil, scrolled(rows)))
 }

@@ -29,10 +29,10 @@ func (u *ui) setupTray() {
 		return
 	}
 	menu := fyne.NewMenu("Veil",
-		fyne.NewMenuItem("Открыть Veil", func() { fyne.Do(u.showWindow) }),
-		fyne.NewMenuItem("Подключить / отключить", func() { fyne.Do(u.toggle) }),
+		fyne.NewMenuItem(L("Open Veil", "Открыть Veil"), func() { fyne.Do(u.showWindow) }),
+		fyne.NewMenuItem(L("Connect / disconnect", "Подключить / отключить"), func() { fyne.Do(u.toggle) }),
 		fyne.NewMenuItemSeparator(),
-		fyne.NewMenuItem("Выход", func() { fyne.Do(u.quit) }),
+		fyne.NewMenuItem(L("Quit", "Выход"), func() { fyne.Do(u.quit) }),
 	)
 	desk.SetSystemTrayMenu(menu)
 	if icon := bundledIcon(); icon != nil {

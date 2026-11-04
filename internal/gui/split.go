@@ -30,7 +30,7 @@ func (u *ui) openSplit() {
 		showError(err, u.win)
 		return
 	}
-	w := u.newSubPage("Раздельное туннелирование")
+	w := u.newSubPage(L("Split tunneling", "Раздельное туннелирование"))
 	mode := 0 // 0 — через VPN, 1 — напрямую
 	list := func() *routing.List {
 		if mode == 0 {
@@ -47,9 +47,9 @@ func (u *ui) openSplit() {
 
 	hint := prose("")
 	setHint := func() {
-		t := "В туннель идёт только то, что перечислено здесь. Если список пуст, через VPN идёт весь трафик."
+		t := L("Only what is listed here goes through the tunnel. If the list is empty, all traffic goes through the VPN.", "В туннель идёт только то, что перечислено здесь. Если список пуст, через VPN идёт весь трафик.")
 		if mode == 1 {
-			t = "Эти сайты и адреса всегда открываются напрямую, мимо VPN."
+			t = L("These sites and addresses always connect directly, bypassing the VPN.", "Эти сайты и адреса всегда открываются напрямую, мимо VPN.")
 		}
 		hint.Segments[0].(*widget.TextSegment).Text = t
 		hint.Refresh()
@@ -71,7 +71,7 @@ func (u *ui) openSplit() {
 		}
 		for i, im := range l.Imports {
 			i, im := i, im
-			sub := fmt.Sprintf("%s · %d подсетей, %d доменов", im.Source, len(im.Prefixes), len(im.Domains))
+			sub := fmt.Sprintf(L("%s · %d subnets, %d domains", "%s · %d подсетей, %d доменов"), im.Source, len(im.Prefixes), len(im.Domains))
 			items.Add(entryRow(im.Title, sub, func() {
 				l.Imports = append(l.Imports[:i], l.Imports[i+1:]...)
 				persist()
@@ -79,16 +79,16 @@ func (u *ui) openSplit() {
 			}))
 		}
 		if len(lines) == 0 && len(l.Imports) == 0 {
-			items.Add(note("Список пуст."))
+			items.Add(note(L("The list is empty.", "Список пуст.")))
 		}
 		items.Refresh()
 	}
 
-	enableRow, _ := switchRow("Раздельное туннелирование", "", cfg.Enabled, func(on bool) {
+	enableRow, _ := switchRow(L("Split tunneling", "Раздельное туннелирование"), "", cfg.Enabled, func(on bool) {
 		cfg.Enabled = on
 		persist()
 	})
-	seg := newSegmented([]string{"Через VPN", "Напрямую"}, 0, func(i int) {
+	seg := newSegmented([]string{L("Via VPN", "Через VPN"), L("Direct", "Напрямую")}, 0, func(i int) {
 		mode = i
 		setHint()
 		rebuild()
@@ -97,7 +97,7 @@ func (u *ui) openSplit() {
 	rebuild()
 
 	entry := widget.NewEntry()
-	entry.SetPlaceHolder("сайт или IP")
+	entry.SetPlaceHolder(L("site or IP", "сайт или IP"))
 	add := func() {
 		raw := strings.TrimSpace(entry.Text)
 		if raw == "" {
@@ -105,7 +105,7 @@ func (u *ui) openSplit() {
 		}
 		prefixes, domains, errs := routing.ParseLines(raw)
 		if len(errs) > 0 || len(prefixes)+len(domains) == 0 {
-			msg := "некорректная запись"
+			msg := L("invalid entry", "некорректная запись")
 			if len(errs) > 0 {
 				msg = errs[0]
 			}
@@ -130,18 +130,18 @@ func (u *ui) openSplit() {
 	var menuBtn *widget.Button
 	menuBtn = widget.NewButtonWithIcon("", theme.MoreVerticalIcon(), func() {
 		menu := fyne.NewMenu("",
-			fyne.NewMenuItem("Добавить из каталога opencck", func() {
+			fyne.NewMenuItem(L("Add from the opencck catalog", "Добавить из каталога opencck"), func() {
 				u.openCatalog(list(), func() {
 					persist()
 					rebuild()
 				})
 			}),
-			fyne.NewMenuItem("Добавить сайты из файла", func() { u.importList(w, list(), false, func() { persist(); rebuild() }) }),
-			fyne.NewMenuItem("Заменить список из файла", func() { u.importList(w, list(), true, func() { persist(); rebuild() }) }),
-			fyne.NewMenuItem("Сохранить список в файл", func() { u.exportList(w, *list()) }),
+			fyne.NewMenuItem(L("Add sites from file", "Добавить сайты из файла"), func() { u.importList(w, list(), false, func() { persist(); rebuild() }) }),
+			fyne.NewMenuItem(L("Replace list from file", "Заменить список из файла"), func() { u.importList(w, list(), true, func() { persist(); rebuild() }) }),
+			fyne.NewMenuItem(L("Save list to file", "Сохранить список в файл"), func() { u.exportList(w, *list()) }),
 			fyne.NewMenuItemSeparator(),
-			fyne.NewMenuItem("Очистить список", func() {
-				showConfirm("Очистить список", "Удалить все записи из этого списка?", func(ok bool) {
+			fyne.NewMenuItem(L("Clear list", "Очистить список"), func() {
+				showConfirm(L("Clear list", "Очистить список"), L("Delete all entries from this list?", "Удалить все записи из этого списка?"), func(ok bool) {
 					if ok {
 						*list() = routing.List{}
 						persist()
@@ -213,11 +213,11 @@ func (u *ui) importList(parent fyne.Window, l *routing.List, replace bool, done 
 			l.Manual = appendLine(l.Manual, d)
 		}
 		done()
-		msg := fmt.Sprintf("Добавлено записей: %d.", len(prefixes)+len(domains))
+		msg := fmt.Sprintf(L("Entries added: %d.", "Добавлено записей: %d."), len(prefixes)+len(domains))
 		if len(errs) > 0 {
-			msg += fmt.Sprintf(" Пропущено строк с ошибками: %d.", len(errs))
+			msg += fmt.Sprintf(L(" Lines skipped due to errors: %d.", " Пропущено строк с ошибками: %d."), len(errs))
 		}
-		showInfo("Импорт", msg, parent)
+		showInfo(L("Import", "Импорт"), msg, parent)
 	}, parent)
 	fd.SetFilter(storage.NewExtensionFileFilter([]string{".txt", ".lst", ".list", ".csv"}))
 	fd.Show()

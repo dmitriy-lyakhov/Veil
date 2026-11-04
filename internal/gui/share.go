@@ -46,16 +46,16 @@ func (u *ui) showShare(parent fyne.Window, title string, r server.LinkResponse, 
 	hint.Wrapping = fyne.TextWrapWord
 	rows := container.NewVBox(qrImage(r.Link, r.QR))
 	if r.Via != "" {
-		v := widget.NewLabel("Маршрут: " + r.Via)
+		v := widget.NewLabel(L("Route: ", "Маршрут: ") + r.Via)
 		v.Wrapping = fyne.TextWrapWord
 		rows.Add(v)
 	}
 	rows.Add(hint)
 	rows.Add(link)
-	copyBtn := widget.NewButtonWithIcon("Скопировать", theme.ContentCopyIcon(), func() {
+	copyBtn := widget.NewButtonWithIcon(L("Copy", "Скопировать"), theme.ContentCopyIcon(), func() {
 		u.app.Clipboard().SetContent(r.Link)
 	})
-	saveBtn := widget.NewButtonWithIcon("Файл…", theme.DocumentSaveIcon(), func() {
+	saveBtn := widget.NewButtonWithIcon(L("File…", "Файл…"), theme.DocumentSaveIcon(), func() {
 		fd := dialog.NewFileSave(func(w fyne.URIWriteCloser, err error) {
 			if err != nil || w == nil {
 				return
@@ -75,7 +75,7 @@ func (u *ui) showShare(parent fyne.Window, title string, r server.LinkResponse, 
 	buttons := container.NewGridWithColumns(2, copyBtn, saveBtn)
 	rows.Add(buttons)
 	if installable {
-		install := widget.NewButtonWithIcon("Добавить на это устройство", theme.ContentAddIcon(), func() {
+		install := widget.NewButtonWithIcon(L("Add to this device", "Добавить на это устройство"), theme.ContentAddIcon(), func() {
 			p, err := config.DecodeLink(r.Link)
 			if err != nil {
 				showError(err, parent)
@@ -91,11 +91,11 @@ func (u *ui) showShare(parent fyne.Window, title string, r server.LinkResponse, 
 			}
 			u.reload()
 			u.selectProfile(p.Name)
-			showInfo("Готово", "Сервер «"+p.Name+"» добавлен в приложение.", parent)
+			showInfo(L("Done", "Готово"), L("Server \""+p.Name+"\" was added to the app.", "Сервер «"+p.Name+"» добавлен в приложение."), parent)
 		})
 		install.Importance = widget.HighImportance
 		rows.Add(install)
 	}
-	d := newCustom(title, "Закрыть", container.NewGridWrap(fyne.NewSize(380, 560), container.NewVScroll(rows)), parent)
+	d := newCustom(title, L("Close", "Закрыть"), container.NewGridWrap(fyne.NewSize(380, 560), container.NewVScroll(rows)), parent)
 	d.Show()
 }

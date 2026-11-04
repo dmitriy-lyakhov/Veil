@@ -27,11 +27,11 @@ type shareState struct {
 }
 
 func (u *ui) sharePage() fyne.CanvasObject {
-	s := &shareState{u: u, mgrs: map[string]*manager{}, name: "Новый клиент"}
+	s := &shareState{u: u, mgrs: map[string]*manager{}, name: L("New client", "Новый клиент")}
 	u.share = s
-	title := text("Поделиться доступом", 20, colText, false)
+	title := text(L("Share access", "Поделиться доступом"), 20, colText, false)
 	title.Alignment = fyne.TextAlignCenter
-	seg := newSegmented([]string{"Подключение", "Пользователи"}, 0, func(i int) {
+	seg := newSegmented([]string{L("Connection", "Подключение"), L("Users", "Пользователи")}, 0, func(i int) {
 		s.tab = i
 		s.render()
 	})
@@ -40,7 +40,7 @@ func (u *ui) sharePage() fyne.CanvasObject {
 		s.render()
 	})
 	s.body = newVBoxFit()
-	top := container.NewVBox(container.NewPadded(title), seg, lead(text("Сервер", 12, colMuted, false)), s.sel)
+	top := container.NewVBox(container.NewPadded(title), seg, lead(text(L("Server", "Сервер"), 12, colMuted, false)), s.sel)
 	s.refreshServers()
 	return container.NewPadded(container.NewBorder(top, nil, nil, nil, container.NewVScroll(s.body)))
 }
@@ -110,7 +110,7 @@ func (s *shareState) render() {
 	s.body.RemoveAll()
 	m := s.manager()
 	if m == nil {
-		s.body.Add(note("Здесь выдаются доступы для других людей и устройств. Для этого нужен сервер, установленный из этого приложения: добавьте его кнопкой «+»."))
+		s.body.Add(note(L("Access for other people and devices is issued here. This needs a server installed from this app: add one with the \"+\" button.", "Здесь выдаются доступы для других людей и устройств. Для этого нужен сервер, установленный из этого приложения: добавьте его кнопкой «+».")))
 		s.body.Refresh()
 		return
 	}
@@ -123,16 +123,17 @@ func (s *shareState) render() {
 }
 
 func (s *shareState) renderConnection(m *manager) {
-	s.body.Add(note("Поделитесь доступом к VPN без возможности управлять сервером."))
+	s.body.Add(note(L("Share VPN access without the ability to manage the server.", "Поделитесь доступом к VPN без возможности управлять сервером.")))
 	name := widget.NewEntry()
 	name.SetText(s.name)
 	name.OnChanged = func(v string) { s.name = v }
-	format := widget.NewSelect([]string{"Для приложения Veil"}, nil)
-	format.SetSelected("Для приложения Veil")
-	share := widget.NewButtonWithIcon("Поделиться", theme.MailForwardIcon(), func() {
+	fmtApp := L("For the Veil app", "Для приложения Veil")
+	format := widget.NewSelect([]string{fmtApp}, nil)
+	format.SetSelected(fmtApp)
+	share := widget.NewButtonWithIcon(L("Share", "Поделиться"), theme.MailForwardIcon(), func() {
 		n := strings.TrimSpace(s.name)
 		if n == "" {
-			showError(fmt.Errorf("укажите имя пользователя"), s.u.win)
+			showError(fmt.Errorf("%s", L("enter a user name", "укажите имя пользователя")), s.u.win)
 			return
 		}
 		m.ensureSession(func() {
@@ -142,21 +143,21 @@ func (s *shareState) renderConnection(m *manager) {
 					showError(err, s.u.win)
 					return
 				}
-				s.u.showShare(s.u.win, "Клиент «"+r.Name+"»", r, "Отсканируйте QR в приложении Veil на устройстве клиента, отправьте файл или ссылку. Показывается один раз: в конфиге приватный ключ.", true)
-				s.name = "Новый клиент"
+				s.u.showShare(s.u.win, L("Client \""+r.Name+"\"", "Клиент «"+r.Name+"»"), r, L("Scan the QR in the Veil app on the client device, or send the file or link. Shown once: the config contains a private key.", "Отсканируйте QR в приложении Veil на устройстве клиента, отправьте файл или ссылку. Показывается один раз: в конфиге приватный ключ."), true)
+				s.name = L("New client", "Новый клиент")
 				m.refresh()
 				s.render()
 			})
 		}, nil)
 	})
 	share.Importance = widget.HighImportance
-	route := widget.NewButtonWithIcon("Задать маршрут через каскад…", theme.ListIcon(), func() {
+	route := widget.NewButtonWithIcon(L("Set route via cascade…", "Задать маршрут через каскад…"), theme.ListIcon(), func() {
 		m.ensureSession(m.addClient, nil)
 	})
 	route.Importance = widget.LowImportance
-	s.body.Add(lead(text("Имя пользователя", 12, colMuted, false)))
+	s.body.Add(lead(text(L("User name", "Имя пользователя"), 12, colMuted, false)))
 	s.body.Add(name)
-	s.body.Add(lead(text("Формат подключения", 12, colMuted, false)))
+	s.body.Add(lead(text(L("Connection format", "Формат подключения"), 12, colMuted, false)))
 	s.body.Add(format)
 	s.body.Add(share)
 	s.body.Add(route)
@@ -166,11 +167,11 @@ func (s *shareState) renderUsers(m *manager) {
 	if !m.loaded {
 		if m.sess != nil {
 			m.refresh()
-			s.body.Add(note("Загружаем пользователей…"))
+			s.body.Add(note(L("Loading users…", "Загружаем пользователей…")))
 			return
 		}
-		s.body.Add(note("Список пользователей хранится на сервере. Чтобы его открыть, войдите по SSH."))
-		btn := widget.NewButtonWithIcon("Войти по SSH", theme.LoginIcon(), func() {
+		s.body.Add(note(L("The user list is stored on the server. Sign in over SSH to open it.", "Список пользователей хранится на сервере. Чтобы его открыть, войдите по SSH.")))
+		btn := widget.NewButtonWithIcon(L("Sign in via SSH", "Войти по SSH"), theme.LoginIcon(), func() {
 			m.ensureSession(m.refresh, nil)
 		})
 		btn.Importance = widget.HighImportance
@@ -178,7 +179,7 @@ func (s *shareState) renderUsers(m *manager) {
 		return
 	}
 	search := widget.NewEntry()
-	search.SetPlaceHolder("Поиск")
+	search.SetPlaceHolder(L("Search", "Поиск"))
 	search.SetText(s.filter)
 	search.OnChanged = func(v string) {
 		s.filter = v
@@ -186,7 +187,7 @@ func (s *shareState) renderUsers(m *manager) {
 	}
 	refresh := widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), m.refresh)
 	refresh.Importance = widget.LowImportance
-	s.body.Add(lead(text("Пользователи", 20, colText, false)))
+	s.body.Add(lead(text(L("Users", "Пользователи"), 20, colText, false)))
 	s.body.Add(container.NewBorder(nil, nil, nil, refresh, search))
 	s.list = newVBoxFit()
 	s.body.Add(s.list)
@@ -212,14 +213,14 @@ func (s *shareState) renderList(m *manager) {
 		shown++
 	}
 	if shown == 0 {
-		msg := "Пользователей пока нет."
+		msg := L("No users yet.", "Пользователей пока нет.")
 		if q != "" {
-			msg = "Ничего не найдено."
+			msg = L("Nothing found.", "Ничего не найдено.")
 		}
 		s.list.Add(note(msg))
 	}
 	if transit > 0 {
-		s.list.Add(note(fmt.Sprintf("Транзитных клиентов от других узлов каскада: %d", transit)))
+		s.list.Add(note(L(fmt.Sprintf("Transit clients from other cascade nodes: %d", transit), fmt.Sprintf("Транзитных клиентов от других узлов каскада: %d", transit))))
 	}
 	s.list.Refresh()
 }

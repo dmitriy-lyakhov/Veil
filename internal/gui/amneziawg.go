@@ -47,13 +47,13 @@ func atoiField(name, s string) (int, error) {
 	}
 	n, err := strconv.Atoi(s)
 	if err != nil || n < 0 {
-		return 0, fmt.Errorf("%s: нужно целое число не меньше нуля", name)
+		return 0, fmt.Errorf(L("%s: a whole number not less than zero is required", "%s: нужно целое число не меньше нуля"), name)
 	}
 	return n, nil
 }
 
 func (u *ui) openAWGInstall(m *manager) {
-	w := u.newSubPage("Установка AmneziaWG")
+	w := u.newSubPage(L("Install AmneziaWG", "Установка AmneziaWG"))
 	def := deploy.DefaultAWG()
 	port := widget.NewEntry()
 	port.SetText(strconv.Itoa(20000 + rand.IntN(40000)))
@@ -79,13 +79,13 @@ func (u *ui) openAWGInstall(m *manager) {
 	bar := newThinBar()
 	barBox := container.New(layoutPadLeft(), bar)
 	barBox.Hide()
-	install := widget.NewButton("Установить", nil)
+	install := widget.NewButton(L("Install", "Установить"), nil)
 	install.Importance = widget.HighImportance
 	install.OnTapped = func() {
 		o := deploy.AWGInstall{Subnet: strings.TrimSpace(subnet.Text), AWG: wgconf.AWG{H1: def.H1, H2: def.H2, H3: def.H3, H4: def.H4}}
 		var err error
-		if o.Port, err = atoiField("Порт", port.Text); err != nil || o.Port == 0 {
-			showError(errors.New("порт должен быть числом от 1 до 65535"), w)
+		if o.Port, err = atoiField(L("Port", "Порт"), port.Text); err != nil || o.Port == 0 {
+			showError(errors.New(L("port must be a number from 1 to 65535", "порт должен быть числом от 1 до 65535")), w)
 			return
 		}
 		for _, f := range []struct {
@@ -111,14 +111,14 @@ func (u *ui) openAWGInstall(m *manager) {
 			install.Enable()
 			setEnabled(true)
 			if err != nil && err.Error() != "отменено" {
-				setStatus("Не удалось установить: " + shortErr(err))
+				setStatus(L("Install failed: ", "Не удалось установить: ") + shortErr(err))
 				showError(err, w)
 			}
 		}
 		m.ensureSession(func() {
 			barBox.Show()
 			bar.Start()
-			setStatus("Установка…")
+			setStatus(L("Installing…", "Установка…"))
 			go func() {
 				cfg, err := m.sess.InstallAmneziaWG(o2, serverHost(m.p), func(f string, a ...any) {
 					line := fmt.Sprintf(f, a...)
@@ -130,27 +130,27 @@ func (u *ui) openAWGInstall(m *manager) {
 						return
 					}
 					if u.saveAWGProfile(m.p, "", cfg) == nil {
-						fail(errors.New("не удалось сохранить профиль"))
+						fail(errors.New(L("failed to save profile", "не удалось сохранить профиль")))
 						return
 					}
 					bar.Stop()
 					w.Close()
 					m.render()
-					u.showAWGShare("Клиент AmneziaWG", cfg)
+					u.showAWGShare(L("AmneziaWG client", "Клиент AmneziaWG"), cfg)
 				})
 			}()
 		}, fail)
 	}
 	form := container.NewVBox(
-		note("AmneziaWG — протокол на основе WireGuard с маскировкой трафика. Устанавливается на сервер по SSH (Ubuntu или Debian, из репозитория Amnezia; собирается модуль ядра, это занимает несколько минут). Затем к нему можно подключиться из этого приложения или приложением AmneziaWG."),
-		lead(text("Подсеть", 12, colMuted, false)), subnet,
-		lead(text("Порт (UDP)", 12, colMuted, false)), port,
-		lead(text("Jc — число мусорных пакетов", 12, colMuted, false)), jc,
-		lead(text("Jmin — минимальный размер мусорного пакета", 12, colMuted, false)), jmin,
-		lead(text("Jmax — максимальный размер мусорного пакета", 12, colMuted, false)), jmax,
-		lead(text("S1 — добавка к размеру первого пакета", 12, colMuted, false)), s1,
-		lead(text("S2 — добавка к размеру ответного пакета", 12, colMuted, false)), s2,
-		note("Заголовки H1–H4 генерируются случайно. Параметры одинаковы у сервера и клиентов."),
+		note(L("AmneziaWG is a WireGuard-based protocol with traffic obfuscation. It is installed on the server over SSH (Ubuntu or Debian, from the Amnezia repository; a kernel module is built, which takes a few minutes). Afterwards you can connect to it from this app or with the AmneziaWG app.", "AmneziaWG — протокол на основе WireGuard с маскировкой трафика. Устанавливается на сервер по SSH (Ubuntu или Debian, из репозитория Amnezia; собирается модуль ядра, это занимает несколько минут). Затем к нему можно подключиться из этого приложения или приложением AmneziaWG.")),
+		lead(text(L("Subnet", "Подсеть"), 12, colMuted, false)), subnet,
+		lead(text(L("Port (UDP)", "Порт (UDP)"), 12, colMuted, false)), port,
+		lead(text(L("Jc — number of junk packets", "Jc — число мусорных пакетов"), 12, colMuted, false)), jc,
+		lead(text(L("Jmin — minimum junk packet size", "Jmin — минимальный размер мусорного пакета"), 12, colMuted, false)), jmin,
+		lead(text(L("Jmax — maximum junk packet size", "Jmax — максимальный размер мусорного пакета"), 12, colMuted, false)), jmax,
+		lead(text(L("S1 — padding added to the first packet size", "S1 — добавка к размеру первого пакета"), 12, colMuted, false)), s1,
+		lead(text(L("S2 — padding added to the reply packet size", "S2 — добавка к размеру ответного пакета"), 12, colMuted, false)), s2,
+		note(L("Headers H1–H4 are generated randomly. The parameters are the same on the server and the clients.", "Заголовки H1–H4 генерируются случайно. Параметры одинаковы у сервера и клиентов.")),
 		status, barBox,
 	)
 	w.SetContent(container.NewPadded(container.NewBorder(nil, install, nil, nil, scrolled(form))))
@@ -186,7 +186,7 @@ func (u *ui) openAWGManage(p *config.Profile) {
 	needServer := func(f func(s *deploy.Session, srv *config.Profile)) func() {
 		return func() {
 			if srv == nil || srv.SSH == nil {
-				showError(errors.New("профиль сервера, с которого ставился AmneziaWG, не найден: управление недоступно"), w)
+				showError(errors.New(L("the profile of the server AmneziaWG was installed from was not found: management unavailable", "профиль сервера, с которого ставился AmneziaWG, не найден: управление недоступно")), w)
 				return
 			}
 			u.withSession(w, srv, func(s *deploy.Session, err error) {
@@ -201,12 +201,12 @@ func (u *ui) openAWGManage(p *config.Profile) {
 		}
 	}
 	rows := container.NewVBox(
-		listRow("Настройки подключения", "MTU, Jc, Jmin, Jmax, сигнатурные пакеты I1–I3", arrow(), func() { u.openAWGConn(p) }),
-		listRow("Конфигурация этого устройства", "QR-код и файл .conf для приложения AmneziaWG", arrow(), func() { u.showAWGShare(p.Name, p.WG) }),
-		listRow("Добавить клиента", "Выдать новый ключ и конфигурацию для другого устройства", arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
+		listRow(L("Connection settings", "Настройки подключения"), L("MTU, Jc, Jmin, Jmax, signature packets I1–I3", "MTU, Jc, Jmin, Jmax, сигнатурные пакеты I1–I3"), arrow(), func() { u.openAWGConn(p) }),
+		listRow(L("This device's configuration", "Конфигурация этого устройства"), L("QR code and .conf file for the AmneziaWG app", "QR-код и файл .conf для приложения AmneziaWG"), arrow(), func() { u.showAWGShare(p.Name, p.WG) }),
+		listRow(L("Add client", "Добавить клиента"), L("Issue a new key and configuration for another device", "Выдать новый ключ и конфигурацию для другого устройства"), arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
 			name := widget.NewEntry()
-			name.SetText("Клиент")
-			showForm("Новый клиент AmneziaWG", "Создать", "Отмена", []*widget.FormItem{widget.NewFormItem("Имя", name)}, func(ok bool) {
+			name.SetText(L("Client", "Клиент"))
+			showForm(L("New AmneziaWG client", "Новый клиент AmneziaWG"), L("Create", "Создать"), L("Cancel", "Отмена"), []*widget.FormItem{widget.NewFormItem(L("Name", "Имя"), name)}, func(ok bool) {
 				if !ok {
 					return
 				}
@@ -217,13 +217,13 @@ func (u *ui) openAWGManage(p *config.Profile) {
 							showError(err, w)
 							return
 						}
-						u.showAWGShare("Клиент «"+strings.TrimSpace(name.Text)+"»", cfg)
+						u.showAWGShare(fmt.Sprintf(L("Client “%s”", "Клиент «%s»"), strings.TrimSpace(name.Text)), cfg)
 					})
 				}()
 			}, w)
 		})),
-		listRowColored("Удалить AmneziaWG с сервера", "Остановить службу и удалить настройки и всех клиентов на сервере", "error", arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
-			showConfirm("Удалить AmneziaWG", "AmneziaWG будет остановлен на сервере, все его клиенты перестанут подключаться. Продолжить?", func(ok bool) {
+		listRowColored(L("Uninstall AmneziaWG from server", "Удалить AmneziaWG с сервера"), L("Stop the service and delete the settings and all clients on the server", "Остановить службу и удалить настройки и всех клиентов на сервере"), "error", arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
+			showConfirm(L("Uninstall AmneziaWG", "Удалить AmneziaWG"), L("AmneziaWG will be stopped on the server; all its clients will stop connecting. Continue?", "AmneziaWG будет остановлен на сервере, все его клиенты перестанут подключаться. Продолжить?"), func(ok bool) {
 				if !ok {
 					return
 				}
@@ -233,11 +233,11 @@ func (u *ui) openAWGManage(p *config.Profile) {
 				}
 				u.deleteProfile(p)
 				w.Close()
-				showInfo("Готово", "AmneziaWG удалён с сервера, профиль удалён из приложения.", u.win)
+				showInfo(L("Done", "Готово"), L("AmneziaWG has been removed from the server and the profile deleted from the app.", "AmneziaWG удалён с сервера, профиль удалён из приложения."), u.win)
 			}, w)
 		})),
-		listRowColored("Удалить профиль из приложения", "Сервер не изменится", "error", arrow(), func() {
-			showConfirm("Удалить профиль", "Профиль «"+p.Name+"» будет удалён с этого устройства. Сервер не изменится. Продолжить?", func(ok bool) {
+		listRowColored(L("Delete profile from the app", "Удалить профиль из приложения"), L("The server will not change", "Сервер не изменится"), "error", arrow(), func() {
+			showConfirm(L("Delete profile", "Удалить профиль"), fmt.Sprintf(L("Profile “%s” will be deleted from this device. The server will not change. Continue?", "Профиль «%s» будет удалён с этого устройства. Сервер не изменится. Продолжить?"), p.Name), func(ok bool) {
 				if ok {
 					u.deleteProfile(p)
 					w.Close()
@@ -252,7 +252,7 @@ func (u *ui) openAWGManage(p *config.Profile) {
 // openAWGConn — настройки подключения: MTU, мусорные пакеты Jc/Jmin/Jmax и сигнатурные пакеты I1–I3.
 // Эти значения действуют только на стороне клиента; S1, S2 и H1–H4 должны совпадать с сервером и здесь не меняются.
 func (u *ui) openAWGConn(p *config.Profile) {
-	w := u.newSubPage("Настройки подключения")
+	w := u.newSubPage(L("Connection settings", "Настройки подключения"))
 	cfg := p.WG
 	if cfg.AWG == nil {
 		cfg.AWG = &wgconf.AWG{}
@@ -267,7 +267,7 @@ func (u *ui) openAWGConn(p *config.Profile) {
 		is[i].SetMinRowsVisible(2)
 		is[i].SetText(a.I[i])
 	}
-	save := widget.NewButton("Сохранить", nil)
+	save := widget.NewButton(L("Save", "Сохранить"), nil)
 	save.Importance = widget.HighImportance
 	save.OnTapped = func() {
 		next := *cfg
@@ -285,7 +285,7 @@ func (u *ui) openAWGConn(p *config.Profile) {
 			}
 		}
 		if next.MTU != 0 && (next.MTU < 576 || next.MTU > 1500) {
-			showError(errors.New("MTU должен быть от 576 до 1500"), w)
+			showError(errors.New(L("MTU must be between 576 and 1500", "MTU должен быть от 576 до 1500")), w)
 			return
 		}
 		for i := range is {
@@ -296,7 +296,7 @@ func (u *ui) openAWGConn(p *config.Profile) {
 			return
 		}
 		if p.Name == u.active {
-			showError(errors.New("сначала отключите VPN, затем меняйте настройки"), w)
+			showError(errors.New(L("disconnect the VPN first, then change the settings", "сначала отключите VPN, затем меняйте настройки")), w)
 			return
 		}
 		np := *p
@@ -309,7 +309,7 @@ func (u *ui) openAWGConn(p *config.Profile) {
 		w.Close()
 	}
 	form := container.NewVBox(
-		note("Параметры действуют на этом устройстве. Если сервер не отвечает, верните значения, выданные сервером."),
+		note(L("The parameters apply on this device. If the server does not respond, restore the values issued by the server.", "Параметры действуют на этом устройстве. Если сервер не отвечает, верните значения, выданные сервером.")),
 		lead(text("MTU", 12, colMuted, false)), mtu,
 		lead(text("Jc", 12, colMuted, false)), jc,
 		lead(text("Jmin", 12, colMuted, false)), jmin,
@@ -330,8 +330,8 @@ func (u *ui) showAWGShare(title string, cfg *wgconf.Config) {
 	entry.SetText(text)
 	entry.Wrapping = fyne.TextWrapBreak
 	entry.SetMinRowsVisible(8)
-	copyBtn := widget.NewButtonWithIcon("Скопировать", theme.ContentCopyIcon(), func() { u.app.Clipboard().SetContent(text) })
-	saveBtn := widget.NewButtonWithIcon("Файл .conf…", theme.DocumentSaveIcon(), func() {
+	copyBtn := widget.NewButtonWithIcon(L("Copy", "Скопировать"), theme.ContentCopyIcon(), func() { u.app.Clipboard().SetContent(text) })
+	saveBtn := widget.NewButtonWithIcon(L(".conf file…", "Файл .conf…"), theme.DocumentSaveIcon(), func() {
 		fd := dialog.NewFileSave(func(wr fyne.URIWriteCloser, err error) {
 			if err != nil || wr == nil {
 				return
@@ -346,7 +346,7 @@ func (u *ui) showAWGShare(title string, cfg *wgconf.Config) {
 	})
 	body := container.NewVBox(
 		qrImage(text, ""),
-		note("Откройте файл .conf в приложении AmneziaWG (импорт из файла). В конфигурации приватный ключ: не показывайте её посторонним."),
+		note(L("Open the .conf file in the AmneziaWG app (import from file). The configuration contains a private key: do not show it to others.", "Откройте файл .conf в приложении AmneziaWG (импорт из файла). В конфигурации приватный ключ: не показывайте её посторонним.")),
 		entry,
 		container.NewGridWithColumns(2, copyBtn, saveBtn),
 	)

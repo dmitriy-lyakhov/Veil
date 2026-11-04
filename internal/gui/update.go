@@ -22,10 +22,10 @@ func fetchLatestRelease(ctx context.Context) (tag, link string, err error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound {
-		return "", "", errors.New("релизов пока нет")
+		return "", "", errors.New(L("no releases yet", "релизов пока нет"))
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("GitHub ответил %s", resp.Status)
+		return "", "", fmt.Errorf(L("GitHub responded %s", "GitHub ответил %s"), resp.Status)
 	}
 	var r struct {
 		Tag  string `json:"tag_name"`

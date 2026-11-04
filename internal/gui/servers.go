@@ -24,13 +24,12 @@ import (
 	"veil/internal/deploy"
 )
 
-const (
-	methodPassword = "Пароль"
-	methodKey      = "SSH-ключ"
-	transportAuto  = "Авто: HTTP/3 → HTTP/2"
-	transportH2    = "Только HTTP/2 (TCP)"
-	maxImportBytes = 64 << 10
-)
+const maxImportBytes = 64 << 10
+
+func methodPassword() string { return L("Password", "Пароль") }
+func methodKey() string      { return L("SSH key", "SSH-ключ") }
+func transportAuto() string  { return L("Auto: HTTP/3 → HTTP/2", "Авто: HTTP/3 → HTTP/2") }
+func transportH2() string    { return L("HTTP/2 only (TCP)", "Только HTTP/2 (TCP)") }
 
 var siteLangs = map[string]string{"Русский": "ru", "English": "en"}
 
@@ -45,7 +44,7 @@ func (u *ui) rebuildServers() {
 	}
 	u.serverList.RemoveAll()
 	if len(u.profiles) == 0 {
-		empty := widget.NewLabel("Пока нет серверов. Разверните Veil на своём сервере по SSH или импортируйте файл конфигурации.")
+		empty := widget.NewLabel(L("No servers yet. Deploy Veil on your own server over SSH or import a configuration file.", "Пока нет серверов. Разверните Veil на своём сервере по SSH или импортируйте файл конфигурации."))
 		empty.Wrapping = fyne.TextWrapWord
 		u.serverList.Add(card(empty))
 		return
@@ -66,9 +65,9 @@ func (u *ui) serverCard(p *config.Profile) fyne.CanvasObject {
 	sub := text(addresses(p), 12, colMuted, false)
 	lines := container.NewVBox(name, sub)
 	if p.Name == u.active {
-		state := "подключение…"
+		state := L("connecting…", "подключение…")
 		if u.connected {
-			state = "подключено"
+			state = L("connected", "подключено")
 		}
 		lines.Add(text("● "+state, 12, colOK, false))
 	}
@@ -96,18 +95,18 @@ func (u *ui) showAddChooser() {
 		})
 	}
 	content := container.NewVBox(
-		option(theme.ComputerIcon(), "Свой сервер по SSH", "IP-адрес, логин и пароль или SSH-ключ. Приложение само установит Veil и сайт-прикрытие.", u.showDeployForm),
-		option(theme.FileIcon(), "Файл или ссылка", "Импорт конфигурации .veil или ссылки veil://, выданной в админ-панели.", u.showImport),
-		option(theme.MailForwardIcon(), "Через ближайший вход", "Подключение через свои серверы: выход задаётся явно, вход выбирается ближайший при каждом подключении.", u.openMultiEntryBuilder),
+		option(theme.ComputerIcon(), L("Your own server over SSH", "Свой сервер по SSH"), L("IP address, login and password or SSH key. The app will install Veil and the cover site itself.", "IP-адрес, логин и пароль или SSH-ключ. Приложение само установит Veil и сайт-прикрытие."), u.showDeployForm),
+		option(theme.FileIcon(), L("File or link", "Файл или ссылка"), L("Import a .veil configuration or a veil:// link issued by the admin panel.", "Импорт конфигурации .veil или ссылки veil://, выданной в админ-панели."), u.showImport),
+		option(theme.MailForwardIcon(), L("Via the nearest entry", "Через ближайший вход"), L("Connect through your own servers: the exit is set explicitly, the nearest entry is chosen on every connection.", "Подключение через свои серверы: выход задаётся явно, вход выбирается ближайший при каждом подключении."), u.openMultiEntryBuilder),
 	)
-	d = newCustom("Добавить сервер", "Отмена", container.NewGridWrap(fyne.NewSize(360, 352), content), u.win)
+	d = newCustom(L("Add server", "Добавить сервер"), L("Cancel", "Отмена"), container.NewGridWrap(fyne.NewSize(360, 352), content), u.win)
 	d.Show()
 }
 
 func (u *ui) showDeployForm() {
-	w := u.newSubPage("Новый сервер")
+	w := u.newSubPage(L("New server", "Новый сервер"))
 	name := widget.NewEntry()
-	name.SetPlaceHolder("Например: Амстердам")
+	name.SetPlaceHolder(L("For example: Amsterdam", "Например: Амстердам"))
 	ipv6 := widget.NewEntry()
 	ipv6.SetPlaceHolder("2001:db8::10")
 	ipv4 := widget.NewEntry()
@@ -132,27 +131,27 @@ func (u *ui) showDeployForm() {
 	lang.SetSelected("Русский")
 
 	authForm := widget.NewForm()
-	method := widget.NewRadioGroup([]string{methodPassword, methodKey}, func(s string) {
-		if s == methodKey {
+	method := widget.NewRadioGroup([]string{methodPassword(), methodKey()}, func(s string) {
+		if s == methodKey() {
 			authForm.Items = []*widget.FormItem{
-				widget.NewFormItem("SSH-ключ", container.NewBorder(nil, nil, nil, pick, keyPath)),
-				widget.NewFormItem("Пароль ключа", passphrase),
+				widget.NewFormItem(L("SSH key", "SSH-ключ"), container.NewBorder(nil, nil, nil, pick, keyPath)),
+				widget.NewFormItem(L("Key passphrase", "Пароль ключа"), passphrase),
 			}
 		} else {
-			authForm.Items = []*widget.FormItem{widget.NewFormItem("Пароль", password)}
+			authForm.Items = []*widget.FormItem{widget.NewFormItem(L("Password", "Пароль"), password)}
 		}
 		authForm.Refresh()
 	})
 	method.Horizontal = true
-	method.SetSelected(methodPassword)
+	method.SetSelected(methodPassword())
 
 	form := widget.NewForm(
-		widget.NewFormItem("Название", name),
+		widget.NewFormItem(L("Name", "Название"), name),
 		widget.NewFormItem("IPv6", ipv6),
 		widget.NewFormItem("IPv4", ipv4),
-		widget.NewFormItem("SSH-порт", port),
-		widget.NewFormItem("Пользователь", user),
-		widget.NewFormItem("Язык сайта", lang),
+		widget.NewFormItem(L("SSH port", "SSH-порт"), port),
+		widget.NewFormItem(L("User", "Пользователь"), user),
+		widget.NewFormItem(L("Site language", "Язык сайта"), lang),
 	)
 	logView := widget.NewMultiLineEntry()
 	logView.Wrapping = fyne.TextWrapWord
@@ -165,7 +164,7 @@ func (u *ui) showDeployForm() {
 		logView.Refresh()
 	}
 	var install *widget.Button
-	install = widget.NewButtonWithIcon("Установить и подключить", theme.UploadIcon(), func() {
+	install = widget.NewButtonWithIcon(L("Install and connect", "Установить и подключить"), theme.UploadIcon(), func() {
 		req, err := buildRequest(name.Text, ipv4.Text, ipv6.Text, port.Text, user.Text, method.Selected, password.Text, keyPath.Text, passphrase.Text)
 		if err != nil {
 			showError(err, w)
@@ -173,7 +172,7 @@ func (u *ui) showDeployForm() {
 		}
 		req.SiteLang = siteLangs[lang.Selected]
 		if u.profileExists(req.Name) {
-			showError(fmt.Errorf("сервер «%s» уже есть — выберите другое название", req.Name), w)
+			showError(fmt.Errorf(L("server “%s” already exists — choose a different name", "сервер «%s» уже есть — выберите другое название"), req.Name), w)
 			return
 		}
 		install.Disable()
@@ -193,11 +192,11 @@ func (u *ui) showDeployForm() {
 				progress.Stop()
 				progress.Hide()
 				if err != nil {
-					appendLog("Ошибка: " + err.Error())
+					appendLog(L("Error: ", "Ошибка: ") + err.Error())
 					install.Enable()
 					return
 				}
-				appendLog("Готово. Профиль сохранён.")
+				appendLog(L("Done. Profile saved.", "Готово. Профиль сохранён."))
 				u.reload()
 				u.selectProfile(prof.Name)
 				w.Close()
@@ -209,7 +208,7 @@ func (u *ui) showDeployForm() {
 		}()
 	})
 	install.Importance = widget.HighImportance
-	hint := widget.NewLabel("Приложение подключится по SSH, установит Veil (порт 443, TCP и UDP) и сгенерирует сайт-прикрытие. Пароль SSH не сохраняется.")
+	hint := widget.NewLabel(L("The app will connect over SSH, install Veil (port 443, TCP and UDP) and generate a cover site. The SSH password is not stored.", "Приложение подключится по SSH, установит Veil (порт 443, TCP и UDP) и сгенерирует сайт-прикрытие. Пароль SSH не сохраняется."))
 	hint.Wrapping = fyne.TextWrapWord
 	w.SetContent(container.NewPadded(container.NewBorder(container.NewVBox(hint, form, method, authForm, install, progress), nil, nil, nil, logView)))
 	w.Resize(fyne.NewSize(winWidth+40, 700))
@@ -217,13 +216,13 @@ func (u *ui) showDeployForm() {
 }
 
 func (u *ui) showImport() {
-	w := u.newSubPage("Импорт конфигурации")
+	w := u.newSubPage(L("Import configuration", "Импорт конфигурации"))
 	link := widget.NewMultiLineEntry()
 	link.SetPlaceHolder("veil://…")
 	link.Wrapping = fyne.TextWrapBreak
 	link.SetMinRowsVisible(5)
 	name := widget.NewEntry()
-	name.SetPlaceHolder("Название (необязательно)")
+	name.SetPlaceHolder(L("Name (optional)", "Название (необязательно)"))
 	status := widget.NewLabel("")
 	status.Wrapping = fyne.TextWrapWord
 	preview := func() {
@@ -234,14 +233,14 @@ func (u *ui) showImport() {
 		case err != nil:
 			status.SetText("⚠ " + err.Error())
 		default:
-			status.SetText("✓ Сервер " + addresses(p))
+			status.SetText(L("✓ Server ", "✓ Сервер ") + addresses(p))
 			if name.Text == "" {
 				name.SetText(p.Name)
 			}
 		}
 	}
 	link.OnChanged = func(string) { preview() }
-	fileBtn := widget.NewButtonWithIcon("Открыть файл…", theme.FolderOpenIcon(), func() {
+	fileBtn := widget.NewButtonWithIcon(L("Open file…", "Открыть файл…"), theme.FolderOpenIcon(), func() {
 		fd := dialog.NewFileOpen(func(r fyne.URIReadCloser, err error) {
 			if err != nil || r == nil {
 				return
@@ -257,10 +256,10 @@ func (u *ui) showImport() {
 		fd.SetFilter(storage.NewExtensionFileFilter([]string{config.FileExt, ".json", ".txt", ".conf", ".ovpn"}))
 		fd.Show()
 	})
-	pasteBtn := widget.NewButtonWithIcon("Вставить", theme.ContentPasteIcon(), func() {
+	pasteBtn := widget.NewButtonWithIcon(L("Paste", "Вставить"), theme.ContentPasteIcon(), func() {
 		link.SetText(u.app.Clipboard().Content())
 	})
-	add := widget.NewButtonWithIcon("Добавить сервер", theme.ConfirmIcon(), func() {
+	add := widget.NewButtonWithIcon(L("Add server", "Добавить сервер"), theme.ConfirmIcon(), func() {
 		p, err := decodeAny(link.Text)
 		if err != nil {
 			showError(err, w)
@@ -270,7 +269,7 @@ func (u *ui) showImport() {
 			p.Name = n
 		}
 		if u.profileExists(p.Name) {
-			showError(fmt.Errorf("сервер «%s» уже есть — задайте другое название", p.Name), w)
+			showError(fmt.Errorf(L("server “%s” already exists — set a different name", "сервер «%s» уже есть — задайте другое название"), p.Name), w)
 			return
 		}
 		if err := saveProfile(p); err != nil {
@@ -283,7 +282,7 @@ func (u *ui) showImport() {
 		u.showPage(0)
 	})
 	add.Importance = widget.HighImportance
-	hint := widget.NewLabel("Вставьте ссылку veil://… или откройте файл .veil, который выдала админ-панель вашего сервера.")
+	hint := widget.NewLabel(L("Paste a veil://… link or open a .veil file issued by your server's admin panel.", "Вставьте ссылку veil://… или откройте файл .veil, который выдала админ-панель вашего сервера."))
 	hint.Wrapping = fyne.TextWrapWord
 	w.SetContent(container.NewPadded(container.NewVBox(hint, container.NewGridWithColumns(2, fileBtn, pasteBtn), link, status, name, add)))
 	w.Resize(fyne.NewSize(winWidth+40, 460))
@@ -294,12 +293,12 @@ func (u *ui) showDetails(p *config.Profile) {
 	var d modal
 	rows := container.NewVBox(text(p.Name, 18, colText, true), text(addresses(p), 12, colMuted, false))
 	if p.Via != "" {
-		v := widget.NewLabel("Каскад: " + p.Via)
+		v := widget.NewLabel(L("Cascade: ", "Каскад: ") + p.Via)
 		v.Wrapping = fyne.TextWrapWord
 		rows.Add(v)
 	}
 	if managed(p) {
-		mg := widget.NewButtonWithIcon("Управление сервером", theme.SettingsIcon(), func() {
+		mg := widget.NewButtonWithIcon(L("Server management", "Управление сервером"), theme.SettingsIcon(), func() {
 			d.Hide()
 			u.openManager(p)
 		})
@@ -307,15 +306,15 @@ func (u *ui) showDetails(p *config.Profile) {
 		rows.Add(mg)
 	}
 
-	mode := widget.NewRadioGroup([]string{transportAuto, transportH2}, nil)
+	mode := widget.NewRadioGroup([]string{transportAuto(), transportH2()}, nil)
 	if len(p.Transports) == 1 && p.Transports[0] == "h2" {
-		mode.SetSelected(transportH2)
+		mode.SetSelected(transportH2())
 	} else {
-		mode.SetSelected(transportAuto)
+		mode.SetSelected(transportAuto())
 	}
 	mode.OnChanged = func(s string) {
 		p.Transports = nil
-		if s == transportH2 {
+		if s == transportH2() {
 			p.Transports = []string{"h2"}
 		}
 		if err := saveProfile(p); err != nil {
@@ -323,30 +322,30 @@ func (u *ui) showDetails(p *config.Profile) {
 		}
 	}
 	rows.Add(widget.NewSeparator())
-	rows.Add(text("Транспорт", 14, colText, true))
+	rows.Add(text(L("Transport", "Транспорт"), 14, colText, true))
 	rows.Add(mode)
 
 	if p.AdminURL != "" {
 		rows.Add(widget.NewSeparator())
-		rows.Add(text("Админ-панель", 14, colText, true))
+		rows.Add(text(L("Admin panel", "Админ-панель"), 14, colText, true))
 		copyRow := func(label, value string) fyne.CanvasObject {
 			btn := widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() { u.app.Clipboard().SetContent(value) })
 			btn.Importance = widget.LowImportance
 			return container.NewBorder(nil, nil, text(label, 12, colMuted, false), btn, widget.NewLabel(value))
 		}
-		rows.Add(copyRow("Адрес", p.AdminURL))
+		rows.Add(copyRow(L("Address", "Адрес"), p.AdminURL))
 		if p.AdminUser != "" {
-			rows.Add(copyRow("Логин", p.AdminUser))
+			rows.Add(copyRow(L("Login", "Логин"), p.AdminUser))
 		}
 		if p.AdminPassword != "" {
-			rows.Add(copyRow("Пароль", p.AdminPassword))
+			rows.Add(copyRow(L("Password", "Пароль"), p.AdminPassword))
 		}
-		openBtn := widget.NewButtonWithIcon("Открыть в браузере", theme.ComputerIcon(), func() {
+		openBtn := widget.NewButtonWithIcon(L("Open in browser", "Открыть в браузере"), theme.ComputerIcon(), func() {
 			if target, err := url.Parse(p.AdminURL); err == nil {
 				_ = u.app.OpenURL(target)
 			}
 		})
-		note := "Панель доступна только через VPN: сначала подключитесь к этому серверу. Браузер предупредит о самоподписанном сертификате — это ожидаемо."
+		note := L("The panel is only available over VPN: connect to this server first. The browser will warn about a self-signed certificate — this is expected.", "Панель доступна только через VPN: сначала подключитесь к этому серверу. Браузер предупредит о самоподписанном сертификате — это ожидаемо.")
 		if p.Name != u.active || !u.connected {
 			openBtn.Disable()
 		}
@@ -356,8 +355,8 @@ func (u *ui) showDetails(p *config.Profile) {
 		rows.Add(hint)
 	}
 
-	remove := widget.NewButtonWithIcon("Удалить профиль", theme.DeleteIcon(), func() {
-		showConfirm("Удалить профиль", "Удалить «"+p.Name+"» с этого устройства? Сервер не изменится.", func(ok bool) {
+	remove := widget.NewButtonWithIcon(L("Delete profile", "Удалить профиль"), theme.DeleteIcon(), func() {
+		showConfirm(L("Delete profile", "Удалить профиль"), fmt.Sprintf(L("Delete “%s” from this device? The server will not change.", "Удалить «%s» с этого устройства? Сервер не изменится."), p.Name), func(ok bool) {
 			if !ok {
 				return
 			}
@@ -374,7 +373,7 @@ func (u *ui) showDetails(p *config.Profile) {
 	}
 	rows.Add(layout.NewSpacer())
 	rows.Add(remove)
-	d = newCustom("Сервер", "Закрыть", container.NewGridWrap(fyne.NewSize(360, 480), container.NewVScroll(rows)), u.win)
+	d = newCustom(L("Server", "Сервер"), L("Close", "Закрыть"), container.NewGridWrap(fyne.NewSize(360, 480), container.NewVScroll(rows)), u.win)
 	d.Show()
 }
 
@@ -398,21 +397,21 @@ func saveProfile(p *config.Profile) error {
 func buildRequest(name, v4, v6, port, user, method, password, keyPath, passphrase string) (deploy.Request, error) {
 	v4, v6 = strings.TrimSpace(v4), strings.Trim(strings.TrimSpace(v6), "[]")
 	if v4 == "" && v6 == "" {
-		return deploy.Request{}, errors.New("укажите хотя бы один адрес сервера: IPv6 или IPv4")
+		return deploy.Request{}, errors.New(L("specify at least one server address: IPv6 or IPv4", "укажите хотя бы один адрес сервера: IPv6 или IPv4"))
 	}
 	if v4 != "" {
 		if a, err := netip.ParseAddr(v4); err != nil || !a.Is4() {
-			return deploy.Request{}, fmt.Errorf("«%s» — не IPv4-адрес", v4)
+			return deploy.Request{}, fmt.Errorf(L("“%s” is not an IPv4 address", "«%s» — не IPv4-адрес"), v4)
 		}
 	}
 	if v6 != "" {
 		if a, err := netip.ParseAddr(v6); err != nil || !a.Is6() {
-			return deploy.Request{}, fmt.Errorf("«%s» — не IPv6-адрес", v6)
+			return deploy.Request{}, fmt.Errorf(L("“%s” is not an IPv6 address", "«%s» — не IPv6-адрес"), v6)
 		}
 	}
 	p, err := strconv.Atoi(strings.TrimSpace(port))
 	if err != nil || p <= 0 || p > 65535 {
-		return deploy.Request{}, errors.New("некорректный SSH-порт")
+		return deploy.Request{}, errors.New(L("invalid SSH port", "некорректный SSH-порт"))
 	}
 	req := deploy.Request{Name: strings.TrimSpace(name), IPv4: v4, IPv6: v6, SSHPort: p, User: strings.TrimSpace(user)}
 	if req.Name == "" {
@@ -421,14 +420,14 @@ func buildRequest(name, v4, v6, port, user, method, password, keyPath, passphras
 			req.Name = v4
 		}
 	}
-	if method == methodKey {
+	if method == methodKey() {
 		if strings.TrimSpace(keyPath) == "" {
-			return req, errors.New("укажите путь к SSH-ключу")
+			return req, errors.New(L("specify the path to the SSH key", "укажите путь к SSH-ключу"))
 		}
 		req.KeyPath, req.KeyPassphrase = strings.TrimSpace(keyPath), passphrase
 	} else {
 		if password == "" {
-			return req, errors.New("укажите пароль SSH")
+			return req, errors.New(L("specify the SSH password", "укажите пароль SSH"))
 		}
 		req.Password = password
 	}

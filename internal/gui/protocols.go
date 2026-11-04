@@ -28,11 +28,13 @@ type protoInfo struct {
 	ready           bool // установка и подключение уже реализованы
 }
 
-var protoList = []protoInfo{
-	{"amneziawg", "AmneziaWG", "AmneziaWG — особый протокол на основе WireGuard: высокая скорость и устойчивая работа даже в самых сложных сетях.", true},
-	{"wireguard", "WireGuard", "WireGuard — популярный VPN-протокол с высокой производительностью, скоростью и низким энергопотреблением.", true},
-	{"openvpn", "OpenVPN", "OpenVPN — самый популярный VPN-протокол с гибкими настройками; своя защита на SSL/TLS.", true},
-	{"ipsec", "IPsec", "IKEv2/IPsec — современный стабильный протокол, восстанавливает соединение после потери сигнала, встроен в Windows, Android и iOS.", true},
+func protoList() []protoInfo {
+	return []protoInfo{
+		{"amneziawg", "AmneziaWG", L("AmneziaWG — a special protocol based on WireGuard: high speed and stable operation even in the most difficult networks.", "AmneziaWG — особый протокол на основе WireGuard: высокая скорость и устойчивая работа даже в самых сложных сетях."), true},
+		{"wireguard", "WireGuard", L("WireGuard — a popular VPN protocol with high performance, speed and low power consumption.", "WireGuard — популярный VPN-протокол с высокой производительностью, скоростью и низким энергопотреблением."), true},
+		{"openvpn", "OpenVPN", L("OpenVPN — the most popular VPN protocol with flexible settings; its own SSL/TLS protection.", "OpenVPN — самый популярный VPN-протокол с гибкими настройками; своя защита на SSL/TLS."), true},
+		{"ipsec", "IPsec", L("IKEv2/IPsec — a modern, stable protocol that restores the connection after signal loss, built into Windows, Android and iOS.", "IKEv2/IPsec — современный стабильный протокол, восстанавливает соединение после потери сигнала, встроен в Windows, Android и iOS."), true},
+	}
 }
 
 func (u *ui) profileByName(name string) *config.Profile {
@@ -65,16 +67,16 @@ func (u *ui) uniqueProfileName(base string) string {
 
 // renderProtocolList — список протоколов под сведениями о сервере (как в референсе).
 func (m *manager) renderProtocolList() {
-	m.body.Add(sectionLabel("Другие протоколы"))
-	for _, pi := range protoList {
+	m.body.Add(sectionLabel(L("Other protocols", "Другие протоколы")))
+	for _, pi := range protoList() {
 		pi := pi
 		var trailing fyne.CanvasObject
 		var tap func()
 		switch {
 		case !pi.ready:
-			trailing = text("скоро", 12, colMuted, false)
+			trailing = text(L("soon", "скоро"), 12, colMuted, false)
 			tap = func() {
-				showInfo(pi.title, "Установка и подключение по этому протоколу будут добавлены в одной из следующих версий.", m.w)
+				showInfo(pi.title, L("Installation and connection for this protocol will be added in one of the next versions.", "Установка и подключение по этому протоколу будут добавлены в одной из следующих версий."), m.w)
 			}
 		case pi.id == "amneziawg" && m.u.awgProfileFor(m.p) != nil:
 			awg := m.u.awgProfileFor(m.p)
@@ -114,7 +116,7 @@ func serverHost(p *config.Profile) string {
 }
 
 func (u *ui) openWGInstall(m *manager) {
-	w := u.newSubPage("Установка WireGuard")
+	w := u.newSubPage(L("Install WireGuard", "Установка WireGuard"))
 	port := widget.NewEntry()
 	port.SetText(strconv.Itoa(20000 + rand.IntN(40000)))
 	status := prose("")
@@ -125,12 +127,12 @@ func (u *ui) openWGInstall(m *manager) {
 	bar := newThinBar()
 	barBox := container.New(layoutPadLeft(), bar)
 	barBox.Hide()
-	install := widget.NewButton("Установить", nil)
+	install := widget.NewButton(L("Install", "Установить"), nil)
 	install.Importance = widget.HighImportance
 	install.OnTapped = func() {
 		n, err := strconv.Atoi(strings.TrimSpace(port.Text))
 		if err != nil || n < 1 || n > 65535 {
-			showError(errors.New("порт должен быть числом от 1 до 65535"), w)
+			showError(errors.New(L("port must be a number from 1 to 65535", "порт должен быть числом от 1 до 65535")), w)
 			return
 		}
 		install.Disable()
@@ -141,14 +143,14 @@ func (u *ui) openWGInstall(m *manager) {
 			install.Enable()
 			port.Enable()
 			if err != nil && err.Error() != "отменено" {
-				setStatus("Не удалось установить: " + shortErr(err))
+				setStatus(L("Install failed: ", "Не удалось установить: ") + shortErr(err))
 				showError(err, w)
 			}
 		}
 		m.ensureSession(func() {
 			barBox.Show()
 			bar.Start()
-			setStatus("Установка…")
+			setStatus(L("Installing…", "Установка…"))
 			go func() {
 				cfg, err := m.sess.InstallWireGuard(deploy.WGInstall{Port: n}, serverHost(m.p), func(f string, a ...any) {
 					line := fmt.Sprintf(f, a...)
@@ -161,20 +163,20 @@ func (u *ui) openWGInstall(m *manager) {
 					}
 					p := u.saveWGProfile(m.p, "", cfg)
 					if p == nil {
-						fail(errors.New("не удалось сохранить профиль"))
+						fail(errors.New(L("failed to save profile", "не удалось сохранить профиль")))
 						return
 					}
 					bar.Stop()
 					w.Close()
 					m.render()
-					u.showWGShare("Клиент WireGuard", cfg)
+					u.showWGShare(L("WireGuard client", "Клиент WireGuard"), cfg)
 				})
 			}()
 		}, fail)
 	}
 	body := container.NewVBox(
-		note("WireGuard — популярный VPN-протокол с высокой производительностью, скоростью и низким энергопотреблением. Устанавливается на сервер по SSH; затем к нему можно подключиться из этого приложения или любым клиентом WireGuard."),
-		lead(text("Порт (UDP)", 12, colMuted, false)), port,
+		note(L("WireGuard is a popular VPN protocol with high performance, speed and low power consumption. It is installed on the server over SSH; afterwards you can connect to it from this app or with any WireGuard client.", "WireGuard — популярный VPN-протокол с высокой производительностью, скоростью и низким энергопотреблением. Устанавливается на сервер по SSH; затем к нему можно подключиться из этого приложения или любым клиентом WireGuard.")),
+		lead(text(L("Port (UDP)", "Порт (UDP)"), 12, colMuted, false)), port,
 		status, barBox,
 	)
 	w.SetContent(container.NewPadded(container.NewBorder(nil, install, nil, nil, scrolled(body))))
@@ -212,7 +214,7 @@ func (u *ui) openWGManage(p *config.Profile) {
 	needServer := func(f func(s *deploy.Session, srv *config.Profile)) func() {
 		return func() {
 			if srv == nil || srv.SSH == nil {
-				showError(errors.New("профиль сервера, с которого ставился WireGuard, не найден: управление недоступно"), w)
+				showError(errors.New(L("the profile of the server WireGuard was installed from was not found: management unavailable", "профиль сервера, с которого ставился WireGuard, не найден: управление недоступно")), w)
 				return
 			}
 			u.withSession(w, srv, func(s *deploy.Session, err error) {
@@ -227,11 +229,11 @@ func (u *ui) openWGManage(p *config.Profile) {
 		}
 	}
 	rows := container.NewVBox(
-		listRow("Конфигурация этого устройства", "QR-код и файл .conf для приложения WireGuard", arrow(), func() { u.showWGShare(p.Name, p.WG) }),
-		listRow("Добавить клиента", "Выдать новый ключ и конфигурацию для другого устройства", arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
+		listRow(L("This device's configuration", "Конфигурация этого устройства"), L("QR code and .conf file for the WireGuard app", "QR-код и файл .conf для приложения WireGuard"), arrow(), func() { u.showWGShare(p.Name, p.WG) }),
+		listRow(L("Add client", "Добавить клиента"), L("Issue a new key and configuration for another device", "Выдать новый ключ и конфигурацию для другого устройства"), arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
 			name := widget.NewEntry()
-			name.SetText("Клиент")
-			showForm("Новый клиент WireGuard", "Создать", "Отмена", []*widget.FormItem{widget.NewFormItem("Имя", name)}, func(ok bool) {
+			name.SetText(L("Client", "Клиент"))
+			showForm(L("New WireGuard client", "Новый клиент WireGuard"), L("Create", "Создать"), L("Cancel", "Отмена"), []*widget.FormItem{widget.NewFormItem(L("Name", "Имя"), name)}, func(ok bool) {
 				if !ok {
 					return
 				}
@@ -242,13 +244,13 @@ func (u *ui) openWGManage(p *config.Profile) {
 							showError(err, w)
 							return
 						}
-						u.showWGShare("Клиент «"+strings.TrimSpace(name.Text)+"»", cfg)
+						u.showWGShare(fmt.Sprintf(L("Client “%s”", "Клиент «%s»"), strings.TrimSpace(name.Text)), cfg)
 					})
 				}()
 			}, w)
 		})),
-		listRowColored("Удалить WireGuard с сервера", "Остановить службу и удалить настройки и всех клиентов на сервере", "error", arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
-			showConfirm("Удалить WireGuard", "WireGuard будет остановлен на сервере, все его клиенты перестанут подключаться. Продолжить?", func(ok bool) {
+		listRowColored(L("Uninstall WireGuard from server", "Удалить WireGuard с сервера"), L("Stop the service and delete the settings and all clients on the server", "Остановить службу и удалить настройки и всех клиентов на сервере"), "error", arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
+			showConfirm(L("Uninstall WireGuard", "Удалить WireGuard"), L("WireGuard will be stopped on the server; all its clients will stop connecting. Continue?", "WireGuard будет остановлен на сервере, все его клиенты перестанут подключаться. Продолжить?"), func(ok bool) {
 				if !ok {
 					return
 				}
@@ -258,11 +260,11 @@ func (u *ui) openWGManage(p *config.Profile) {
 				}
 				u.deleteProfile(p)
 				w.Close()
-				showInfo("Готово", "WireGuard удалён с сервера, профиль удалён из приложения.", u.win)
+				showInfo(L("Done", "Готово"), L("WireGuard has been removed from the server and the profile deleted from the app.", "WireGuard удалён с сервера, профиль удалён из приложения."), u.win)
 			}, w)
 		})),
-		listRowColored("Удалить профиль из приложения", "Сервер не изменится", "error", arrow(), func() {
-			showConfirm("Удалить профиль", "Профиль «"+p.Name+"» будет удалён с этого устройства. Сервер не изменится. Продолжить?", func(ok bool) {
+		listRowColored(L("Delete profile from the app", "Удалить профиль из приложения"), L("The server will not change", "Сервер не изменится"), "error", arrow(), func() {
+			showConfirm(L("Delete profile", "Удалить профиль"), fmt.Sprintf(L("Profile “%s” will be deleted from this device. The server will not change. Continue?", "Профиль «%s» будет удалён с этого устройства. Сервер не изменится. Продолжить?"), p.Name), func(ok bool) {
 				if ok {
 					u.deleteProfile(p)
 					w.Close()
@@ -276,7 +278,7 @@ func (u *ui) openWGManage(p *config.Profile) {
 
 func (u *ui) deleteProfile(p *config.Profile) {
 	if p.Name == u.active {
-		showError(errors.New("сначала отключите VPN"), u.win)
+		showError(errors.New(L("disconnect the VPN first", "сначала отключите VPN")), u.win)
 		return
 	}
 	if path, err := config.ProfilePath(p.Name); err == nil {
@@ -293,8 +295,8 @@ func (u *ui) showWGShare(title string, cfg *wgconf.Config) {
 	entry.SetText(text)
 	entry.Wrapping = fyne.TextWrapBreak
 	entry.SetMinRowsVisible(8)
-	copyBtn := widget.NewButtonWithIcon("Скопировать", theme.ContentCopyIcon(), func() { u.app.Clipboard().SetContent(text) })
-	saveBtn := widget.NewButtonWithIcon("Файл .conf…", theme.DocumentSaveIcon(), func() {
+	copyBtn := widget.NewButtonWithIcon(L("Copy", "Скопировать"), theme.ContentCopyIcon(), func() { u.app.Clipboard().SetContent(text) })
+	saveBtn := widget.NewButtonWithIcon(L(".conf file…", "Файл .conf…"), theme.DocumentSaveIcon(), func() {
 		fd := dialog.NewFileSave(func(wr fyne.URIWriteCloser, err error) {
 			if err != nil || wr == nil {
 				return
@@ -309,7 +311,7 @@ func (u *ui) showWGShare(title string, cfg *wgconf.Config) {
 	})
 	body := container.NewVBox(
 		qrImage(text, ""),
-		note("Отсканируйте QR-код в приложении WireGuard или сохраните файл. В конфигурации приватный ключ: не показывайте её посторонним."),
+		note(L("Scan the QR code in the WireGuard app or save the file. The configuration contains a private key: do not show it to others.", "Отсканируйте QR-код в приложении WireGuard или сохраните файл. В конфигурации приватный ключ: не показывайте её посторонним.")),
 		entry,
 		container.NewGridWithColumns(2, copyBtn, saveBtn),
 	)

@@ -32,7 +32,7 @@ func (u *ui) ovProfileFor(srv *config.Profile) *config.Profile {
 // ---------- установка OpenVPN ----------
 
 func (u *ui) openOVInstall(m *manager) {
-	w := u.newSubPage("Установка OpenVPN")
+	w := u.newSubPage(L("Install OpenVPN", "Установка OpenVPN"))
 	port := widget.NewEntry()
 	port.SetText("1194")
 	proto := widget.NewRadioGroup([]string{"UDP", "TCP"}, nil)
@@ -55,12 +55,12 @@ func (u *ui) openOVInstall(m *manager) {
 	bar := newThinBar()
 	barBox := container.New(layoutPadLeft(), bar)
 	barBox.Hide()
-	install := widget.NewButton("Установить", nil)
+	install := widget.NewButton(L("Install", "Установить"), nil)
 	install.Importance = widget.HighImportance
 	install.OnTapped = func() {
 		n, err := strconv.Atoi(strings.TrimSpace(port.Text))
 		if err != nil || n < 1 || n > 65535 {
-			showError(errors.New("порт должен быть числом от 1 до 65535"), w)
+			showError(errors.New(L("port must be a number from 1 to 65535", "порт должен быть числом от 1 до 65535")), w)
 			return
 		}
 		pr := strings.ToLower(proto.Selected)
@@ -74,14 +74,14 @@ func (u *ui) openOVInstall(m *manager) {
 			port.Enable()
 			proto.Enable()
 			if err != nil && err.Error() != "отменено" {
-				setStatus("Не удалось установить: " + shortErr(err))
+				setStatus(L("Install failed: ", "Не удалось установить: ") + shortErr(err))
 				showError(err, w)
 			}
 		}
 		m.ensureSession(func() {
 			barBox.Show()
 			bar.Start()
-			setStatus("Установка…")
+			setStatus(L("Installing…", "Установка…"))
 			go func() {
 				cfg, err := m.sess.InstallOpenVPN(deploy.OVInstall{Port: n, Proto: pr}, serverHost(m.p), func(f string, a ...any) {
 					line := fmt.Sprintf(f, a...)
@@ -94,22 +94,22 @@ func (u *ui) openOVInstall(m *manager) {
 					}
 					p := u.saveOVProfile(m.p, "", cfg)
 					if p == nil {
-						fail(errors.New("не удалось сохранить профиль"))
+						fail(errors.New(L("failed to save profile", "не удалось сохранить профиль")))
 						return
 					}
 					bar.Stop()
 					w.Close()
 					m.render()
-					u.showOVShare("Клиент OpenVPN", cfg)
+					u.showOVShare(L("OpenVPN client", "Клиент OpenVPN"), cfg)
 				})
 			}()
 		}, fail)
 	}
 	body := container.NewVBox(
-		note("OpenVPN — самый популярный VPN-протокол с гибкими настройками; своя защита на SSL/TLS. Устанавливается на сервер по SSH; для подключения из этого приложения на компьютере должен быть установлен OpenVPN (openvpn.net/community-downloads)."),
-		lead(text("Сетевой протокол", 12, colMuted, false)), lead(proto),
-		lead(text("Порт", 12, colMuted, false)), port,
-		note("UDP быстрее; TCP на порту 443 чаще проходит через ограничивающие сети."),
+		note(L("OpenVPN is the most popular VPN protocol with flexible settings; its own SSL/TLS protection. It is installed on the server over SSH; to connect from this app, OpenVPN must be installed on the computer (openvpn.net/community-downloads).", "OpenVPN — самый популярный VPN-протокол с гибкими настройками; своя защита на SSL/TLS. Устанавливается на сервер по SSH; для подключения из этого приложения на компьютере должен быть установлен OpenVPN (openvpn.net/community-downloads).")),
+		lead(text(L("Network protocol", "Сетевой протокол"), 12, colMuted, false)), lead(proto),
+		lead(text(L("Port", "Порт"), 12, colMuted, false)), port,
+		note(L("UDP is faster; TCP on port 443 more often passes through restrictive networks.", "UDP быстрее; TCP на порту 443 чаще проходит через ограничивающие сети.")),
 		status, barBox,
 	)
 	w.SetContent(container.NewPadded(container.NewBorder(nil, install, nil, nil, scrolled(body))))
@@ -151,7 +151,7 @@ func (u *ui) openOVManage(p *config.Profile) {
 	needServer := func(f func(s *deploy.Session, srv *config.Profile)) func() {
 		return func() {
 			if srv == nil || srv.SSH == nil {
-				showError(errors.New("профиль сервера, с которого ставился OpenVPN, не найден: управление недоступно"), w)
+				showError(errors.New(L("the profile of the server OpenVPN was installed from was not found: management unavailable", "профиль сервера, с которого ставился OpenVPN, не найден: управление недоступно")), w)
 				return
 			}
 			u.withSession(w, srv, func(s *deploy.Session, err error) {
@@ -166,11 +166,11 @@ func (u *ui) openOVManage(p *config.Profile) {
 		}
 	}
 	rows := container.NewVBox(
-		listRow("Файл .ovpn этого устройства", "Для приложения OpenVPN на другом устройстве", arrow(), func() { u.showOVShare(p.Name, p.OVPN) }),
-		listRow("Добавить клиента", "Выпустить сертификат и файл .ovpn для другого устройства", arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
+		listRow(L("This device's .ovpn file", "Файл .ovpn этого устройства"), L("For the OpenVPN app on another device", "Для приложения OpenVPN на другом устройстве"), arrow(), func() { u.showOVShare(p.Name, p.OVPN) }),
+		listRow(L("Add client", "Добавить клиента"), L("Issue a certificate and .ovpn file for another device", "Выпустить сертификат и файл .ovpn для другого устройства"), arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
 			name := widget.NewEntry()
-			name.SetText("Клиент")
-			showForm("Новый клиент OpenVPN", "Создать", "Отмена", []*widget.FormItem{widget.NewFormItem("Имя", name)}, func(ok bool) {
+			name.SetText(L("Client", "Клиент"))
+			showForm(L("New OpenVPN client", "Новый клиент OpenVPN"), L("Create", "Создать"), L("Cancel", "Отмена"), []*widget.FormItem{widget.NewFormItem(L("Name", "Имя"), name)}, func(ok bool) {
 				if !ok {
 					return
 				}
@@ -181,12 +181,12 @@ func (u *ui) openOVManage(p *config.Profile) {
 							showError(err, w)
 							return
 						}
-						u.showOVShare("Клиент «"+strings.TrimSpace(name.Text)+"»", cfg)
+						u.showOVShare(fmt.Sprintf(L("Client “%s”", "Клиент «%s»"), strings.TrimSpace(name.Text)), cfg)
 					})
 				}()
 			}, w)
 		})),
-		listRow("Клиенты на сервере", "Список сертификатов; отзыв доступа", arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
+		listRow(L("Clients on the server", "Клиенты на сервере"), L("List of certificates; revoke access", "Список сертификатов; отзыв доступа"), arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
 			go func() {
 				names, err := s.OpenVPNClients()
 				fyne.Do(func() {
@@ -198,8 +198,8 @@ func (u *ui) openOVManage(p *config.Profile) {
 				})
 			}()
 		})),
-		listRowColored("Удалить OpenVPN с сервера", "Остановить службу и удалить сертификаты и настройки на сервере", "error", arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
-			showConfirm("Удалить OpenVPN", "OpenVPN будет остановлен на сервере, все его клиенты перестанут подключаться. Продолжить?", func(ok bool) {
+		listRowColored(L("Uninstall OpenVPN from server", "Удалить OpenVPN с сервера"), L("Stop the service and delete the certificates and settings on the server", "Остановить службу и удалить сертификаты и настройки на сервере"), "error", arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
+			showConfirm(L("Uninstall OpenVPN", "Удалить OpenVPN"), L("OpenVPN will be stopped on the server; all its clients will stop connecting. Continue?", "OpenVPN будет остановлен на сервере, все его клиенты перестанут подключаться. Продолжить?"), func(ok bool) {
 				if !ok {
 					return
 				}
@@ -209,11 +209,11 @@ func (u *ui) openOVManage(p *config.Profile) {
 				}
 				u.deleteProfile(p)
 				w.Close()
-				showInfo("Готово", "OpenVPN удалён с сервера, профиль удалён из приложения.", u.win)
+				showInfo(L("Done", "Готово"), L("OpenVPN has been removed from the server and the profile deleted from the app.", "OpenVPN удалён с сервера, профиль удалён из приложения."), u.win)
 			}, w)
 		})),
-		listRowColored("Удалить профиль из приложения", "Сервер не изменится", "error", arrow(), func() {
-			showConfirm("Удалить профиль", "Профиль «"+p.Name+"» будет удалён с этого устройства. Сервер не изменится. Продолжить?", func(ok bool) {
+		listRowColored(L("Delete profile from the app", "Удалить профиль из приложения"), L("The server will not change", "Сервер не изменится"), "error", arrow(), func() {
+			showConfirm(L("Delete profile", "Удалить профиль"), fmt.Sprintf(L("Profile “%s” will be deleted from this device. The server will not change. Continue?", "Профиль «%s» будет удалён с этого устройства. Сервер не изменится. Продолжить?"), p.Name), func(ok bool) {
 				if ok {
 					u.deleteProfile(p)
 					w.Close()
@@ -226,15 +226,15 @@ func (u *ui) openOVManage(p *config.Profile) {
 }
 
 func (u *ui) showOVClients(s *deploy.Session, names []string) {
-	w := u.newSubPage("Клиенты OpenVPN")
+	w := u.newSubPage(L("OpenVPN clients", "Клиенты OpenVPN"))
 	box := container.NewVBox()
 	if len(names) == 0 {
-		box.Add(note("Выпущенных клиентов нет."))
+		box.Add(note(L("No clients have been issued.", "Выпущенных клиентов нет.")))
 	}
 	for _, n := range names {
 		n := n
-		box.Add(listRow(n, "Нажмите, чтобы отозвать доступ", widget.NewIcon(theme.DeleteIcon()), func() {
-			showConfirm("Отозвать клиента", "Сертификат «"+n+"» будет отозван: это устройство больше не сможет подключиться. Продолжить?", func(ok bool) {
+		box.Add(listRow(n, L("Tap to revoke access", "Нажмите, чтобы отозвать доступ"), widget.NewIcon(theme.DeleteIcon()), func() {
+			showConfirm(L("Revoke client", "Отозвать клиента"), fmt.Sprintf(L("Certificate “%s” will be revoked: this device will no longer be able to connect. Continue?", "Сертификат «%s» будет отозван: это устройство больше не сможет подключиться. Продолжить?"), n), func(ok bool) {
 				if !ok {
 					return
 				}
@@ -246,7 +246,7 @@ func (u *ui) showOVClients(s *deploy.Session, names []string) {
 							return
 						}
 						w.Close()
-						showInfo("Готово", "Доступ клиента «"+n+"» отозван. Уже установленное соединение продлится до переподключения.", u.win)
+						showInfo(L("Done", "Готово"), fmt.Sprintf(L("Access for client “%s” has been revoked. The existing connection will last until reconnect.", "Доступ клиента «%s» отозван. Уже установленное соединение продлится до переподключения."), n), u.win)
 					})
 				}()
 			}, w)
@@ -264,8 +264,8 @@ func (u *ui) showOVShare(title string, cfg *ovpnconf.Config) {
 	entry.SetText(text)
 	entry.Wrapping = fyne.TextWrapBreak
 	entry.SetMinRowsVisible(10)
-	copyBtn := widget.NewButtonWithIcon("Скопировать", theme.ContentCopyIcon(), func() { u.app.Clipboard().SetContent(text) })
-	saveBtn := widget.NewButtonWithIcon("Файл .ovpn…", theme.DocumentSaveIcon(), func() {
+	copyBtn := widget.NewButtonWithIcon(L("Copy", "Скопировать"), theme.ContentCopyIcon(), func() { u.app.Clipboard().SetContent(text) })
+	saveBtn := widget.NewButtonWithIcon(L(".ovpn file…", "Файл .ovpn…"), theme.DocumentSaveIcon(), func() {
 		fd := dialog.NewFileSave(func(wr fyne.URIWriteCloser, err error) {
 			if err != nil || wr == nil {
 				return
@@ -279,7 +279,7 @@ func (u *ui) showOVShare(title string, cfg *ovpnconf.Config) {
 		fd.Show()
 	})
 	body := container.NewVBox(
-		note("Импортируйте файл в приложение OpenVPN или сохраните его. В файле закрытый ключ: не показывайте его посторонним."),
+		note(L("Import the file into the OpenVPN app or save it. The file contains a private key: do not show it to others.", "Импортируйте файл в приложение OpenVPN или сохраните его. В файле закрытый ключ: не показывайте его посторонним.")),
 		entry,
 		container.NewGridWithColumns(2, copyBtn, saveBtn),
 	)

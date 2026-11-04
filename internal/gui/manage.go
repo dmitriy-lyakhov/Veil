@@ -19,11 +19,12 @@ import (
 	"veil/internal/server"
 )
 
-const (
-	sshOpenTimeout = 40 * time.Second
-	exitHere       = "Выход на этом сервере"
-	exitLast       = "Выход на последнем узле"
-)
+const sshOpenTimeout = 40 * time.Second
+
+func exitHere() string { return L("Exit on this server", "Выход на этом сервере") }
+func exitLast() string {
+	return L("Exit on the last node", "Выход на последнем узле")
+}
 
 func nodeName(p *config.Profile) string {
 	return strings.ReplaceAll(strings.TrimSpace(p.Name), "/", "-")
@@ -77,11 +78,11 @@ func (u *ui) askSSHPassword(parent fyne.Window, p *config.Profile, done func(*de
 	progress := newThinBar()
 	barBox := container.New(layout.NewCustomPaddedLayout(0, 0, theme.InnerPadding(), 0), progress)
 	barBox.Hide()
-	content := container.NewVBox(widget.NewForm(widget.NewFormItem("Пароль SSH", pw)), errBox, barBox)
+	content := container.NewVBox(widget.NewForm(widget.NewFormItem(L("SSH password", "Пароль SSH"), pw)), errBox, barBox)
 
-	m := newModal(parent, "Вход на «"+p.Name+"»", content)
-	cancel := widget.NewButton("Отмена", nil)
-	login := widget.NewButton("Войти", nil)
+	m := newModal(parent, fmt.Sprintf(L("Sign in to “%s”", "Вход на «%s»"), p.Name), content)
+	cancel := widget.NewButton(L("Cancel", "Отмена"), nil)
+	login := widget.NewButton(L("Sign in", "Войти"), nil)
 	login.Importance = widget.HighImportance
 	m.buttons.Add(cancel)
 	m.buttons.Add(login)
@@ -100,7 +101,7 @@ func (u *ui) askSSHPassword(parent fyne.Window, p *config.Profile, done func(*de
 	var submit func()
 	submit = func() {
 		if pw.Text == "" {
-			fail("Введите пароль")
+			fail(L("Enter the password", "Введите пароль"))
 			return
 		}
 		errBox.Hide()
@@ -120,9 +121,9 @@ func (u *ui) askSSHPassword(parent fyne.Window, p *config.Profile, done func(*de
 					done(s, nil)
 				case isAuthError(err):
 					pw.SetText("")
-					fail("Неверный пароль")
+					fail(L("Wrong password", "Неверный пароль"))
 				default:
-					fail("Не удалось подключиться: " + shortErr(err))
+					fail(L("Failed to connect: ", "Не удалось подключиться: ") + shortErr(err))
 				}
 			})
 		}()
@@ -173,7 +174,7 @@ func (u *ui) openManager(p *config.Profile) {
 	m.status = newStatusLine()
 	m.body = newVBoxFit()
 	seg := container.NewGridWithColumns(4)
-	for i, title := range []string{"Протокол", "Сервисы", "Каскад", "Управление"} {
+	for i, title := range []string{L("Protocol", "Протокол"), L("Services", "Сервисы"), L("Cascade", "Каскад"), L("Management", "Управление")} {
 		b := widget.NewButton(title, func() { m.show(i) })
 		m.tabs = append(m.tabs, b)
 		seg.Add(b)
@@ -232,7 +233,7 @@ func (m *manager) call(method, path string, in, out any, done func(error)) {
 		m.ensureSession(func() { m.call(method, path, in, out, done) }, done)
 		return
 	}
-	m.status.SetText("Выполняется…")
+	m.status.SetText(L("Working…", "Выполняется…"))
 	go func() {
 		err := m.sess.Call(method, path, in, out)
 		fyne.Do(func() {
@@ -240,7 +241,7 @@ func (m *manager) call(method, path string, in, out any, done func(error)) {
 				m.u.dropSession(m.p.Name)
 			}
 			if err != nil {
-				m.status.SetText("Ошибка: " + err.Error())
+				m.status.SetText(L("Error: ", "Ошибка: ") + err.Error())
 			} else {
 				m.status.SetText("")
 			}
@@ -262,7 +263,7 @@ func (m *manager) refresh() {
 		}
 		m.state = st
 		m.loaded = true
-		m.status.SetText(fmt.Sprintf("Сайт-прикрытие: %s · клиентов %d, онлайн %d", st.Server.Company, st.Server.Clients, st.Server.Online))
+		m.status.SetText(fmt.Sprintf(L("Cover site: %s · clients %d, online %d", "Сайт-прикрытие: %s · клиентов %d, онлайн %d"), st.Server.Company, st.Server.Clients, st.Server.Online))
 		m.render()
 	})
 }
@@ -297,13 +298,13 @@ func (m *manager) render() {
 		if m.loaded {
 			m.renderServer()
 		} else {
-			m.renderLogin("Настройки сайта-прикрытия, домена и пароля админ-панели хранятся на сервере. Чтобы их открыть, войдите по SSH.")
+			m.renderLogin(L("The cover site, domain and admin panel password settings are stored on the server. Sign in over SSH to open them.", "Настройки сайта-прикрытия, домена и пароля админ-панели хранятся на сервере. Чтобы их открыть, войдите по SSH."))
 		}
 	case 2:
 		if m.loaded {
 			m.renderCascade()
 		} else {
-			m.renderLogin("Каскад настраивается на сервере. Чтобы его открыть, войдите по SSH.")
+			m.renderLogin(L("The cascade is configured on the server. Sign in over SSH to open it.", "Каскад настраивается на сервере. Чтобы его открыть, войдите по SSH."))
 		}
 	default:
 		m.renderManagement()
@@ -326,9 +327,9 @@ func (m *manager) confirm(title, msg string, yes func()) {
 }
 
 func (m *manager) renderClients() {
-	add := widget.NewButtonWithIcon("Новый клиент", theme.ContentAddIcon(), m.addClient)
+	add := widget.NewButtonWithIcon(L("New client", "Новый клиент"), theme.ContentAddIcon(), m.addClient)
 	add.Importance = widget.HighImportance
-	m.body.Add(container.NewGridWithColumns(2, add, widget.NewButtonWithIcon("Обновить", theme.ViewRefreshIcon(), m.refresh)))
+	m.body.Add(container.NewGridWithColumns(2, add, widget.NewButtonWithIcon(L("Refresh", "Обновить"), theme.ViewRefreshIcon(), m.refresh)))
 	transit := 0
 	for _, c := range m.state.Clients {
 		if c.RelayOf != "" {
@@ -338,10 +339,10 @@ func (m *manager) renderClients() {
 		m.body.Add(m.clientCard(c))
 	}
 	if len(m.state.Clients)-transit == 0 {
-		m.body.Add(card(widget.NewLabel("Клиентов пока нет.")))
+		m.body.Add(card(widget.NewLabel(L("No clients yet.", "Клиентов пока нет."))))
 	}
 	if transit > 0 {
-		m.body.Add(text(fmt.Sprintf("Транзитных клиентов от других узлов каскада: %d", transit), 12, colMuted, false))
+		m.body.Add(text(fmt.Sprintf(L("Transit clients from other cascade nodes: %d", "Транзитных клиентов от других узлов каскада: %d"), transit), 12, colMuted, false))
 	}
 }
 
@@ -357,18 +358,18 @@ func (m *manager) clientCard(c server.ClientInfo) fyne.CanvasObject {
 	if c.Note != "" {
 		lines.Add(richText(c.Note, true, false))
 	}
-	route := "выход на этом сервере"
+	route := L("exit on this server", "выход на этом сервере")
 	if len(c.Route) > 0 {
 		route = "→ " + strings.Join(c.Route, " → ")
 	}
 	if c.Auto != nil {
-		route = "авто " + route
+		route = L("auto ", "авто ") + route
 		if c.Auto.CostMs > 0 {
-			route += fmt.Sprintf(" · %.0f мс", c.Auto.CostMs)
+			route += fmt.Sprintf(L(" · %.0f ms", " · %.0f мс"), c.Auto.CostMs)
 		}
 	}
 	if c.Disabled {
-		route = "заблокирован · " + route
+		route = L("blocked · ", "заблокирован · ") + route
 	}
 	lines.Add(richText(route, true, false))
 	lines.Add(richText(fmt.Sprintf("↓ %s  ↑ %s", humanBytes(c.TxBytes), humanBytes(c.RxBytes)), true, false))
@@ -387,18 +388,18 @@ func (m *manager) clientCard(c server.ClientInfo) fyne.CanvasObject {
 		})
 	})
 	reissue := iconButton(theme.ViewRefreshIcon(), func() {
-		m.confirm("Новый конфиг", "Выпустить новый конфиг для «"+c.Name+"»? Старый перестанет работать.", func() {
+		m.confirm(L("New config", "Новый конфиг"), fmt.Sprintf(L("Issue a new config for “%s”? The old one will stop working.", "Выпустить новый конфиг для «%s»? Старый перестанет работать."), c.Name), func() {
 			var r server.LinkResponse
 			m.call("POST", "/clients/reissue", map[string]string{"name": c.Name}, &r, func(err error) {
 				if err == nil {
-					m.u.showShare(m.w, "Новый конфиг «"+c.Name+"»", r, "Старый конфиг больше не работает. Ссылка показывается один раз.", true)
+					m.u.showShare(m.w, fmt.Sprintf(L("New config “%s”", "Новый конфиг «%s»"), c.Name), r, L("The old config no longer works. The link is shown once.", "Старый конфиг больше не работает. Ссылка показывается один раз."), true)
 					m.refresh()
 				}
 			})
 		})
 	})
 	del := iconButton(theme.DeleteIcon(), func() {
-		m.confirm("Удалить клиента", "Удалить «"+c.Name+"»? Его подключения будут разорваны.", func() {
+		m.confirm(L("Delete client", "Удалить клиента"), fmt.Sprintf(L("Delete “%s”? Its connections will be dropped.", "Удалить «%s»? Его подключения будут разорваны."), c.Name), func() {
 			m.call("POST", "/clients/delete", map[string]string{"name": c.Name}, nil, func(err error) {
 				if err == nil {
 					m.refresh()
@@ -416,8 +417,8 @@ func (m *manager) editClient(c server.ClientInfo) {
 	name.SetText(c.Name)
 	note := widget.NewEntry()
 	note.SetText(c.Note)
-	showForm("Клиент", "Сохранить", "Отмена", []*widget.FormItem{
-		widget.NewFormItem("Имя", name), widget.NewFormItem("Заметка", note),
+	showForm(L("Client", "Клиент"), L("Save", "Сохранить"), L("Cancel", "Отмена"), []*widget.FormItem{
+		widget.NewFormItem(L("Name", "Имя"), name), widget.NewFormItem(L("Note", "Заметка"), note),
 	}, func(ok bool) {
 		if !ok {
 			return
@@ -432,7 +433,7 @@ func (m *manager) editClient(c server.ClientInfo) {
 
 func (m *manager) addClient() {
 	name := widget.NewEntry()
-	name.SetPlaceHolder("Например: телефон Ани")
+	name.SetPlaceHolder(L("For example: Anna's phone", "Например: телефон Ани"))
 	note := widget.NewEntry()
 	routeBox := container.NewVBox()
 	var route []string
@@ -443,12 +444,12 @@ func (m *manager) addClient() {
 			routeBox.Add(text(fmt.Sprintf("%d. %s", i+1, h), 13, colText, false))
 		}
 		if len(route) > 0 {
-			routeBox.Add(widget.NewButton("Убрать последний узел", func() {
+			routeBox.Add(widget.NewButton(L("Remove last node", "Убрать последний узел"), func() {
 				route = route[:len(route)-1]
 				rebuild()
 			}))
 		}
-		loading := text("Загрузка вариантов…", 12, colMuted, false)
+		loading := text(L("Loading options…", "Загрузка вариантов…"), 12, colMuted, false)
 		routeBox.Add(loading)
 		var resp struct {
 			Upstreams []string `json:"upstreams"`
@@ -459,20 +460,21 @@ func (m *manager) addClient() {
 				routeBox.Add(text(err.Error(), 12, colBad, false))
 				return
 			}
-			first := exitHere
+			hopPrefix := L("then via ", "дальше через ")
+			first := exitHere()
 			if len(route) > 0 {
-				first = exitLast
+				first = exitLast()
 			}
 			options := []string{first}
 			for _, o := range resp.Upstreams {
 				if !containsString(route, o) {
-					options = append(options, "дальше через "+o)
+					options = append(options, hopPrefix+o)
 				}
 			}
 			sel := widget.NewSelect(options, nil)
 			sel.SetSelected(first)
 			sel.OnChanged = func(v string) {
-				if hop, ok := strings.CutPrefix(v, "дальше через "); ok {
+				if hop, ok := strings.CutPrefix(v, hopPrefix); ok {
 					route = append(route, hop)
 					rebuild()
 				}
@@ -482,10 +484,10 @@ func (m *manager) addClient() {
 	}
 	rebuild()
 	content := container.NewVBox(
-		widget.NewForm(widget.NewFormItem("Имя", name), widget.NewFormItem("Заметка", note)),
-		text("Маршрут", 14, colText, true), routeBox,
+		widget.NewForm(widget.NewFormItem(L("Name", "Имя"), name), widget.NewFormItem(L("Note", "Заметка"), note)),
+		text(L("Route", "Маршрут"), 14, colText, true), routeBox,
 	)
-	d := newCustomConfirm("Новый клиент", "Создать", "Отмена", container.NewGridWrap(fyne.NewSize(380, 360), container.NewVScroll(content)), func(ok bool) {
+	d := newCustomConfirm(L("New client", "Новый клиент"), L("Create", "Создать"), L("Cancel", "Отмена"), container.NewGridWrap(fyne.NewSize(380, 360), container.NewVScroll(content)), func(ok bool) {
 		if !ok {
 			return
 		}
@@ -495,7 +497,7 @@ func (m *manager) addClient() {
 				showError(err, m.w)
 				return
 			}
-			m.u.showShare(m.w, "Клиент «"+r.Name+"»", r, "Отсканируйте QR в приложении Veil на устройстве клиента, отправьте файл или ссылку. Показывается один раз: в конфиге приватный ключ.", true)
+			m.u.showShare(m.w, fmt.Sprintf(L("Client “%s”", "Клиент «%s»"), r.Name), r, L("Scan the QR in the Veil app on the client's device, or send the file or link. Shown once: the config contains a private key.", "Отсканируйте QR в приложении Veil на устройстве клиента, отправьте файл или ссылку. Показывается один раз: в конфиге приватный ключ."), true)
 			m.refresh()
 		})
 	}, m.w)
@@ -512,13 +514,13 @@ func containsString(v []string, s string) bool {
 }
 
 func (m *manager) renderCascade() {
-	m.body.Add(text("Следующие узлы", 15, colText, true))
+	m.body.Add(text(L("Next nodes", "Следующие узлы"), 15, colText, true))
 	if len(m.state.Upstreams) == 0 {
-		m.body.Add(text("Нет — этот сервер выпускает трафик в интернет сам.", 12, colMuted, false))
+		m.body.Add(text(L("None — this server sends traffic to the internet itself.", "Нет — этот сервер выпускает трафик в интернет сам."), 12, colMuted, false))
 	}
 	for _, up := range m.state.Upstreams {
 		del := iconButton(theme.DeleteIcon(), func() {
-			m.confirm("Отключить узел", "Отключить «"+up.Name+"»?", func() {
+			m.confirm(L("Disconnect node", "Отключить узел"), fmt.Sprintf(L("Disconnect “%s”?", "Отключить «%s»?"), up.Name), func() {
 				m.call("POST", "/upstreams/delete", map[string]string{"name": up.Name}, nil, func(err error) {
 					if err == nil {
 						m.refresh()
@@ -526,25 +528,25 @@ func (m *manager) renderCascade() {
 				})
 			})
 		})
-		info := container.NewVBox(text(up.Name, 14, colText, true), text(fmt.Sprintf("%s · клиентов %d", up.Company, up.Clients), 12, colMuted, false))
+		info := container.NewVBox(text(up.Name, 14, colText, true), text(fmt.Sprintf(L("%s · clients %d", "%s · клиентов %d"), up.Company, up.Clients), 12, colMuted, false))
 		m.body.Add(card(container.NewBorder(nil, nil, nil, del, info)))
 	}
-	link := widget.NewButtonWithIcon("Связать со своим сервером…", theme.MailForwardIcon(), m.linkOwnServer)
+	link := widget.NewButtonWithIcon(L("Link to your own server…", "Связать со своим сервером…"), theme.MailForwardIcon(), m.linkOwnServer)
 	link.Importance = widget.HighImportance
 	m.body.Add(link)
-	m.body.Add(widget.NewButtonWithIcon("Построить каскад из нескольких серверов…", theme.ListIcon(), func() { m.u.openChainBuilder(m.p) }))
-	m.body.Add(widget.NewButtonWithIcon("Подключение через ближайший вход…", theme.MailForwardIcon(), m.u.openMultiEntryBuilder))
+	m.body.Add(widget.NewButtonWithIcon(L("Build a cascade from several servers…", "Построить каскад из нескольких серверов…"), theme.ListIcon(), func() { m.u.openChainBuilder(m.p) }))
+	m.body.Add(widget.NewButtonWithIcon(L("Connection via the nearest entry…", "Подключение через ближайший вход…"), theme.MailForwardIcon(), m.u.openMultiEntryBuilder))
 	if len(m.state.Latency) > 0 {
-		m.body.Add(text("Задержки до соседей", 15, colText, true))
+		m.body.Add(text(L("Latency to neighbours", "Задержки до соседей"), 15, colText, true))
 		for _, l := range m.state.Latency {
-			line := fmt.Sprintf("%s — %.1f мс", l.Name, l.RTTms)
+			line := fmt.Sprintf(L("%s — %.1f ms", "%s — %.1f мс"), l.Name, l.RTTms)
 			col := colText
 			if !l.OK {
-				line, col = l.Name+" — нет связи", colBad
+				line, col = l.Name+L(" — no connection", " — нет связи"), colBad
 			}
 			m.body.Add(text(line, 13, col, false))
 		}
-		opt := widget.NewButtonWithIcon("Перестроить автомаршруты сейчас", theme.ViewRefreshIcon(), func() {
+		opt := widget.NewButtonWithIcon(L("Rebuild auto routes now", "Перестроить автомаршруты сейчас"), theme.ViewRefreshIcon(), func() {
 			var resp struct {
 				Events []server.RerouteEvent `json:"events"`
 			}
@@ -552,34 +554,34 @@ func (m *manager) renderCascade() {
 				if err != nil {
 					return
 				}
-				msg := "Текущие маршруты оптимальны (или новый путь ещё не подтвердился — нужно два замера подряд)."
+				msg := L("Current routes are optimal (or the new path is not yet confirmed — two measurements in a row are needed).", "Текущие маршруты оптимальны (или новый путь ещё не подтвердился — нужно два замера подряд).")
 				if len(resp.Events) > 0 {
 					var lines []string
 					for _, e := range resp.Events {
 						if e.Error != "" {
 							lines = append(lines, e.Client+": "+e.Error)
 						} else {
-							lines = append(lines, fmt.Sprintf("%s: %s → %s (%.0f → %.0f мс)", e.Client, e.From, e.To, e.OldMs, e.NewMs))
+							lines = append(lines, fmt.Sprintf(L("%s: %s → %s (%.0f → %.0f ms)", "%s: %s → %s (%.0f → %.0f мс)"), e.Client, e.From, e.To, e.OldMs, e.NewMs))
 						}
 					}
 					msg = strings.Join(lines, "\n")
 				}
-				showInfo("Автомаршруты", msg, m.w)
+				showInfo(L("Auto routes", "Автомаршруты"), msg, m.w)
 				m.refresh()
 			})
 		})
 		m.body.Add(opt)
 	}
-	m.body.Add(widget.NewButtonWithIcon("Добавить узел по ключу каскада…", theme.ContentPasteIcon(), m.addUpstreamByKey))
+	m.body.Add(widget.NewButtonWithIcon(L("Add node by cascade key…", "Добавить узел по ключу каскада…"), theme.ContentPasteIcon(), m.addUpstreamByKey))
 
 	m.body.Add(widget.NewSeparator())
-	m.body.Add(text("Выданные ключи каскада", 15, colText, true))
+	m.body.Add(text(L("Issued cascade keys", "Выданные ключи каскада"), 15, colText, true))
 	if len(m.state.Relays) == 0 {
-		m.body.Add(text("Ключи не выдавались.", 12, colMuted, false))
+		m.body.Add(text(L("No keys have been issued.", "Ключи не выдавались."), 12, colMuted, false))
 	}
 	for _, rl := range m.state.Relays {
 		del := iconButton(theme.DeleteIcon(), func() {
-			m.confirm("Отозвать ключ", "Отозвать ключ «"+rl.Name+"»? Клиенты, идущие через этот узел, будут удалены.", func() {
+			m.confirm(L("Revoke key", "Отозвать ключ"), fmt.Sprintf(L("Revoke the key “%s”? Clients going through this node will be deleted.", "Отозвать ключ «%s»? Клиенты, идущие через этот узел, будут удалены."), rl.Name), func() {
 				m.call("POST", "/relays/delete", map[string]string{"name": rl.Name}, nil, func(err error) {
 					if err == nil {
 						m.refresh()
@@ -587,14 +589,14 @@ func (m *manager) renderCascade() {
 				})
 			})
 		})
-		state := "не на связи"
+		state := L("offline", "не на связи")
 		if rl.Online {
-			state = "на связи"
+			state = L("online", "на связи")
 		}
-		info := container.NewVBox(text(rl.Name, 14, colText, true), text(fmt.Sprintf("%s · клиентов %d", state, rl.Clients), 12, colMuted, false))
+		info := container.NewVBox(text(rl.Name, 14, colText, true), text(fmt.Sprintf(L("%s · clients %d", "%s · клиентов %d"), state, rl.Clients), 12, colMuted, false))
 		m.body.Add(card(container.NewBorder(nil, nil, nil, del, info)))
 	}
-	m.body.Add(widget.NewButtonWithIcon("Выдать ключ каскада…", theme.ContentAddIcon(), m.issueRelay))
+	m.body.Add(widget.NewButtonWithIcon(L("Issue cascade key…", "Выдать ключ каскада…"), theme.ContentAddIcon(), m.issueRelay))
 }
 
 func (m *manager) otherManaged() []*config.Profile {
@@ -610,7 +612,7 @@ func (m *manager) otherManaged() []*config.Profile {
 func (m *manager) linkOwnServer() {
 	others := m.otherManaged()
 	if len(others) == 0 {
-		showInfo("Каскад", "Других своих серверов в приложении нет. Добавьте ещё один сервер по SSH.", m.w)
+		showInfo(L("Cascade", "Каскад"), L("There are no other servers of yours in the app. Add another server over SSH.", "Других своих серверов в приложении нет. Добавьте ещё один сервер по SSH."), m.w)
 		return
 	}
 	names := make([]string, len(others))
@@ -619,13 +621,13 @@ func (m *manager) linkOwnServer() {
 	}
 	sel := widget.NewSelect(names, nil)
 	sel.SetSelected(names[0])
-	showForm("Следующий узел", "Связать", "Отмена", []*widget.FormItem{widget.NewFormItem("Сервер", sel)}, func(ok bool) {
+	showForm(L("Next node", "Следующий узел"), L("Link", "Связать"), L("Cancel", "Отмена"), []*widget.FormItem{widget.NewFormItem(L("Server", "Сервер"), sel)}, func(ok bool) {
 		if !ok {
 			return
 		}
 		for _, p := range others {
 			if p.Name == sel.Selected {
-				m.status.SetText("Связываем «" + m.p.Name + "» → «" + p.Name + "»…")
+				m.status.SetText(fmt.Sprintf(L("Linking “%s” → “%s”…", "Связываем «%s» → «%s»…"), m.p.Name, p.Name))
 				m.u.linkPair(m.w, m.p, p, func(err error) {
 					if err != nil {
 						showError(err, m.w)
@@ -690,8 +692,8 @@ func (m *manager) addUpstreamByKey() {
 	key.SetPlaceHolder("veil-relay://…")
 	key.Wrapping = fyne.TextWrapBreak
 	key.SetMinRowsVisible(4)
-	showForm("Узел по ключу каскада", "Подключить", "Отмена", []*widget.FormItem{
-		widget.NewFormItem("Название", name), widget.NewFormItem("Ключ", key),
+	showForm(L("Node by cascade key", "Узел по ключу каскада"), L("Connect", "Подключить"), L("Cancel", "Отмена"), []*widget.FormItem{
+		widget.NewFormItem(L("Name", "Название"), name), widget.NewFormItem(L("Key", "Ключ"), key),
 	}, func(ok bool) {
 		if !ok {
 			return
@@ -708,8 +710,8 @@ func (m *manager) addUpstreamByKey() {
 
 func (m *manager) issueRelay() {
 	name := widget.NewEntry()
-	name.SetPlaceHolder("Название предыдущего узла")
-	showForm("Ключ каскада", "Выдать", "Отмена", []*widget.FormItem{widget.NewFormItem("Для узла", name)}, func(ok bool) {
+	name.SetPlaceHolder(L("Name of the previous node", "Название предыдущего узла"))
+	showForm(L("Cascade key", "Ключ каскада"), L("Issue", "Выдать"), L("Cancel", "Отмена"), []*widget.FormItem{widget.NewFormItem(L("For node", "Для узла"), name)}, func(ok bool) {
 		if !ok {
 			return
 		}
@@ -719,7 +721,7 @@ func (m *manager) issueRelay() {
 				showError(err, m.w)
 				return
 			}
-			m.u.showShare(m.w, "Ключ каскада для «"+r.Name+"»", r, "Вставьте этот ключ на узле «"+r.Name+"»: Каскад → Добавить узел по ключу каскада.", false)
+			m.u.showShare(m.w, fmt.Sprintf(L("Cascade key for “%s”", "Ключ каскада для «%s»"), r.Name), r, fmt.Sprintf(L("Paste this key on node “%s”: Cascade → Add node by cascade key.", "Вставьте этот ключ на узле «%s»: Каскад → Добавить узел по ключу каскада."), r.Name), false)
 			m.refresh()
 		})
 	}, m.w)
@@ -728,12 +730,12 @@ func (m *manager) issueRelay() {
 func (m *manager) renderServer() {
 	st := m.state.Server
 	info := container.New(tightVBox{gap: -4},
-		text("Сервер", 15, colText, true),
-		richText("Версия: "+st.Version, true, false),
-		richText("Сайт-прикрытие: "+st.Company, true, false),
+		text(L("Server", "Сервер"), 15, colText, true),
+		richText(L("Version: ", "Версия: ")+st.Version, true, false),
+		richText(L("Cover site: ", "Сайт-прикрытие: ")+st.Company, true, false),
 	)
 	if st.AdminURL != "" {
-		info.Add(richText("Админ-панель (через VPN): "+st.AdminURL, true, false))
+		info.Add(richText(L("Admin panel (via VPN): ", "Админ-панель (через VPN): ")+st.AdminURL, true, false))
 	}
 	m.body.Add(card(info))
 
@@ -741,14 +743,14 @@ func (m *manager) renderServer() {
 	domain.SetPlaceHolder("example.com")
 	domain.SetText(st.Domain)
 	certText := map[string]string{
-		"none":    "Домен не задан: клиенты подключаются по IP с закреплённым сертификатом.",
-		"pending": "Получаем сертификат Let's Encrypt…",
-		"ready":   "Сертификат действителен до " + st.Cert.Expires.Format("02.01.2006") + ". Новые клиенты подключаются по домену.",
+		"none":    L("No domain set: clients connect by IP with a pinned certificate.", "Домен не задан: клиенты подключаются по IP с закреплённым сертификатом."),
+		"pending": L("Obtaining a Let's Encrypt certificate…", "Получаем сертификат Let's Encrypt…"),
+		"ready":   L("Certificate valid until ", "Сертификат действителен до ") + st.Cert.Expires.Format("02.01.2006") + L(". New clients connect by domain.", ". Новые клиенты подключаются по домену."),
 		"error":   st.Cert.Message,
 	}[st.Cert.State]
 	certLbl := widget.NewLabel(certText)
 	certLbl.Wrapping = fyne.TextWrapWord
-	saveDomain := widget.NewButton("Сохранить домен", func() {
+	saveDomain := widget.NewButton(L("Save domain", "Сохранить домен"), func() {
 		m.call("POST", "/settings/domain", map[string]string{"domain": domain.Text}, nil, func(err error) {
 			if err == nil {
 				time.AfterFunc(3*time.Second, func() { fyne.Do(m.refresh) })
@@ -756,22 +758,22 @@ func (m *manager) renderServer() {
 			}
 		})
 	})
-	hint := widget.NewLabel("Укажите домен, A/AAAA-записи которого ведут на этот сервер. Сайт-прикрытие откроется по домену, сертификат выпустится автоматически.")
+	hint := widget.NewLabel(L("Enter a domain whose A/AAAA records point to this server. The cover site will open on the domain, and the certificate will be issued automatically.", "Укажите домен, A/AAAA-записи которого ведут на этот сервер. Сайт-прикрытие откроется по домену, сертификат выпустится автоматически."))
 	hint.Wrapping = fyne.TextWrapWord
-	m.body.Add(card(container.NewVBox(lead(text("Домен", 15, colText, true)), hint, domain, saveDomain, certLbl)))
+	m.body.Add(card(container.NewVBox(lead(text(L("Domain", "Домен"), 15, colText, true)), hint, domain, saveDomain, certLbl)))
 
 	pw := widget.NewPasswordEntry()
 	rep := widget.NewPasswordEntry()
-	gen := widget.NewButton("Сгенерировать", func() {
+	gen := widget.NewButton(L("Generate", "Сгенерировать"), func() {
 		v := randomPassword()
 		pw.SetText(v)
 		rep.SetText(v)
 		pw.Password = false
 		pw.Refresh()
 	})
-	savePw := widget.NewButton("Сменить пароль админки", func() {
+	savePw := widget.NewButton(L("Change admin password", "Сменить пароль админки"), func() {
 		if pw.Text != rep.Text {
-			showError(errors.New("пароли не совпадают"), m.w)
+			showError(errors.New(L("passwords do not match", "пароли не совпадают")), m.w)
 			return
 		}
 		newPw := pw.Text
@@ -788,27 +790,27 @@ func (m *manager) renderServer() {
 				showError(err, m.w)
 				return
 			}
-			showInfo("Готово", "Пароль админки изменён и сохранён в карточке сервера.", m.w)
+			showInfo(L("Done", "Готово"), L("The admin password has been changed and saved in the server card.", "Пароль админки изменён и сохранён в карточке сервера."), m.w)
 		})
 	})
 	savePw.Importance = widget.HighImportance
-	m.body.Add(card(container.NewVBox(lead(text("Пароль админ-панели", 15, colText, true)),
-		widget.NewForm(widget.NewFormItem("Новый", pw), widget.NewFormItem("Ещё раз", rep)),
+	m.body.Add(card(container.NewVBox(lead(text(L("Admin panel password", "Пароль админ-панели"), 15, colText, true)),
+		widget.NewForm(widget.NewFormItem(L("New", "Новый"), pw), widget.NewFormItem(L("Repeat", "Ещё раз"), rep)),
 		container.NewVBox(gen, savePw))))
 	m.body.Add(m.updateButton(st.Version))
 	m.body.Add(layout.NewSpacer())
 }
 
 func (m *manager) updateButton(serverVersion string) fyne.CanvasObject {
-	label := "Обновить сервер до " + appVersion
+	label := L("Update server to ", "Обновить сервер до ") + appVersion
 	if serverVersion == appVersion {
-		label = "Переустановить серверную часть (" + appVersion + ")"
+		label = L("Reinstall the server part (", "Переустановить серверную часть (") + appVersion + ")"
 	}
 	return widget.NewButtonWithIcon(label, theme.UploadIcon(), func() {
 		if m.sess == nil {
 			return
 		}
-		m.status.SetText("Обновление сервера…")
+		m.status.SetText(L("Updating server…", "Обновление сервера…"))
 		go func() {
 			err := m.sess.Update(context.Background(), "", func(f string, a ...any) {
 				line := fmt.Sprintf(f, a...)
