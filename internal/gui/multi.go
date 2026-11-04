@@ -11,7 +11,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"veil/internal/client"
@@ -49,60 +48,75 @@ func (u *ui) openMultiEntryBuilder() {
 	for i, p := range servers {
 		names[i] = p.Name
 	}
-	exitSel := widget.NewSelect(names, nil)
-	entryChecks := widget.NewCheckGroup(nil, nil)
-	exitAsEntry := widget.NewCheck(L("The exit can also be an entry", "Выход тоже может быть входом"), nil)
-	exitAsEntry.SetChecked(true)
-	mode := widget.NewRadioGroup([]string{routeDirect(), routeAuto()}, nil)
-	mode.SetSelected(routeDirect())
-	hops := widget.NewSelect([]string{hopsAll()}, nil)
-	hops.SetSelected(hopsAll())
-	hops.Disable()
-	mode.OnChanged = func(v string) {
-		if v == routeAuto() {
-			hops.Enable()
-		} else {
-			hops.Disable()
-		}
-	}
-	exitSel.OnChanged = func(exit string) {
-		var opts []string
-		for _, n := range names {
-			if n != exit {
-				opts = append(opts, n)
-			}
-		}
-		entryChecks.Options = opts
-		entryChecks.SetSelected(opts)
-		hopOpts := []string{hopsAll()}
-		for i := 0; i < len(names)-1; i++ {
-			hopOpts = append(hopOpts, strconv.Itoa(i))
-		}
-		hops.Options = hopOpts
-		hops.SetSelected(hopsAll())
-		entryChecks.Refresh()
-	}
-	exitSel.SetSelected(names[len(names)-1])
+	exitName := names[len(names)-1]
+	picked := map[string]bool{}
+	exitAsEntry := true
+	auto := false
+	hopsChoice := hopsAll()
+	building := false
 	clientName := widget.NewEntry()
 	clientName.SetText(L("This device", "Это устройство"))
 	logLbl := widget.NewLabel("")
 	logLbl.Wrapping = fyne.TextWrapWord
 	say := func(s string) { logLbl.SetText(strings.TrimLeft(logLbl.Text+"\n"+s, "\n")) }
 
-	var build *widget.Button
-	build = widget.NewButtonWithIcon(L("Create connection", "Создать подключение"), theme.ConfirmIcon(), func() {
-		exit := findProfile(servers, exitSel.Selected)
+	entriesBox := newVBoxFit()
+	renderEntries := func() {
+		entriesBox.RemoveAll()
+		for _, p := range servers {
+			p := p
+			if p.Name == exitName {
+				continue
+			}
+			row, _ := switchRowFit(p.Name, addresses(p), picked[p.Name], func(on bool) { picked[p.Name] = on })
+			entriesBox.Add(row)
+		}
+		entriesBox.Refresh()
+	}
+	resetPicked := func() {
+		for _, n := range names {
+			picked[n] = n != exitName
+		}
+		renderEntries()
+	}
+	resetPicked()
+
+	hopOptions := []string{hopsAll()}
+	for i := 0; i < len(names)-1; i++ {
+		hopOptions = append(hopOptions, strconv.Itoa(i))
+	}
+	hopsField := u.fieldSelect(L("Intermediate nodes", "Промежуточных узлов"), hopsAll(), hopOptions, func(s string) { hopsChoice = s })
+	hopsField.Hide()
+	exitField := u.fieldSelect(L("Exit", "Выход"), exitName, names, func(s string) {
+		exitName = s
+		resetPicked()
+	})
+	modeField := u.fieldSelect(L("Path from entry to exit", "Путь от входа до выхода"), routeDirect(), []string{routeDirect(), routeAuto()}, func(s string) {
+		auto = s == routeAuto()
+		if auto {
+			hopsField.Show()
+		} else {
+			hopsField.Hide()
+		}
+	})
+	exitRow, _ := switchRowFit(L("The exit can also be an entry", "Выход тоже может быть входом"), "", true, func(on bool) { exitAsEntry = on })
+
+	buildBtn := bigButton(L("Create connection", "Создать подключение"), "check", true, func() {
+		if building {
+			return
+		}
+		exit := findProfile(servers, exitName)
 		if exit == nil {
 			showError(errors.New(L("choose an exit server", "выберите выходной сервер")), w)
 			return
 		}
 		var entries []*config.Profile
-		for _, n := range entryChecks.Selected {
-			if p := findProfile(servers, n); p != nil {
+		for _, p := range servers {
+			if p.Name != exitName && picked[p.Name] {
 				entries = append(entries, p)
 			}
 		}
-		if exitAsEntry.Checked {
+		if exitAsEntry {
 			entries = append(entries, exit)
 		}
 		if len(entries) == 0 {
@@ -110,14 +124,14 @@ func (u *ui) openMultiEntryBuilder() {
 			return
 		}
 		maxHops := server.AllHops
-		if hops.Selected != hopsAll() {
-			maxHops, _ = strconv.Atoi(hops.Selected)
+		if hopsChoice != hopsAll() {
+			maxHops, _ = strconv.Atoi(hopsChoice)
 		}
-		job := multiJob{u: u, w: w, say: say, exit: exit, entries: entries, auto: mode.Selected == routeAuto(), maxHops: maxHops, name: strings.TrimSpace(clientName.Text)}
-		build.Disable()
+		job := multiJob{u: u, w: w, say: say, exit: exit, entries: entries, auto: auto, maxHops: maxHops, name: strings.TrimSpace(clientName.Text)}
+		building = true
 		logLbl.SetText("")
 		job.run(func(p *config.Profile, err error) {
-			build.Enable()
+			building = false
 			if err != nil {
 				say(L("Error: ", "Ошибка: ") + err.Error())
 				return
@@ -132,18 +146,18 @@ func (u *ui) openMultiEntryBuilder() {
 				fmt.Sprintf(L("On every connection the client will pick the nearest entry itself; the exit is always “%s”.", "При каждом подключении клиент сам выберет ближайший вход; выход всегда «%s»."), exit.Name), true)
 		})
 	})
-	build.Importance = widget.HighImportance
-	hint := widget.NewLabel(L("The exit is the server through which traffic goes to the internet; it is set explicitly. Entries are the servers a client may connect to: the one with the lowest latency is chosen on every connection.", "Выход — сервер, через который трафик уходит в интернет, задаётся явно. Входы — серверы, к которым может подключаться клиент: при каждом подключении выбирается ближайший по задержке."))
-	hint.Wrapping = fyne.TextWrapWord
-	form := widget.NewForm(
-		widget.NewFormItem(L("Client name", "Имя клиента"), clientName),
-		widget.NewFormItem(L("Exit", "Выход"), exitSel),
-	)
-	content := container.NewVBox(hint, form,
-		text(L("Entries", "Входы"), 14, colText, true), entryChecks, exitAsEntry,
-		text(L("Path from entry to exit", "Путь от входа до выхода"), 14, colText, true), mode,
-		widget.NewForm(widget.NewFormItem(L("Intermediate nodes", "Промежуточных узлов"), hops)),
-		build, logLbl)
+	content := newVBoxFit()
+	content.Add(note(L("The exit is the server through which traffic goes to the internet; it is set explicitly. Entries are the servers a client may connect to: the one with the lowest latency is chosen on every connection.", "Выход — сервер, через который трафик уходит в интернет, задаётся явно. Входы — серверы, к которым может подключаться клиент: при каждом подключении выбирается ближайший по задержке.")))
+	content.Add(fieldEntry(L("Client name", "Имя клиента"), clientName))
+	content.Add(exitField)
+	content.Add(sectionLabel(L("Entries", "Входы")))
+	content.Add(entriesBox)
+	content.Add(exitRow)
+	content.Add(sectionLabel(L("Path from entry to exit", "Путь от входа до выхода")))
+	content.Add(modeField)
+	content.Add(hopsField)
+	content.Add(buildBtn)
+	content.Add(logLbl)
 	w.SetContent(container.NewPadded(container.NewVScroll(content)))
 	w.Resize(fyne.NewSize(winWidth+80, 720))
 	w.Show()

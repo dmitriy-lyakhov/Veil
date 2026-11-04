@@ -24,7 +24,7 @@ type subPage struct {
 	anim   *fyne.Animation
 	shown  bool
 	right  *fyne.Container
-	titleW *canvas.Text
+	titleW *fitText
 	subs   *subFrame
 	u      *ui
 
@@ -61,7 +61,7 @@ func (u *ui) newSubPage(title string) *subPage {
 	// длинный заголовок обрезается многоточием, а не заезжает под кнопку «назад»
 	p.title.Wrapping = fyne.TextWrapOff
 	p.title.Truncation = fyne.TextTruncateEllipsis
-	p.titleW = text(title, 24, colText, true)
+	p.titleW = newFitText(title, 24, colText, true)
 	back := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), p.Close)
 	back.Importance = widget.LowImportance
 	line := canvas.NewRectangle(colLine)
@@ -85,7 +85,8 @@ func (u *ui) newSubPage(title string) *subPage {
 // subFrame — шапка и содержимое вложенной страницы: на широком окне (дизайн десктопа) заголовок 24 px
 // слева от «назад», плашка статуса справа, колонка до 560 px; на узком — заголовок по центру.
 type subFrame struct {
-	bg, back, title, titleW, right, pill, line, body fyne.CanvasObject
+	bg, back, title, right, pill, line, body fyne.CanvasObject
+	titleW                                   *fitText
 }
 
 func (f *subFrame) MinSize([]fyne.CanvasObject) fyne.Size { return fyne.NewSize(300, 240) }
@@ -111,7 +112,8 @@ func (f *subFrame) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 		f.back.Resize(bs)
 		f.back.Move(fyne.NewPos(16, (hdr-bs.Height)/2))
 		ts := f.titleW.MinSize()
-		f.titleW.Resize(ts)
+		avail := s.Width - 24 - ps.Width - 8 - rs.Width - 8 - 68
+		f.titleW.Resize(fyne.NewSize(max(0, min(f.titleW.naturalWidth(), avail)), ts.Height))
 		f.titleW.Move(fyne.NewPos(68, (hdr-ts.Height)/2))
 		f.right.Resize(rs)
 		f.right.Move(fyne.NewPos(s.Width-24-ps.Width-8-rs.Width, (hdr-rs.Height)/2))
@@ -138,8 +140,7 @@ func (f *subFrame) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 }
 
 func (p *subPage) SetTitle(s string) {
-	p.titleW.Text = s
-	p.titleW.Refresh()
+	p.titleW.SetText(s)
 	p.title.Segments[0].(*widget.TextSegment).Text = s
 	p.title.Refresh()
 }

@@ -162,7 +162,7 @@ func (m *manager) frontRow() fyne.CanvasObject {
 }
 
 func (m *manager) showFrontDialog(current string) {
-	picker := newFrontPicker(current)
+	picker := newFrontPicker(m.u, current)
 	hint := note(L("Real visitors and probes see the genuine site and its certificate; only your clients get through to the tunnel. TCP only: QUIC is turned off while masquerading is on.", "Посторонние и проверяющие видят настоящий сайт и его сертификат, в туннель проходят только ваши клиенты. Только TCP: пока маскировка включена, QUIC отключён."))
 	content := container.NewVBox(hint, picker.View())
 	d := newCustomConfirm(L("Masquerade as another site", "Маскировка под чужой сайт"), L("Apply", "Применить"), L("Cancel", "Отмена"), container.NewGridWrap(fyne.NewSize(340, 260), content), func(ok bool) {

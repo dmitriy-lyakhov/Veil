@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
 	"veil/internal/front"
@@ -14,44 +13,50 @@ import (
 func frontNone() string  { return L("No masquerading", "Без маскировки") }
 func frontOther() string { return L("Other domain…", "Свой домен…") }
 
-// frontPicker — выбор сайта, под который маскируется вход: готовые варианты и свой домен.
 type frontPicker struct {
-	sel    *widget.Select
-	custom *widget.Entry
-	box    *fyne.Container
+	choice    string
+	custom    *widget.Entry
+	customRow fyne.CanvasObject
+	view      *fyne.Container
 }
 
-func newFrontPicker(current string) *frontPicker {
+func newFrontPicker(u *ui, current string) *frontPicker {
 	p := &frontPicker{custom: widget.NewEntry()}
 	p.custom.SetPlaceHolder("example.ru")
 	opts := append([]string{frontNone()}, front.Presets...)
 	opts = append(opts, frontOther())
-	p.sel = widget.NewSelect(opts, func(string) { p.syncCustom() })
-	p.box = container.NewVBox(p.sel, p.custom)
 	switch {
 	case current == "":
-		p.sel.SetSelected(frontNone())
+		p.choice = frontNone()
 	case slices.Contains(front.Presets, current):
-		p.sel.SetSelected(current)
+		p.choice = current
 	default:
-		p.sel.SetSelected(frontOther())
+		p.choice = frontOther()
 		p.custom.SetText(current)
 	}
+	field := u.fieldSelect(L("Masquerade as", "Маскировка под"), p.choice, opts, func(s string) {
+		p.choice = s
+		p.syncCustom()
+	})
+	p.customRow = fieldEntry(L("Site domain", "Домен сайта"), p.custom)
+	p.view = newVBoxFit()
+	p.view.Add(field)
+	p.view.Add(p.customRow)
 	p.syncCustom()
 	return p
 }
 
 func (p *frontPicker) syncCustom() {
-	if p.sel.Selected == frontOther() {
-		p.custom.Show()
+	if p.choice == frontOther() {
+		p.customRow.Show()
 	} else {
-		p.custom.Hide()
+		p.customRow.Hide()
 	}
+	p.view.Refresh()
 }
 
-// SNI возвращает выбранный домен; пустая строка — без маскировки.
 func (p *frontPicker) SNI() (string, error) {
-	switch p.sel.Selected {
+	switch p.choice {
 	case "", frontNone():
 		return "", nil
 	case frontOther():
@@ -61,10 +66,10 @@ func (p *frontPicker) SNI() (string, error) {
 		}
 		return sni, err
 	}
-	return p.sel.Selected, nil
+	return p.choice, nil
 }
 
-func (p *frontPicker) View() fyne.CanvasObject { return p.box }
+func (p *frontPicker) View() fyne.CanvasObject { return p.view }
 
 func frontWarning(sni string) string {
 	return L(

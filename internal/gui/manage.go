@@ -170,6 +170,18 @@ type manager struct {
 }
 
 func (u *ui) openManager(p *config.Profile) {
+	m := u.buildManager(p)
+	// вход по SSH не требуется для просмотра страницы: пароль спросим, когда он понадобится
+	if s, ok := u.sessions[p.Name]; ok {
+		m.sess = s
+		m.refresh()
+	} else {
+		m.render()
+	}
+}
+
+// buildManager создаёт и показывает страницу сервера, не обращаясь к серверу.
+func (u *ui) buildManager(p *config.Profile) *manager {
 	m := &manager{u: u, p: p, w: u.newSubPage(p.Name)}
 	m.status = newStatusLine()
 	m.body = newVBoxFit()
@@ -179,18 +191,12 @@ func (u *ui) openManager(p *config.Profile) {
 		m.tabs = append(m.tabs, b)
 		seg.Add(b)
 	}
-	header := container.NewVBox(lead(text(sshSummary(p), 14, colMuted, false)), seg, m.status.Label)
+	header := container.NewVBox(lead(newFitText(sshSummary(p), 14, colMuted, false)), seg, m.status.Label)
 	m.w.SetContent(container.NewPadded(container.NewBorder(header, nil, nil, nil, container.NewVScroll(m.body))))
 	m.w.Resize(fyne.NewSize(winWidth+80, 720))
 	m.w.Show()
 	m.highlight()
-	// вход по SSH не требуется для просмотра страницы: пароль спросим, когда он понадобится
-	if s, ok := u.sessions[p.Name]; ok {
-		m.sess = s
-		m.refresh()
-	} else {
-		m.render()
-	}
+	return m
 }
 
 // ensureSession выполняет ok, когда есть SSH-сессия; при необходимости спрашивает пароль.
@@ -327,9 +333,8 @@ func (m *manager) confirm(title, msg string, yes func()) {
 }
 
 func (m *manager) renderClients() {
-	add := widget.NewButtonWithIcon(L("New client", "Новый клиент"), theme.ContentAddIcon(), m.addClient)
-	add.Importance = widget.HighImportance
-	m.body.Add(container.NewGridWithColumns(2, add, widget.NewButtonWithIcon(L("Refresh", "Обновить"), theme.ViewRefreshIcon(), m.refresh)))
+	m.body.Add(bigButton(L("New client", "Новый клиент"), "plus", true, m.addClient))
+	m.body.Add(bigButton(L("Refresh", "Обновить"), "refresh", false, m.refresh))
 	transit := 0
 	for _, c := range m.state.Clients {
 		if c.RelayOf != "" {
@@ -528,14 +533,12 @@ func (m *manager) renderCascade() {
 				})
 			})
 		})
-		info := container.NewVBox(text(up.Name, 14, colText, true), text(fmt.Sprintf(L("%s · clients %d", "%s · клиентов %d"), up.Company, up.Clients), 12, colMuted, false))
+		info := container.NewVBox(newFitText(up.Name, 14, colText, true), newFitText(fmt.Sprintf(L("%s · clients %d", "%s · клиентов %d"), up.Company, up.Clients), 12, colMuted, false))
 		m.body.Add(card(container.NewBorder(nil, nil, nil, del, info)))
 	}
-	link := widget.NewButtonWithIcon(L("Link to your own server…", "Связать со своим сервером…"), theme.MailForwardIcon(), m.linkOwnServer)
-	link.Importance = widget.HighImportance
-	m.body.Add(link)
-	m.body.Add(widget.NewButtonWithIcon(L("Build a cascade from several servers…", "Построить каскад из нескольких серверов…"), theme.ListIcon(), func() { m.u.openChainBuilder(m.p) }))
-	m.body.Add(widget.NewButtonWithIcon(L("Connection via the nearest entry…", "Подключение через ближайший вход…"), theme.MailForwardIcon(), m.u.openMultiEntryBuilder))
+	m.body.Add(bigButton(L("Link to your own server…", "Связать со своим сервером…"), "link", true, m.linkOwnServer))
+	m.body.Add(bigButton(L("Build a cascade from several servers…", "Построить каскад из нескольких серверов…"), "share", false, func() { m.u.openChainBuilder(m.p) }))
+	m.body.Add(bigButton(L("Connection via the nearest entry…", "Подключение через ближайший вход…"), "split", false, m.u.openMultiEntryBuilder))
 	if len(m.state.Latency) > 0 {
 		m.body.Add(text(L("Latency to neighbours", "Задержки до соседей"), 15, colText, true))
 		for _, l := range m.state.Latency {
@@ -544,9 +547,9 @@ func (m *manager) renderCascade() {
 			if !l.OK {
 				line, col = l.Name+L(" — no connection", " — нет связи"), colBad
 			}
-			m.body.Add(text(line, 13, col, false))
+			m.body.Add(newFitText(line, 13, col, false))
 		}
-		opt := widget.NewButtonWithIcon(L("Rebuild auto routes now", "Перестроить автомаршруты сейчас"), theme.ViewRefreshIcon(), func() {
+		opt := bigButton(L("Rebuild auto routes now", "Перестроить автомаршруты сейчас"), "refresh", false, func() {
 			var resp struct {
 				Events []server.RerouteEvent `json:"events"`
 			}
@@ -572,7 +575,7 @@ func (m *manager) renderCascade() {
 		})
 		m.body.Add(opt)
 	}
-	m.body.Add(widget.NewButtonWithIcon(L("Add node by cascade key…", "Добавить узел по ключу каскада…"), theme.ContentPasteIcon(), m.addUpstreamByKey))
+	m.body.Add(bigButton(L("Add node by cascade key…", "Добавить узел по ключу каскада…"), "copy", false, m.addUpstreamByKey))
 
 	m.body.Add(widget.NewSeparator())
 	m.body.Add(text(L("Issued cascade keys", "Выданные ключи каскада"), 15, colText, true))
@@ -593,10 +596,10 @@ func (m *manager) renderCascade() {
 		if rl.Online {
 			state = L("online", "на связи")
 		}
-		info := container.NewVBox(text(rl.Name, 14, colText, true), text(fmt.Sprintf(L("%s · clients %d", "%s · клиентов %d"), state, rl.Clients), 12, colMuted, false))
+		info := container.NewVBox(newFitText(rl.Name, 14, colText, true), newFitText(fmt.Sprintf(L("%s · clients %d", "%s · клиентов %d"), state, rl.Clients), 12, colMuted, false))
 		m.body.Add(card(container.NewBorder(nil, nil, nil, del, info)))
 	}
-	m.body.Add(widget.NewButtonWithIcon(L("Issue cascade key…", "Выдать ключ каскада…"), theme.ContentAddIcon(), m.issueRelay))
+	m.body.Add(bigButton(L("Issue cascade key…", "Выдать ключ каскада…"), "plus", false, m.issueRelay))
 }
 
 func (m *manager) otherManaged() []*config.Profile {
@@ -806,7 +809,7 @@ func (m *manager) updateButton(serverVersion string) fyne.CanvasObject {
 	if serverVersion == appVersion {
 		label = L("Reinstall the server part (", "Переустановить серверную часть (") + appVersion + ")"
 	}
-	return widget.NewButtonWithIcon(label, theme.UploadIcon(), func() {
+	return bigButton(label, "download", false, func() {
 		if m.sess == nil {
 			return
 		}

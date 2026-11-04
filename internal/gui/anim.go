@@ -257,7 +257,7 @@ func (l tightVBox) Layout(objs []fyne.CanvasObject, size fyne.Size) {
 		if !o.Visible() {
 			continue
 		}
-		h := o.MinSize().Height
+		h := heightAtWidth(o, size.Width)
 		o.Move(fyne.NewPos(0, y))
 		o.Resize(fyne.NewSize(size.Width, h))
 		g := l.gap
@@ -313,6 +313,11 @@ func removeOverlay(c fyne.Canvas, o fyne.CanvasObject) {
 	}
 }
 
+func heightAtWidth(o fyne.CanvasObject, w float32) float32 {
+	o.Resize(fyne.NewSize(w, o.Size().Height))
+	return o.MinSize().Height
+}
+
 // vboxFit — как VBox, но не требует ширины по содержимому: всё укладывается
 // в доступную ширину, а не раздвигает прокручиваемую область за край окна.
 type vboxFit struct{}
@@ -324,7 +329,7 @@ func (vboxFit) Layout(objs []fyne.CanvasObject, size fyne.Size) {
 		if !o.Visible() {
 			continue
 		}
-		h := o.MinSize().Height
+		h := heightAtWidth(o, size.Width)
 		o.Move(fyne.NewPos(0, y))
 		o.Resize(fyne.NewSize(size.Width, h))
 		y += h + pad

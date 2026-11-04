@@ -90,7 +90,7 @@ func (u *ui) openIPsecInstall(m *manager) {
 			}()
 		}, fail)
 	}
-	body := container.NewVBox(
+	body := container.New(vboxFit{},
 		note(L("IPsec/IKEv2 is a modern, stable protocol that restores the connection after signal loss and is built into Windows, Android and iOS. strongSwan with its own certificate authority is installed on the server over SSH; afterwards you can connect to it from this app (Windows) or with the phone's built-in VPN.", "IPsec/IKEv2 — современный стабильный протокол, восстанавливает соединение после потери сигнала и встроен в Windows, Android и iOS. На сервер по SSH устанавливается strongSwan со своим центром сертификации; затем к нему можно подключиться из этого приложения (Windows) или встроенным VPN телефона.")),
 		status, barBox,
 	)
@@ -195,7 +195,7 @@ func (u *ui) openIPsecManage(p *config.Profile) {
 	trustRow := listRow(L("Trust the authority certificate on this computer", "Доверие сертификату центра на этом компьютере"), trustSub(), arrow(), func() {
 		u.askTrustCA(p, func() { w.Close(); u.openIPsecManage(p) })
 	})
-	rows := container.NewVBox(
+	rows := container.New(vboxFit{},
 		listRow(L("This device's details", "Данные этого устройства"), L("Address, login, password, authority certificate and instructions for Windows, Android and iOS", "Адрес, логин, пароль, сертификат центра и инструкция для Windows, Android и iOS"), arrow(), func() { u.showIPsecShare(p.Name, p.IPsec) }),
 		trustRow,
 		listRow(L("Add client (login and password)", "Добавить клиента (логин и пароль)"), L("Issue a new login and password for another device", "Выдать новый логин и пароль для другого устройства"), arrow(), addClient(false)),
@@ -312,7 +312,7 @@ func (u *ui) showIPsecShare(title string, cfg *ipsecconf.Config) {
 		})
 		btns = container.NewGridWithColumns(1, copyBtn, caBtn, p12Btn)
 	}
-	body := container.NewVBox(
+	body := container.New(vboxFit{},
 		note(L("This contains the client's password or key: do not show this data to others. The authority certificate must be installed on the device as trusted.", "Здесь пароль или ключ клиента: не показывайте эти данные посторонним. Сертификат центра нужно установить на устройство как доверенный.")),
 		entry, btns,
 	)

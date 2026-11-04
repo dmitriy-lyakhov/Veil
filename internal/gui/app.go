@@ -50,8 +50,8 @@ type ui struct {
 	status  *canvas.Text
 	sub     *canvas.Text
 	rx, tx  *canvas.Text
-	srvName *canvas.Text
-	srvAddr *canvas.Text
+	srvName *fitText
+	srvAddr *fitText
 	recheck *widget.Button
 
 	serverList *fyne.Container
@@ -73,7 +73,7 @@ type ui struct {
 
 	traffic            *canvas.Text
 	splitTxt           *canvas.Text
-	srvNameW, srvAddrW *canvas.Text
+	srvNameW, srvAddrW *fitText
 	pills              []pillRef
 	subpages           []*subPage
 	stats              [4]*statTile
@@ -209,16 +209,14 @@ func addresses(p *config.Profile) string {
 
 func (u *ui) refreshHome() {
 	p := u.current()
-	if p == nil {
-		u.srvName.Text, u.srvAddr.Text = L("No server selected", "Сервер не выбран"), L("Add a server with the + button", "Добавьте сервер кнопкой «+»")
-	} else {
-		u.srvName.Text, u.srvAddr.Text = p.Name, addresses(p)
+	name, addr := L("No server selected", "Сервер не выбран"), L("Add a server with the + button", "Добавьте сервер кнопкой «+»")
+	if p != nil {
+		name, addr = p.Name, addresses(p)
 	}
-	u.srvNameW.Text, u.srvAddrW.Text = u.srvName.Text, u.srvAddr.Text
-	u.srvNameW.Refresh()
-	u.srvAddrW.Refresh()
-	u.srvName.Refresh()
-	u.srvAddr.Refresh()
+	u.srvName.SetText(name)
+	u.srvAddr.SetText(addr)
+	u.srvNameW.SetText(name)
+	u.srvAddrW.SetText(addr)
 	if p != nil && len(p.Entries) > 0 {
 		u.recheck.Show()
 	} else {

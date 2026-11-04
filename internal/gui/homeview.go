@@ -35,24 +35,26 @@ func (t *statTile) set(val, delta string) {
 	t.delta.Refresh()
 }
 
-// statsLayout — сетка плиток: 2 столбца, а при большой ширине 4.
-type statsLayout struct{}
+// statsLayout — сетка плиток: 2 столбца, а при большой ширине 4. Запоминает ширину последней раскладки,
+// чтобы MinSize считал высоту по тому же числу столбцов, что и Layout.
+type statsLayout struct{ lastW float32 }
 
-func (statsLayout) cols(w float32) int {
-	if w >= 480 {
+func (*statsLayout) cols(w float32) int {
+	if w >= 440 {
 		return 4
 	}
 	return 2
 }
 
-func (l statsLayout) gap(w float32) float32 {
+func (l *statsLayout) gap(w float32) float32 {
 	if l.cols(w) == 4 {
 		return 8
 	}
 	return 12
 }
 
-func (l statsLayout) Layout(objs []fyne.CanvasObject, s fyne.Size) {
+func (l *statsLayout) Layout(objs []fyne.CanvasObject, s fyne.Size) {
+	l.lastW = s.Width
 	c, g := l.cols(s.Width), l.gap(s.Width)
 	cw := (s.Width - g*float32(c-1)) / float32(c)
 	var rowH, y float32
@@ -69,12 +71,9 @@ func (l statsLayout) Layout(objs []fyne.CanvasObject, s fyne.Size) {
 	}
 }
 
-func (l statsLayout) MinSize(objs []fyne.CanvasObject) fyne.Size {
-	c := 2
-	if len(objs) > 0 && len(objs) <= 4 {
-		c = 2
-	}
-	g := l.gap(0)
+func (l *statsLayout) MinSize(objs []fyne.CanvasObject) fyne.Size {
+	c := l.cols(l.lastW)
+	g := l.gap(l.lastW)
 	var h, rowH float32
 	for i, o := range objs {
 		if i%c == 0 && i > 0 {
@@ -135,12 +134,15 @@ func (l *homeLayout) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 		bh := l.bottom.MinSize().Height
 		l.bottom.Resize(fyne.NewSize(s.Width, bh))
 		l.bottom.Move(fyne.NewPos(0, s.Height-bh))
-		d := float32(196)
-		if s.Height-bh < 420 {
-			d = 150
+		avail := s.Height - bh - 56
+		l.hero.Resize(fyne.NewSize(s.Width, avail))
+		for _, d := range []float32{196, 168, 140, 120, 100, 84} {
+			l.power.SetDiameter(d)
+			if l.hero.MinSize().Height <= avail {
+				break
+			}
 		}
-		l.power.SetDiameter(d)
-		l.hero.Resize(fyne.NewSize(s.Width, s.Height-bh-56))
+		l.hero.Resize(fyne.NewSize(s.Width, avail))
 		l.hero.Move(fyne.NewPos(0, 56))
 		return
 	}
@@ -157,8 +159,15 @@ func (l *homeLayout) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 		sh := l.side.MinSize().Height
 		l.side.Resize(fyne.NewSize(sw, sh))
 		l.side.Move(fyne.NewPos(24, s.Height-16-sh))
-		l.power.SetDiameter(168)
-		l.hero.Resize(fyne.NewSize(s.Width, s.Height-16-sh-hdr))
+		avail := s.Height - 16 - sh - hdr
+		l.hero.Resize(fyne.NewSize(s.Width, avail))
+		for _, d := range []float32{168, 140, 120, 100, 84} {
+			l.power.SetDiameter(d)
+			if l.hero.MinSize().Height <= avail {
+				break
+			}
+		}
+		l.hero.Resize(fyne.NewSize(s.Width, avail))
 		l.hero.Move(fyne.NewPos(0, hdr))
 		return
 	}

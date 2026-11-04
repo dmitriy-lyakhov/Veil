@@ -141,7 +141,7 @@ func (u *ui) openAWGInstall(m *manager) {
 			}()
 		}, fail)
 	}
-	form := container.NewVBox(
+	form := container.New(vboxFit{},
 		note(L("AmneziaWG is a WireGuard-based protocol with traffic obfuscation. It is installed on the server over SSH (Ubuntu or Debian, from the Amnezia repository; a kernel module is built, which takes a few minutes). Afterwards you can connect to it from this app or with the AmneziaWG app.", "AmneziaWG — протокол на основе WireGuard с маскировкой трафика. Устанавливается на сервер по SSH (Ubuntu или Debian, из репозитория Amnezia; собирается модуль ядра, это занимает несколько минут). Затем к нему можно подключиться из этого приложения или приложением AmneziaWG.")),
 		lead(text(L("Subnet", "Подсеть"), 12, colMuted, false)), subnet,
 		lead(text(L("Port (UDP)", "Порт (UDP)"), 12, colMuted, false)), port,
@@ -200,7 +200,7 @@ func (u *ui) openAWGManage(p *config.Profile) {
 			})
 		}
 	}
-	rows := container.NewVBox(
+	rows := container.New(vboxFit{},
 		listRow(L("Connection settings", "Настройки подключения"), L("MTU, Jc, Jmin, Jmax, signature packets I1–I3", "MTU, Jc, Jmin, Jmax, сигнатурные пакеты I1–I3"), arrow(), func() { u.openAWGConn(p) }),
 		listRow(L("This device's configuration", "Конфигурация этого устройства"), L("QR code and .conf file for the AmneziaWG app", "QR-код и файл .conf для приложения AmneziaWG"), arrow(), func() { u.showAWGShare(p.Name, p.WG) }),
 		listRow(L("Add client", "Добавить клиента"), L("Issue a new key and configuration for another device", "Выдать новый ключ и конфигурацию для другого устройства"), arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
@@ -308,7 +308,7 @@ func (u *ui) openAWGConn(p *config.Profile) {
 		u.reload()
 		w.Close()
 	}
-	form := container.NewVBox(
+	form := container.New(vboxFit{},
 		note(L("The parameters apply on this device. If the server does not respond, restore the values issued by the server.", "Параметры действуют на этом устройстве. Если сервер не отвечает, верните значения, выданные сервером.")),
 		lead(text("MTU", 12, colMuted, false)), mtu,
 		lead(text("Jc", 12, colMuted, false)), jc,
@@ -344,7 +344,7 @@ func (u *ui) showAWGShare(title string, cfg *wgconf.Config) {
 		fd.SetFileName("veil-amneziawg.conf")
 		fd.Show()
 	})
-	body := container.NewVBox(
+	body := container.New(vboxFit{},
 		qrImage(text, ""),
 		note(L("Open the .conf file in the AmneziaWG app (import from file). The configuration contains a private key: do not show it to others.", "Откройте файл .conf в приложении AmneziaWG (импорт из файла). В конфигурации приватный ключ: не показывайте её посторонним.")),
 		entry,

@@ -40,16 +40,16 @@ func (u *ui) homePage() fyne.CanvasObject {
 	hero := container.NewVBox(layout.NewSpacer(), centered(u.power), u.status, u.sub, u.traffic, centered(u.recheck), split, layout.NewSpacer())
 
 	// узкий вид: карточка сервера внизу по центру
-	u.srvName = text(L("No server selected", "Сервер не выбран"), 28, colText, true)
-	u.srvAddr = text(L("Add a server with the + button", "Добавьте сервер кнопкой «+»"), 13, colMuted, false)
+	u.srvName = newFitText(L("No server selected", "Сервер не выбран"), 28, colText, true)
+	u.srvAddr = newFitText(L("Add a server with the + button", "Добавьте сервер кнопкой «+»"), 13, colMuted, false)
 	u.srvAddr.Alignment = fyne.TextAlignCenter
-	bottom := newTapCardR(container.NewVBox(container.NewHBox(layout.NewSpacer(), u.srvName, container.NewCenter(iconImg("down", colMuted, 22)), layout.NewSpacer()), u.srvAddr),
+	bottom := newTapCardR(container.NewVBox(nameWithChevron(u.srvName, container.NewCenter(iconImg("down", colMuted, 22)), true), u.srvAddr),
 		colCard, colCardHover, 16, 16, u.openServerSheet)
 
 	// широкий вид: карточка слева и плитки статистики
-	u.srvNameW = text(L("No server selected", "Сервер не выбран"), 20, colText, true)
-	u.srvAddrW = text(L("Add a server with the + button", "Добавьте сервер кнопкой «+»"), 13, colMuted, false)
-	srvW := newTapCardR(container.NewVBox(container.NewHBox(u.srvNameW, container.NewCenter(iconImg("down", colMuted, 22))), u.srvAddrW),
+	u.srvNameW = newFitText(L("No server selected", "Сервер не выбран"), 20, colText, true)
+	u.srvAddrW = newFitText(L("Add a server with the + button", "Добавьте сервер кнопкой «+»"), 13, colMuted, false)
+	srvW := newTapCardR(container.NewVBox(nameWithChevron(u.srvNameW, container.NewCenter(iconImg("down", colMuted, 22)), false), u.srvAddrW),
 		colCard, colCardHover, 14, 16, u.openServerSheet)
 	u.stats = [4]*statTile{
 		newStatTile(L("Download", "Загрузка"), L("MB/s", "МБ/с")),
@@ -57,7 +57,7 @@ func (u *ui) homePage() fyne.CanvasObject {
 		newStatTile(L("Latency", "Задержка"), L("ms", "мс")),
 		newStatTile(L("Session", "Сессия"), ""),
 	}
-	grid := container.New(statsLayout{}, u.stats[0].obj, u.stats[1].obj, u.stats[2].obj, u.stats[3].obj)
+	grid := container.New(&statsLayout{}, u.stats[0].obj, u.stats[1].obj, u.stats[2].obj, u.stats[3].obj)
 	side := container.NewVBox(srvW, grid)
 
 	title := text(L("Connect", "Подключение"), 24, colText, true)
@@ -118,9 +118,9 @@ func (u *ui) openServerSheet() {
 	head := container.NewVBox()
 	box := container.NewVBox()
 	if p := u.current(); p != nil {
-		title := text(p.Name, 22, colText, false)
+		title := newFitText(p.Name, 22, colText, false)
 		title.Alignment = fyne.TextAlignCenter
-		addr := text(addresses(p), 13, colMuted, false)
+		addr := newFitText(addresses(p), 13, colMuted, false)
 		addr.Alignment = fyne.TextAlignCenter
 		head.Add(title)
 		head.Add(addr)
@@ -141,7 +141,7 @@ func (u *ui) openServerSheet() {
 		})
 		gear.Importance = widget.LowImportance
 		row := container.NewBorder(nil, nil, container.NewCenter(widget.NewIcon(icon)),
-			container.NewCenter(gear), vcenter(rowText(p.Name, addresses(p), "foreground")))
+			container.NewCenter(gear), vcenter(rowFit(p.Name, addresses(p), colText)))
 		line := canvas.NewRectangle(colLine)
 		line.SetMinSize(fyne.NewSize(1, 1))
 		tap := newRowTap(container.NewPadded(row), func() {

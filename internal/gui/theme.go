@@ -137,7 +137,43 @@ func (veilTheme) Font(s fyne.TextStyle) fyne.Resource {
 	return resMedium
 }
 
-func (veilTheme) Icon(n fyne.ThemeIconName) fyne.Resource { return theme.DefaultTheme().Icon(n) }
+var themeIconMap = map[fyne.ThemeIconName]string{
+	theme.IconNameMoveDown:           "down",
+	theme.IconNameArrowDropDown:      "down",
+	theme.IconNameNavigateNext:       "right",
+	theme.IconNameNavigateBack:       "back",
+	theme.IconNameContentAdd:         "plus",
+	theme.IconNameContentRemove:      "close",
+	theme.IconNameCancel:             "close",
+	theme.IconNameWindowClose:        "close",
+	theme.IconNameCheckButtonChecked: "check",
+	theme.IconNameConfirm:            "check",
+	theme.IconNameSearch:             "search",
+	theme.IconNameContentCopy:        "copy",
+	theme.IconNameContentPaste:       "copy",
+	theme.IconNameDelete:             "trash",
+	theme.IconNameDocumentCreate:     "edit",
+	theme.IconNameViewRefresh:        "refresh",
+	theme.IconNameInfo:               "info",
+	theme.IconNameWarning:            "warn",
+	theme.IconNameError:              "warn",
+	theme.IconNameDownload:           "download",
+	theme.IconNameUpload:             "download",
+	theme.IconNameFile:               "file",
+	theme.IconNameSettings:           "sliders",
+	theme.IconNameHome:               "home",
+	theme.IconNameAccount:            "user",
+	theme.IconNameMailForward:        "share",
+}
+
+func (veilTheme) Icon(n fyne.ThemeIconName) fyne.Resource {
+	if name, ok := themeIconMap[n]; ok {
+		if r := iconRes(name, colText); r != nil {
+			return r
+		}
+	}
+	return theme.DefaultTheme().Icon(n)
+}
 
 func (veilTheme) Size(n fyne.ThemeSizeName) float32 {
 	switch n {

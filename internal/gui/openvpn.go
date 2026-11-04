@@ -105,7 +105,7 @@ func (u *ui) openOVInstall(m *manager) {
 			}()
 		}, fail)
 	}
-	body := container.NewVBox(
+	body := container.New(vboxFit{},
 		note(L("OpenVPN is the most popular VPN protocol with flexible settings; its own SSL/TLS protection. It is installed on the server over SSH; to connect from this app, OpenVPN must be installed on the computer (openvpn.net/community-downloads).", "OpenVPN — самый популярный VPN-протокол с гибкими настройками; своя защита на SSL/TLS. Устанавливается на сервер по SSH; для подключения из этого приложения на компьютере должен быть установлен OpenVPN (openvpn.net/community-downloads).")),
 		lead(text(L("Network protocol", "Сетевой протокол"), 12, colMuted, false)), lead(proto),
 		lead(text(L("Port", "Порт"), 12, colMuted, false)), port,
@@ -165,7 +165,7 @@ func (u *ui) openOVManage(p *config.Profile) {
 			})
 		}
 	}
-	rows := container.NewVBox(
+	rows := container.New(vboxFit{},
 		listRow(L("This device's .ovpn file", "Файл .ovpn этого устройства"), L("For the OpenVPN app on another device", "Для приложения OpenVPN на другом устройстве"), arrow(), func() { u.showOVShare(p.Name, p.OVPN) }),
 		listRow(L("Add client", "Добавить клиента"), L("Issue a certificate and .ovpn file for another device", "Выпустить сертификат и файл .ovpn для другого устройства"), arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
 			name := widget.NewEntry()
@@ -278,7 +278,7 @@ func (u *ui) showOVShare(title string, cfg *ovpnconf.Config) {
 		fd.SetFileName("veil-openvpn.ovpn")
 		fd.Show()
 	})
-	body := container.NewVBox(
+	body := container.New(vboxFit{},
 		note(L("Import the file into the OpenVPN app or save it. The file contains a private key: do not show it to others.", "Импортируйте файл в приложение OpenVPN или сохраните его. В файле закрытый ключ: не показывайте его посторонним.")),
 		entry,
 		container.NewGridWithColumns(2, copyBtn, saveBtn),

@@ -197,11 +197,15 @@ func listRow(title, sub string, trailing fyne.CanvasObject, onTap func()) fyne.C
 }
 
 func listRowColored(title, sub string, titleColor fyne.ThemeColorName, trailing fyne.CanvasObject, onTap func()) fyne.CanvasObject {
+	return listRowOf(rowText(title, sub, titleColor), trailing, onTap)
+}
+
+func listRowOf(content, trailing fyne.CanvasObject, onTap func()) fyne.CanvasObject {
 	var right fyne.CanvasObject
 	if trailing != nil {
 		right = vcenter(trailing)
 	}
-	body := container.NewBorder(nil, nil, nil, right, vcenter(rowText(title, sub, titleColor)))
+	body := container.NewBorder(nil, nil, nil, right, vcenter(content))
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 14
 	bg.SetMinSize(fyne.NewSize(1, 56))
@@ -219,6 +223,11 @@ func switchRow(title, sub string, on bool, changed func(bool)) (fyne.CanvasObjec
 	sw := newSwitch(on, changed)
 	row := listRow(title, sub, sw, func() { sw.Tapped(nil) })
 	return row, sw
+}
+
+func switchRowFit(title, sub string, on bool, changed func(bool)) (fyne.CanvasObject, *switchWidget) {
+	sw := newSwitch(on, changed)
+	return listRowOf(rowFit(title, sub, colText), sw, func() { sw.Tapped(nil) }), sw
 }
 
 // ---------- сегментный переключатель ----------

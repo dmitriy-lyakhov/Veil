@@ -61,15 +61,14 @@ func fieldEntry(label string, e *widget.Entry) fyne.CanvasObject {
 
 // fieldSelect — карточка выбора из списка: по нажатию раскрывается меню под полем.
 func (u *ui) fieldSelect(label, current string, options []string, changed func(string)) fyne.CanvasObject {
-	val := text(current, 16, colText, true)
+	val := newFitText(current, 16, colText, true)
 	var card fyne.CanvasObject
 	card = fieldCard(label, val, container.NewCenter(iconImg("down", colMuted, 22)), func() {
 		items := make([]*fyne.MenuItem, len(options))
 		for i, o := range options {
 			o := o
 			items[i] = fyne.NewMenuItem(o, func() {
-				val.Text = o
-				val.Refresh()
+				val.SetText(o)
 				changed(o)
 			})
 		}
@@ -79,6 +78,18 @@ func (u *ui) fieldSelect(label, current string, options []string, changed func(s
 		pop.Resize(fyne.NewSize(card.Size().Width, pop.MinSize().Height))
 	})
 	return withGap(card)
+}
+
+func (u *ui) showMenuAt(anchor fyne.CanvasObject, options []string, pick func(string)) {
+	items := make([]*fyne.MenuItem, len(options))
+	for i, o := range options {
+		o := o
+		items[i] = fyne.NewMenuItem(o, func() { pick(o) })
+	}
+	pop := widget.NewPopUpMenu(fyne.NewMenu("", items...), u.win.Canvas())
+	pos := fyne.CurrentApp().Driver().AbsolutePositionForObject(anchor)
+	pop.ShowAtPosition(fyne.NewPos(pos.X, pos.Y+anchor.Size().Height+6))
+	pop.Resize(fyne.NewSize(anchor.Size().Width, pop.MinSize().Height))
 }
 
 // withGap добавляет 4 px под полем: вместе с зазором контейнера получается шаг 12 px, как в дизайне.
@@ -93,12 +104,7 @@ func bigButton(label string, icon string, primary bool, onTap func()) fyne.Canva
 	if primary {
 		bg, hv, fg = colAccent, mix(colAccent, colText, 0.12), colAccentDark
 	}
-	row := container.NewHBox()
-	if icon != "" {
-		row.Add(container.NewCenter(iconImg(icon, fg, 20)))
-	}
-	row.Add(text(label, 16, fg, true))
-	return container.New(&fillMin{h: 52}, newTapCardR(container.NewCenter(row), bg, hv, 14, 1, onTap))
+	return container.New(&fillMin{h: 52}, newTapCardR(iconLabelRow(icon, label, 16, fg), bg, hv, 14, 1, onTap))
 }
 
 // fillMin растягивает содержимое на всю область и задаёт минимальную высоту.
@@ -138,7 +144,7 @@ func infoNote(s string) fyne.CanvasObject {
 
 // dangerButton — кнопка 52 px на карточке с красным текстом (удаление, очистка).
 func dangerButton(label string, onTap func()) fyne.CanvasObject {
-	return container.New(&fillMin{h: 52}, newTapCardR(container.NewCenter(text(label, 16, colAccentInk, true)), colCard, colCardHover, 14, 1, onTap))
+	return container.New(&fillMin{h: 52}, newTapCardR(iconLabelRow("", label, 16, colAccentInk), colCard, colCardHover, 14, 1, onTap))
 }
 
 // infoRow — строка «подпись — значение» высотой 52 px; при нажатии копирует значение.
@@ -146,9 +152,9 @@ func infoRow(label, value string, onTap func()) fyne.CanvasObject {
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 14
 	bg.SetMinSize(fyne.NewSize(1, 52))
-	val := text(value, 14, colText, false)
+	val := newFitText(value, 14, colText, false)
 	val.Alignment = fyne.TextAlignTrailing
-	row := container.NewBorder(nil, nil, container.NewCenter(text(label, 14, colMuted, false)), container.NewCenter(val))
+	row := container.NewBorder(nil, nil, container.NewCenter(text(label, 14, colMuted, false)), nil, vcenter(val))
 	card := container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(0, 0, 16, 16), row))
 	if onTap == nil {
 		return card
@@ -161,17 +167,17 @@ func (u *ui) optionRow(label, current string, options []string, changed func(str
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 14
 	bg.SetMinSize(fyne.NewSize(1, 52))
-	val := text(current, 14, colText, false)
+	val := newFitText(current, 14, colText, false)
+	val.Alignment = fyne.TextAlignTrailing
 	row := container.NewBorder(nil, nil, container.NewCenter(text(label, 14, colMuted, false)),
-		container.NewHBox(container.NewCenter(val), container.NewCenter(iconImg("down", colMuted, 20))))
+		container.NewCenter(iconImg("down", colMuted, 20)), vcenter(val))
 	card := container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(0, 0, 16, 16), row))
 	return newRowTap(card, func() {
 		items := make([]*fyne.MenuItem, len(options))
 		for i, o := range options {
 			o := o
 			items[i] = fyne.NewMenuItem(o, func() {
-				val.Text = o
-				val.Refresh()
+				val.SetText(o)
 				changed(o)
 			})
 		}

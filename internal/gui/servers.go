@@ -60,8 +60,8 @@ func (u *ui) serverCard(p *config.Profile) fyne.CanvasObject {
 		dot.FillColor = colAccent
 	}
 	dotBox := container.NewGridWrap(fyne.NewSize(12, 12), dot)
-	name := text(p.Name, 16, colText, true)
-	sub := text(addresses(p), 12, colMuted, false)
+	name := newFitText(p.Name, 16, colText, true)
+	sub := newFitText(addresses(p), 12, colMuted, false)
 	lines := container.NewVBox(name, sub)
 	if p.Name == u.active {
 		state := L("connecting…", "подключение…")
@@ -118,60 +118,53 @@ func (u *ui) showDeployForm() {
 	keyPath := widget.NewEntry()
 	keyPath.SetPlaceHolder("~/.ssh/id_ed25519")
 	passphrase := widget.NewPasswordEntry()
-	pick := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
-		dialog.NewFileOpen(func(r fyne.URIReadCloser, err error) {
-			if err == nil && r != nil {
-				keyPath.SetText(r.URI().Path())
-				r.Close()
-			}
-		}, w).Show()
-	})
-	lang := widget.NewSelect([]string{"Русский", "English"}, nil)
-	lang.SetSelected("Русский")
-	frontPick := newFrontPicker("")
+	langName := "Русский"
+	method := methodPassword()
+	frontPick := newFrontPicker(u, "")
+	installing := false
 
-	authForm := widget.NewForm()
-	method := widget.NewRadioGroup([]string{methodPassword(), methodKey()}, func(s string) {
-		if s == methodKey() {
-			authForm.Items = []*widget.FormItem{
-				widget.NewFormItem(L("SSH key", "SSH-ключ"), container.NewBorder(nil, nil, nil, pick, keyPath)),
-				widget.NewFormItem(L("Key passphrase", "Пароль ключа"), passphrase),
-			}
+	authBox := newVBoxFit()
+	renderAuth := func() {
+		authBox.RemoveAll()
+		if method == methodKey() {
+			authBox.Add(fieldEntry(L("SSH key", "SSH-ключ"), keyPath))
+			authBox.Add(bigButton(L("Choose key file…", "Выбрать файл ключа…"), "file", false, func() {
+				dialog.NewFileOpen(func(r fyne.URIReadCloser, err error) {
+					if err == nil && r != nil {
+						keyPath.SetText(r.URI().Path())
+						r.Close()
+					}
+				}, w).Show()
+			}))
+			authBox.Add(fieldEntry(L("Key passphrase", "Пароль ключа"), passphrase))
 		} else {
-			authForm.Items = []*widget.FormItem{widget.NewFormItem(L("Password", "Пароль"), password)}
+			authBox.Add(fieldEntry(L("Password", "Пароль"), password))
 		}
-		authForm.Refresh()
+		authBox.Refresh()
+	}
+	renderAuth()
+	segment := newSegmented([]string{methodPassword(), methodKey()}, 0, func(i int) {
+		method = []string{methodPassword(), methodKey()}[i]
+		renderAuth()
 	})
-	method.Horizontal = true
-	method.SetSelected(methodPassword())
 
-	form := widget.NewForm(
-		widget.NewFormItem(L("Name", "Название"), name),
-		widget.NewFormItem("IPv6", ipv6),
-		widget.NewFormItem("IPv4", ipv4),
-		widget.NewFormItem(L("SSH port", "SSH-порт"), port),
-		widget.NewFormItem(L("User", "Пользователь"), user),
-		widget.NewFormItem(L("Site language", "Язык сайта"), lang),
-		widget.NewFormItem(L("Masquerade as", "Маскировка под"), frontPick.View()),
-	)
-	logView := widget.NewMultiLineEntry()
-	logView.Wrapping = fyne.TextWrapWord
-	logView.SetMinRowsVisible(2)
+	logLbl := widget.NewLabel("")
+	logLbl.Wrapping = fyne.TextWrapBreak
 	progress := newThinBar()
 	progress.Hide()
 	appendLog := func(s string) {
-		logView.SetText(strings.TrimLeft(logView.Text+"\n"+s, "\n"))
-		logView.CursorRow = strings.Count(logView.Text, "\n")
-		logView.Refresh()
+		logLbl.SetText(strings.TrimLeft(logLbl.Text+"\n"+s, "\n"))
 	}
-	var install *widget.Button
-	install = widget.NewButtonWithIcon(L("Install and connect", "Установить и подключить"), theme.UploadIcon(), func() {
-		req, err := buildRequest(name.Text, ipv4.Text, ipv6.Text, port.Text, user.Text, method.Selected, password.Text, keyPath.Text, passphrase.Text)
+	install := bigButton(L("Install and connect", "Установить и подключить"), "download", true, func() {
+		if installing {
+			return
+		}
+		req, err := buildRequest(name.Text, ipv4.Text, ipv6.Text, port.Text, user.Text, method, password.Text, keyPath.Text, passphrase.Text)
 		if err != nil {
 			showError(err, w)
 			return
 		}
-		req.SiteLang = siteLangs[lang.Selected]
+		req.SiteLang = siteLangs[langName]
 		sni, err := frontPick.SNI()
 		if err != nil {
 			showError(err, w)
@@ -182,10 +175,10 @@ func (u *ui) showDeployForm() {
 			showError(fmt.Errorf(L("server “%s” already exists — choose a different name", "сервер «%s» уже есть — выберите другое название"), req.Name), w)
 			return
 		}
-		install.Disable()
+		installing = true
 		progress.Show()
 		progress.Start()
-		logView.SetText("")
+		logLbl.SetText("")
 		go func() {
 			logf := func(format string, args ...any) {
 				line := fmt.Sprintf(format, args...)
@@ -198,9 +191,9 @@ func (u *ui) showDeployForm() {
 			fyne.Do(func() {
 				progress.Stop()
 				progress.Hide()
+				installing = false
 				if err != nil {
 					appendLog(L("Error: ", "Ошибка: ") + err.Error())
-					install.Enable()
 					return
 				}
 				appendLog(L("Done. Profile saved.", "Готово. Профиль сохранён."))
@@ -214,10 +207,22 @@ func (u *ui) showDeployForm() {
 			})
 		}()
 	})
-	install.Importance = widget.HighImportance
-	hint := widget.NewLabel(L("The app will connect over SSH, install Veil (port 443, TCP and UDP) and generate a cover site. The SSH password is not stored.", "Приложение подключится по SSH, установит Veil (порт 443, TCP и UDP) и сгенерирует сайт-прикрытие. Пароль SSH не сохраняется."))
-	hint.Wrapping = fyne.TextWrapWord
-	w.SetContent(container.NewPadded(container.NewBorder(container.NewVBox(hint, form, method, authForm, install, progress), nil, nil, nil, logView)))
+
+	content := newVBoxFit()
+	content.Add(note(L("The app will connect over SSH, install Veil (port 443, TCP and UDP) and generate a cover site. The SSH password is not stored.", "Приложение подключится по SSH, установит Veil (порт 443, TCP и UDP) и сгенерирует сайт-прикрытие. Пароль SSH не сохраняется.")))
+	content.Add(fieldEntry(L("Name", "Название"), name))
+	content.Add(fieldEntry("IPv6", ipv6))
+	content.Add(fieldEntry("IPv4", ipv4))
+	content.Add(fieldEntry(L("SSH port", "SSH-порт"), port))
+	content.Add(fieldEntry(L("User", "Пользователь"), user))
+	content.Add(u.fieldSelect(L("Site language", "Язык сайта"), langName, []string{"Русский", "English"}, func(s string) { langName = s }))
+	content.Add(frontPick.View())
+	content.Add(segment)
+	content.Add(authBox)
+	content.Add(install)
+	content.Add(progress)
+	content.Add(logLbl)
+	w.SetContent(container.NewPadded(container.NewVScroll(content)))
 	w.Resize(fyne.NewSize(winWidth+40, 700))
 	w.Show()
 }

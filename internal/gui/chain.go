@@ -6,7 +6,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
 	"veil/internal/config"
@@ -20,12 +19,12 @@ func randomPassword() string { return provision.NewAdminPassword() }
 func (u *ui) openChainBuilder(entry *config.Profile) {
 	w := u.newSubPage(L("Build a cascade", "Построить каскад"))
 	chain := []*config.Profile{entry}
-	list := container.NewVBox()
-	addSel := widget.NewSelect(nil, nil)
+	list := newVBoxFit()
 	clientName := widget.NewEntry()
 	clientName.SetText(L("This device", "Это устройство"))
 	logLbl := widget.NewLabel("")
 	logLbl.Wrapping = fyne.TextWrapWord
+	building := false
 
 	inChain := func(p *config.Profile) bool {
 		for _, c := range chain {
@@ -35,8 +34,16 @@ func (u *ui) openChainBuilder(entry *config.Profile) {
 		}
 		return false
 	}
-	var redraw func()
-	redraw = func() {
+	freeServers := func() []string {
+		var opts []string
+		for _, p := range u.profiles {
+			if managed(p) && !inChain(p) {
+				opts = append(opts, p.Name)
+			}
+		}
+		return opts
+	}
+	redraw := func() {
 		list.RemoveAll()
 		for i, p := range chain {
 			role := L("intermediate", "промежуточный")
@@ -46,46 +53,44 @@ func (u *ui) openChainBuilder(entry *config.Profile) {
 			case i == len(chain)-1:
 				role = L("exit", "выход")
 			}
-			list.Add(card(container.NewVBox(text(fmt.Sprintf("%d. %s", i+1, p.Name), 15, colText, true), text(role+" · "+addresses(p), 12, colMuted, false))))
+			list.Add(card(container.NewVBox(newFitText(fmt.Sprintf("%d. %s", i+1, p.Name), 15, colText, true), newFitText(role+" · "+addresses(p), 12, colMuted, false))))
 		}
-		var opts []string
-		for _, p := range u.profiles {
-			if managed(p) && !inChain(p) {
-				opts = append(opts, p.Name)
-			}
-		}
-		addSel.Options = opts
-		addSel.ClearSelected()
-		addSel.PlaceHolder = L("Add the next node…", "Добавить следующий узел…")
-		if len(opts) == 0 {
-			addSel.PlaceHolder = L("No free servers", "Свободных серверов нет")
-		}
-		addSel.Refresh()
 		list.Refresh()
 	}
-	addSel.OnChanged = func(name string) {
-		for _, p := range u.profiles {
-			if p.Name == name && !inChain(p) {
-				chain = append(chain, p)
-				redraw()
-				return
-			}
+	var addBtn fyne.CanvasObject
+	addBtn = bigButton(L("Add the next node…", "Добавить следующий узел…"), "plus", false, func() {
+		opts := freeServers()
+		if len(opts) == 0 {
+			showInfo(L("No free servers", "Свободных серверов нет"), L("All your servers are already in the chain.", "Все ваши серверы уже в цепочке."), w)
+			return
 		}
-	}
-	removeLast := widget.NewButtonWithIcon(L("Remove last", "Убрать последний"), theme.ContentUndoIcon(), func() {
+		u.showMenuAt(addBtn, opts, func(name string) {
+			for _, p := range u.profiles {
+				if p.Name == name && !inChain(p) {
+					chain = append(chain, p)
+					redraw()
+					return
+				}
+			}
+		})
+	})
+	removeBtn := bigButton(L("Remove last", "Убрать последний"), "trash", false, func() {
 		if len(chain) > 1 {
 			chain = chain[:len(chain)-1]
 			redraw()
 		}
 	})
-	var build *widget.Button
-	build = widget.NewButtonWithIcon(L("Build and create config", "Построить и создать конфиг"), theme.ConfirmIcon(), func() {
+	say := func(s string) { logLbl.SetText(strings.TrimLeft(logLbl.Text+"\n"+s, "\n")) }
+	finish := func() { building = false }
+	buildBtn := bigButton(L("Build and create config", "Построить и создать конфиг"), "check", true, func() {
+		if building {
+			return
+		}
 		if len(chain) < 2 {
 			showError(fmt.Errorf(L("add at least one node after “%s”", "добавьте хотя бы один узел после «%s»"), entry.Name), w)
 			return
 		}
-		build.Disable()
-		say := func(s string) { logLbl.SetText(strings.TrimLeft(logLbl.Text+"\n"+s, "\n")) }
+		building = true
 		var step func(i int)
 		step = func(i int) {
 			if i == len(chain)-1 {
@@ -97,14 +102,14 @@ func (u *ui) openChainBuilder(entry *config.Profile) {
 				u.withSession(w, entry, func(s *deploy.Session, err error) {
 					if err != nil {
 						say(L("Error: ", "Ошибка: ") + err.Error())
-						build.Enable()
+						finish()
 						return
 					}
 					go func() {
 						var r server.LinkResponse
 						err := s.Call("POST", "/clients", map[string]any{"name": clientName.Text, "route": route}, &r)
 						fyne.Do(func() {
-							build.Enable()
+							finish()
 							if err != nil {
 								say(L("Error: ", "Ошибка: ") + err.Error())
 								return
@@ -120,7 +125,7 @@ func (u *ui) openChainBuilder(entry *config.Profile) {
 			u.linkPair(w, chain[i], chain[i+1], func(err error) {
 				if err != nil {
 					say(L("Error: ", "Ошибка: ") + err.Error())
-					build.Enable()
+					finish()
 					return
 				}
 				step(i + 1)
@@ -128,14 +133,16 @@ func (u *ui) openChainBuilder(entry *config.Profile) {
 		}
 		step(0)
 	})
-	build.Importance = widget.HighImportance
-	hint := widget.NewLabel(L("Choose servers in the order traffic passes through them: the first is the entry, the last is the exit to the internet. The number of nodes is unlimited. The app will issue cascade keys and link neighbouring nodes itself.", "Выберите серверы в порядке прохождения трафика: первый — вход, последний — выход в интернет. Число узлов не ограничено. Приложение само выдаст ключи каскада и свяжет соседние узлы."))
-	hint.Wrapping = fyne.TextWrapWord
 	redraw()
-	w.SetContent(container.NewPadded(container.NewBorder(
-		container.NewVBox(hint, addSel, removeLast),
-		container.NewVBox(widget.NewForm(widget.NewFormItem(L("Client name", "Имя клиента"), clientName)), build, logLbl),
-		nil, nil, container.NewVScroll(list))))
+	content := newVBoxFit()
+	content.Add(note(L("Choose servers in the order traffic passes through them: the first is the entry, the last is the exit to the internet. The number of nodes is unlimited. The app will issue cascade keys and link neighbouring nodes itself.", "Выберите серверы в порядке прохождения трафика: первый — вход, последний — выход в интернет. Число узлов не ограничено. Приложение само выдаст ключи каскада и свяжет соседние узлы.")))
+	content.Add(list)
+	content.Add(addBtn)
+	content.Add(removeBtn)
+	content.Add(fieldEntry(L("Client name", "Имя клиента"), clientName))
+	content.Add(buildBtn)
+	content.Add(logLbl)
+	w.SetContent(container.NewPadded(container.NewVScroll(content)))
 	w.Resize(fyne.NewSize(winWidth+60, 680))
 	w.Show()
 }
