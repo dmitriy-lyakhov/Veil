@@ -61,9 +61,12 @@ func (u *ui) homePage() fyne.CanvasObject {
 	side := container.NewVBox(srvW, grid)
 
 	title := text(L("Connect", "Подключение"), 24, colText, true)
+	logoName := text("Veil", 20, colText, true)
+	logo := container.NewHBox(markImg(28), container.NewCenter(logoName))
+	hl := &headerLeft{title: title, logo: logo}
 	header := container.New(layout.NewCustomPaddedLayout(0, 0, 24, 24),
-		container.NewBorder(nil, nil, container.NewCenter(title), container.NewCenter(u.statusPill()), nil))
-	return container.New(&homeLayout{header: header, hero: hero, side: side, bottom: bottom, power: u.power}, header, hero, side, bottom)
+		container.NewBorder(nil, nil, container.New(hl, title, logo), container.NewCenter(u.statusPill()), nil))
+	return container.New(&homeLayout{header: header, hero: hero, side: side, bottom: bottom, power: u.power, hl: hl}, header, hero, side, bottom)
 }
 
 func (u *ui) splitEnabled() bool {

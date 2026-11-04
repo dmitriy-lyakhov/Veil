@@ -91,14 +91,45 @@ func (l statsLayout) MinSize(objs []fyne.CanvasObject) fyne.Size {
 type homeLayout struct {
 	header, hero, side, bottom fyne.CanvasObject
 	power                      *powerButton
+	hl                         *headerLeft
+}
+
+// headerLeft показывает слева в шапке главной: заголовок на широком окне, логотип на узком.
+type headerLeft struct {
+	title, logo fyne.CanvasObject
+	wide        bool
+}
+
+func (h *headerLeft) Layout(_ []fyne.CanvasObject, s fyne.Size) {
+	o := h.logo
+	if h.wide {
+		o = h.title
+		h.logo.Hide()
+	} else {
+		h.title.Hide()
+	}
+	o.Show()
+	m := o.MinSize()
+	o.Resize(m)
+	o.Move(fyne.NewPos(0, (s.Height-m.Height)/2))
+}
+
+func (h *headerLeft) MinSize([]fyne.CanvasObject) fyne.Size {
+	if h.wide {
+		return h.title.MinSize()
+	}
+	return h.logo.MinSize()
 }
 
 func (l *homeLayout) MinSize([]fyne.CanvasObject) fyne.Size { return fyne.NewSize(300, 320) }
 
 func (l *homeLayout) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 	wide := s.Width >= wideBreakpoint-sidebarWidth
+	l.hl.wide = wide
 	if !wide {
-		l.header.Hide()
+		l.header.Show()
+		l.header.Resize(fyne.NewSize(s.Width, 56))
+		l.header.Move(fyne.NewPos(0, 0))
 		l.side.Hide()
 		l.bottom.Show()
 		bh := l.bottom.MinSize().Height
@@ -109,8 +140,8 @@ func (l *homeLayout) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 			d = 150
 		}
 		l.power.SetDiameter(d)
-		l.hero.Resize(fyne.NewSize(s.Width, s.Height-bh))
-		l.hero.Move(fyne.NewPos(0, 0))
+		l.hero.Resize(fyne.NewSize(s.Width, s.Height-bh-56))
+		l.hero.Move(fyne.NewPos(0, 56))
 		return
 	}
 	const hdr = 72
