@@ -79,6 +79,12 @@ type ui struct {
 }
 
 func Run() {
+	release, first := acquireSingleInstance()
+	if !first {
+		activateExisting()
+		return
+	}
+	defer release()
 	a := app.NewWithID(appID)
 	a.Settings().SetTheme(veilTheme{})
 	if icon := bundledIcon(); icon != nil {

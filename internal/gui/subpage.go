@@ -17,7 +17,7 @@ const subPageTime = 280 * time.Millisecond
 // родитель для диалогов; SetContent/Show/Close/Resize/SetTitle переопределены.
 type subPage struct {
 	fyne.Window
-	title *canvas.Text
+	title *widget.RichText
 	body  *fyne.Container
 	root  *fyne.Container
 	lay   *slideLayout
@@ -40,25 +40,31 @@ func (l *slideLayout) MinSize([]fyne.CanvasObject) fyne.Size { return fyne.NewSi
 
 func (u *ui) newSubPage(title string) *subPage {
 	p := &subPage{Window: u.win, lay: &slideLayout{off: 1}}
-	p.title = text(title, 17, colText, true)
+	p.title = widget.NewRichText(&widget.TextSegment{Text: title, Style: widget.RichTextStyle{
+		ColorName: theme.ColorNameForeground, SizeName: theme.SizeNameSubHeadingText, Alignment: fyne.TextAlignCenter, TextStyle: fyne.TextStyle{Bold: true}}})
+	// длинный заголовок обрезается многоточием, а не заезжает под кнопку «назад»
+	p.title.Wrapping = fyne.TextWrapOff
+	p.title.Truncation = fyne.TextTruncateEllipsis
 	back := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), p.Close)
 	back.Importance = widget.LowImportance
 	line := canvas.NewRectangle(colLine)
 	line.SetMinSize(fyne.NewSize(1, 1))
 	p.right = container.NewStack()
-	p.title.Alignment = fyne.TextAlignCenter
 	// кнопка «назад» и правое действие одинаковой ширины, чтобы заголовок был ровно по центру
 	side := fyne.NewSize(44, 40)
 	left := container.NewGridWrap(side, back)
 	rightBox := container.NewGridWrap(side, p.right)
-	header := container.NewVBox(container.NewPadded(container.NewBorder(nil, nil, left, rightBox, container.NewCenter(p.title))), line)
+	header := container.NewVBox(container.NewPadded(container.NewBorder(nil, nil, left, rightBox, vcenter(p.title))), line)
 	p.body = container.NewStack()
 	bg := canvas.NewRectangle(colBackground)
 	p.root = container.New(p.lay, container.NewStack(bg, container.NewBorder(header, nil, nil, nil, p.body)))
 	return p
 }
 
-func (p *subPage) SetTitle(s string) { p.title.Text = s; p.title.Refresh() }
+func (p *subPage) SetTitle(s string) {
+	p.title.Segments[0].(*widget.TextSegment).Text = s
+	p.title.Refresh()
+}
 
 func (p *subPage) SetContent(o fyne.CanvasObject) {
 	p.body.Objects = []fyne.CanvasObject{o}

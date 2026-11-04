@@ -44,7 +44,7 @@ func (u *ui) openMultiEntryBuilder() {
 		showInfo("Нет своих серверов", "Сначала добавьте хотя бы один сервер по SSH.", u.win)
 		return
 	}
-	w := u.newSubPage("Подключение через ближайший вход")
+	w := u.newSubPage("Через ближайший вход")
 	names := make([]string, len(servers))
 	for i, p := range servers {
 		names[i] = p.Name

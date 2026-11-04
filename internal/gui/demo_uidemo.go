@@ -31,6 +31,8 @@ func init() {
 							break
 						}
 					}
+				case "longtitle":
+					u.openMultiEntryBuilder()
 				case "bench":
 					steps := []func(){
 						func() { u.showPage(1) }, func() { u.showPage(0) }, func() { u.showPage(2) }, u.openConnection,
