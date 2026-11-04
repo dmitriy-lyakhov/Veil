@@ -23,6 +23,7 @@ var iconPaths = map[string]string{
 	"search":   "M7 3h6l4 4v6l-4 4H7l-4-4V7zM16 16l5 5",
 	"split":    "M4 20L20 4M11 4h9v9",
 	"shield":   "M12 2l8 3v7l-8 10-8-10V5z",
+	"shieldok": "M12 2l8 3v7l-8 10-8-10V5zM8 12l3 3 5-6",
 	"close":    "M5 5l14 14M19 5L5 19",
 	"server":   "M3 4h18v6H3zM3 14h18v6H3zM7 7h2M7 17h2",
 	"qr":       "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2z",

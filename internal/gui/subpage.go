@@ -17,13 +17,16 @@ const subPageTime = 280 * time.Millisecond
 // родитель для диалогов; SetContent/Show/Close/Resize/SetTitle переопределены.
 type subPage struct {
 	fyne.Window
-	title *widget.RichText
-	body  *fyne.Container
-	root  *fyne.Container
-	lay   *slideLayout
-	anim  *fyne.Animation
-	shown bool
-	right *fyne.Container
+	title  *widget.RichText
+	body   *fyne.Container
+	root   *fyne.Container
+	lay    *slideLayout
+	anim   *fyne.Animation
+	shown  bool
+	right  *fyne.Container
+	titleW *canvas.Text
+	subs   *subFrame
+	u      *ui
 
 	// OnClosed вызывается при закрытии страницы (отмена фоновых задач).
 	OnClosed func()
@@ -31,7 +34,20 @@ type subPage struct {
 
 type slideLayout struct{ off float32 }
 
+// Layout: на узком окне страница выезжает на весь экран, на широком — только справа от боковой панели.
 func (l *slideLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
+	if size.Width >= wideBreakpoint && len(objs) > 1 {
+		w := size.Width - sidebarWidth
+		objs[1].Show()
+		objs[1].Resize(fyne.NewSize(sidebarWidth, size.Height))
+		objs[1].Move(fyne.NewPos(0, 0))
+		objs[0].Resize(fyne.NewSize(w, size.Height))
+		objs[0].Move(fyne.NewPos(sidebarWidth+l.off*w, 0))
+		return
+	}
+	if len(objs) > 1 {
+		objs[1].Hide()
+	}
 	objs[0].Resize(size)
 	objs[0].Move(fyne.NewPos(l.off*size.Width, 0))
 }
@@ -39,29 +55,91 @@ func (l *slideLayout) Layout(objs []fyne.CanvasObject, size fyne.Size) {
 func (l *slideLayout) MinSize([]fyne.CanvasObject) fyne.Size { return fyne.NewSize(0, 0) }
 
 func (u *ui) newSubPage(title string) *subPage {
-	p := &subPage{Window: u.win, lay: &slideLayout{off: 1}}
+	p := &subPage{Window: u.win, lay: &slideLayout{off: 1}, u: u}
 	p.title = widget.NewRichText(&widget.TextSegment{Text: title, Style: widget.RichTextStyle{
 		ColorName: theme.ColorNameForeground, SizeName: theme.SizeNameSubHeadingText, Alignment: fyne.TextAlignCenter, TextStyle: fyne.TextStyle{Bold: true}}})
 	// длинный заголовок обрезается многоточием, а не заезжает под кнопку «назад»
 	p.title.Wrapping = fyne.TextWrapOff
 	p.title.Truncation = fyne.TextTruncateEllipsis
+	p.titleW = text(title, 24, colText, true)
 	back := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), p.Close)
 	back.Importance = widget.LowImportance
 	line := canvas.NewRectangle(colLine)
-	line.SetMinSize(fyne.NewSize(1, 1))
 	p.right = container.NewStack()
-	// кнопка «назад» и правое действие одинаковой ширины, чтобы заголовок был ровно по центру
-	side := fyne.NewSize(44, 40)
-	left := container.NewGridWrap(side, back)
-	rightBox := container.NewGridWrap(side, p.right)
-	header := container.NewVBox(container.NewPadded(container.NewBorder(nil, nil, left, rightBox, vcenter(p.title))), line)
 	p.body = container.NewStack()
 	bg := canvas.NewRectangle(colBackground)
-	p.root = container.New(p.lay, container.NewStack(bg, container.NewBorder(header, nil, nil, nil, p.body)))
+	pill := u.statusPill()
+	sidebar, items := u.sidebar(func(i int) {
+		u.closeSubPages()
+		u.showPage(i)
+	})
+	for _, n := range items {
+		n.SetActive(n.e.index == u.curPage)
+	}
+	p.subs = &subFrame{bg: bg, back: back, title: p.title, titleW: p.titleW, right: p.right, pill: pill, line: line, body: p.body}
+	content := container.New(p.subs, bg, line, p.body, back, p.title, p.titleW, p.right, pill)
+	p.root = container.New(p.lay, content, sidebar)
 	return p
 }
 
+// subFrame — шапка и содержимое вложенной страницы: на широком окне (дизайн десктопа) заголовок 24 px
+// слева от «назад», плашка статуса справа, колонка до 560 px; на узком — заголовок по центру.
+type subFrame struct {
+	bg, back, title, titleW, right, pill, line, body fyne.CanvasObject
+}
+
+func (f *subFrame) MinSize([]fyne.CanvasObject) fyne.Size { return fyne.NewSize(300, 240) }
+
+func (f *subFrame) Layout(_ []fyne.CanvasObject, s fyne.Size) {
+	f.bg.Resize(s)
+	f.bg.Move(fyne.NewPos(0, 0))
+	bs := fyne.NewSize(44, 40)
+	rs := f.right.MinSize()
+	if rs.Width < 44 {
+		rs.Width = 44
+	}
+	rs.Height = 40
+	if s.Width >= wideBreakpoint-sidebarWidth {
+		const hdr = 72
+		f.line.Hide()
+		f.title.Hide()
+		f.titleW.Show()
+		f.pill.Show()
+		ps := f.pill.MinSize()
+		f.pill.Resize(ps)
+		f.pill.Move(fyne.NewPos(s.Width-24-ps.Width, (hdr-ps.Height)/2))
+		f.back.Resize(bs)
+		f.back.Move(fyne.NewPos(16, (hdr-bs.Height)/2))
+		ts := f.titleW.MinSize()
+		f.titleW.Resize(ts)
+		f.titleW.Move(fyne.NewPos(68, (hdr-ts.Height)/2))
+		f.right.Resize(rs)
+		f.right.Move(fyne.NewPos(s.Width-24-ps.Width-8-rs.Width, (hdr-rs.Height)/2))
+		w := min(560, s.Width-48)
+		f.body.Resize(fyne.NewSize(w, s.Height-80-24))
+		f.body.Move(fyne.NewPos(24, 80))
+		return
+	}
+	const hdr = 56
+	f.titleW.Hide()
+	f.pill.Hide()
+	f.title.Show()
+	f.line.Show()
+	f.line.Resize(fyne.NewSize(s.Width, 1))
+	f.line.Move(fyne.NewPos(0, hdr))
+	f.back.Resize(bs)
+	f.back.Move(fyne.NewPos(8, (hdr-bs.Height)/2))
+	f.right.Resize(rs)
+	f.right.Move(fyne.NewPos(s.Width-8-rs.Width, (hdr-rs.Height)/2))
+	f.title.Resize(fyne.NewSize(s.Width-2*60, f.title.MinSize().Height))
+	f.title.Move(fyne.NewPos(60, (hdr-f.title.MinSize().Height)/2))
+	f.body.Resize(fyne.NewSize(s.Width-16, s.Height-hdr-1-8))
+	f.body.Move(fyne.NewPos(8, hdr+1+8))
+}
+
 func (p *subPage) SetTitle(s string) {
+	p.titleW.Text = s
+	p.titleW.Refresh()
 	p.title.Segments[0].(*widget.TextSegment).Text = s
 	p.title.Refresh()
 }
@@ -97,6 +175,7 @@ func (p *subPage) Show() {
 		return
 	}
 	p.shown = true
+	p.u.subpages = append(p.u.subpages, p)
 	c := p.Window.Canvas()
 	p.lay.off = 1
 	p.root.Resize(c.Size())
@@ -115,6 +194,7 @@ func (p *subPage) Close() {
 		return
 	}
 	p.shown = false
+	p.u.dropSubPage(p)
 	if p.OnClosed != nil {
 		p.OnClosed()
 	}
@@ -129,4 +209,20 @@ func (p *subPage) SetRight(o fyne.CanvasObject) {
 		p.right.Objects = []fyne.CanvasObject{o}
 	}
 	p.right.Refresh()
+}
+
+func (u *ui) dropSubPage(p *subPage) {
+	for i, s := range u.subpages {
+		if s == p {
+			u.subpages = append(u.subpages[:i], u.subpages[i+1:]...)
+			return
+		}
+	}
+}
+
+// closeSubPages закрывает все открытые вложенные страницы (переход по боковой панели).
+func (u *ui) closeSubPages() {
+	for len(u.subpages) > 0 {
+		u.subpages[len(u.subpages)-1].Close()
+	}
 }

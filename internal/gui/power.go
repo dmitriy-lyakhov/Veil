@@ -19,41 +19,38 @@ const (
 )
 
 const (
-	powerSize  = 190
-	ringWidth  = 3
-	glowExtra  = 30
+	ringWidth  = 4
 	pulseCycle = 900 * time.Millisecond
 )
 
-// powerButton — большое кольцо с мягким свечением и подписью внутри (как в референсе).
+// powerButton — кольцо подключения по дизайну: тонкое кольцо цвета текста; при подключении
+// заливается акцентом, внутри щит, подпись и таймер.
 type powerButton struct {
 	widget.BaseWidget
 	OnTapped func()
+	OnState  func(powerState)
 	state    powerState
 	disabled bool
+	diameter float32
+	timerTxt string
 
-	glow2 *canvas.Circle
-	glow1 *canvas.Circle
-	ring  *canvas.Circle
-	face  *canvas.Circle
-	label *canvas.Text
-	pulse *fyne.Animation
+	ring   *canvas.Circle
+	shield *canvas.Image
+	label  *canvas.Text
+	timer  *canvas.Text
+	pulse  *fyne.Animation
 }
 
 func newPowerButton(tap func()) *powerButton {
-	p := &powerButton{OnTapped: tap}
-	p.glow2 = canvas.NewCircle(color.Transparent)
-	p.glow1 = canvas.NewCircle(color.Transparent)
+	p := &powerButton{OnTapped: tap, diameter: 196}
 	p.ring = canvas.NewCircle(color.Transparent)
 	p.ring.StrokeWidth = ringWidth
-	p.face = canvas.NewCircle(colBackground)
-	p.label = text(L("Connect", "Подключить"), 20, colText, false)
-	p.label.Alignment = fyne.TextAlignCenter
+	p.shield = canvas.NewImageFromResource(iconRes("shieldok", colAccentDark))
+	p.shield.FillMode = canvas.ImageFillContain
+	p.label = text(L("Connect", "Подключить"), 22, colText, true)
+	p.timer = text("", 15, colAccentDark, true)
 	p.pulse = fyne.NewAnimation(pulseCycle, func(f float32) {
-		a := uint8(70 + 185*f)
-		p.ring.StrokeColor = color.NRGBA{colAccent.R, colAccent.G, colAccent.B, a}
-		p.glow1.FillColor = color.NRGBA{colAccent.R, colAccent.G, colAccent.B, uint8(10 + 30*f)}
-		p.glow1.Refresh()
+		p.ring.StrokeColor = mix(colIdle, colAccent, f)
 		p.ring.Refresh()
 	})
 	p.pulse.AutoReverse = true
@@ -69,11 +66,32 @@ func (p *powerButton) SetState(s powerState) {
 	}
 	p.state = s
 	p.apply()
+	if p.OnState != nil {
+		p.OnState(s)
+	}
 }
 
 func (p *powerButton) SetDisabled(d bool) {
 	p.disabled = d
 	p.apply()
+}
+
+// SetDiameter меняет размер кольца: 232 на широком экране, 196 на узком, 168 на средней ширине.
+func (p *powerButton) SetDiameter(d float32) {
+	if p.diameter != d {
+		p.diameter = d
+		p.Refresh()
+	}
+}
+
+// SetTimer задаёт время подключения внутри кольца.
+func (p *powerButton) SetTimer(s string) {
+	if p.timerTxt != s {
+		p.timerTxt = s
+		p.timer.Text = s
+		p.timer.Refresh()
+		p.Refresh()
+	}
 }
 
 func rgba(c color.NRGBA, a uint8) color.NRGBA {
@@ -85,24 +103,19 @@ func (p *powerButton) apply() {
 	p.pulse.Stop()
 	switch p.state {
 	case powerOn:
-		p.ring.StrokeColor = colAccent
-		p.glow1.FillColor = rgba(colAccent, 0x30)
-		p.glow2.FillColor = rgba(colAccent, 0x14)
-		p.label.Text, p.label.Color = L("Disconnect", "Отключить"), colText
+		p.ring.StrokeColor, p.ring.FillColor = colAccent, colAccent
+		p.label.Text, p.label.Color = L("Connected", "Подключено"), colAccentDark
+		p.timer.Color = colAccentDark
+		p.shield.Resource = iconRes("shieldok", colAccentDark)
 	case powerBusy:
-		p.glow2.FillColor = rgba(colAccent, 0x0a)
-		p.label.Text, p.label.Color = L("Connecting…", "Подключение…"), colMuted
+		p.ring.StrokeColor, p.ring.FillColor = colIdle, color.Transparent
+		p.label.Text, p.label.Color = L("Connecting", "Подключение"), colText
 		p.pulse.Start()
 	default:
-		p.ring.StrokeColor = colText
-		p.glow1.FillColor = rgba(colText, 0x26)
-		p.glow2.FillColor = rgba(colText, 0x0e)
+		p.ring.StrokeColor, p.ring.FillColor = colText, color.Transparent
 		p.label.Text, p.label.Color = L("Connect", "Подключить"), colText
 		if p.disabled {
-			p.ring.StrokeColor = colIdle
-			p.glow1.FillColor = color.Transparent
-			p.glow2.FillColor = color.Transparent
-			p.label.Color = colMuted
+			p.ring.StrokeColor, p.label.Color = colIdle, colMuted
 		}
 	}
 	p.Refresh()
@@ -116,30 +129,61 @@ func (p *powerButton) Tapped(*fyne.PointEvent) {
 
 func (p *powerButton) Cursor() desktop.Cursor { return desktop.PointerCursor }
 
-func (p *powerButton) CreateRenderer() fyne.WidgetRenderer {
-	return &powerRenderer{p: p}
-}
+func (p *powerButton) CreateRenderer() fyne.WidgetRenderer { return &powerRenderer{p: p} }
 
 type powerRenderer struct{ p *powerButton }
 
-func (r *powerRenderer) MinSize() fyne.Size {
-	return fyne.NewSize(powerSize+glowExtra*2, powerSize+glowExtra*2)
-}
+func (r *powerRenderer) MinSize() fyne.Size { return fyne.NewSize(r.p.diameter, r.p.diameter) }
 
 func (r *powerRenderer) Layout(size fyne.Size) {
-	d := min(size.Width, size.Height) - glowExtra*2
+	p := r.p
+	d := min(size.Width, size.Height)
 	cx, cy := size.Width/2, size.Height/2
-	place := func(o fyne.CanvasObject, diameter float32) {
-		o.Resize(fyne.NewSize(diameter, diameter))
-		o.Move(fyne.NewPos(cx-diameter/2, cy-diameter/2))
+	p.ring.Resize(fyne.NewSize(d, d))
+	p.ring.Move(fyne.NewPos(cx-d/2, cy-d/2))
+	// размер подписи подгоняется под кольцо, как в дизайне
+	fs := float32(22)
+	if d >= 220 {
+		fs = 24
 	}
-	place(r.p.glow2, d+glowExtra*2)
-	place(r.p.glow1, d+glowExtra)
-	place(r.p.ring, d)
-	place(r.p.face, d-ringWidth*2)
-	ls := r.p.label.MinSize()
-	r.p.label.Resize(ls)
-	r.p.label.Move(fyne.NewPos(cx-ls.Width/2, cy-ls.Height/2))
+	if n := float32(len([]rune(p.label.Text))); n > 0 {
+		if m := d * 0.62 / (n * 0.64); m < fs {
+			fs = max(11, m)
+		}
+	}
+	p.label.TextSize = fs
+	ls := p.label.MinSize()
+	shield := float32(38)
+	if d < 160 {
+		shield = 28
+	}
+	on := p.state == powerOn
+	h := ls.Height
+	if on {
+		h += shield + 6
+		if p.timerTxt != "" {
+			h += p.timer.MinSize().Height + 6
+		}
+	}
+	y := cy - h/2
+	if on {
+		p.shield.Show()
+		p.shield.Resize(fyne.NewSize(shield, shield))
+		p.shield.Move(fyne.NewPos(cx-shield/2, y))
+		y += shield + 6
+	} else {
+		p.shield.Hide()
+	}
+	p.label.Resize(ls)
+	p.label.Move(fyne.NewPos(cx-ls.Width/2, y))
+	if on && p.timerTxt != "" {
+		ts := p.timer.MinSize()
+		p.timer.Show()
+		p.timer.Resize(ts)
+		p.timer.Move(fyne.NewPos(cx-ts.Width/2, y+ls.Height+6))
+	} else {
+		p.timer.Hide()
+	}
 }
 
 func (r *powerRenderer) Refresh() {
@@ -150,7 +194,7 @@ func (r *powerRenderer) Refresh() {
 }
 
 func (r *powerRenderer) Objects() []fyne.CanvasObject {
-	return []fyne.CanvasObject{r.p.glow2, r.p.glow1, r.p.ring, r.p.face, r.p.label}
+	return []fyne.CanvasObject{r.p.ring, r.p.shield, r.p.label, r.p.timer}
 }
 
 func (r *powerRenderer) Destroy() { r.p.pulse.Stop() }

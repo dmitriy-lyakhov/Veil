@@ -1,48 +1,70 @@
 package gui
 
 import (
-	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 )
 
-// openAppearance — страница «Внешний вид»: тема и язык.
-func (u *ui) openAppearance() {
+func themeName() string {
+	if paletteDark {
+		return L("Dark", "Тёмная")
+	}
+	return L("Light", "Светлая")
+}
+
+func langName() string {
+	if curLang == "en" {
+		return "English"
+	}
+	return "Русский"
+}
+
+// navRowVal — строка-переход со значением справа (как «Тема · Тёмная» в дизайне).
+func navRowVal(title, value string, onTap func()) fyne.CanvasObject {
+	val := text(value, 13, colMuted, false)
+	return listRow(title, "", container.NewHBox(container.NewCenter(val), container.NewCenter(iconImg("right", colMuted, 22))), onTap)
+}
+
+// openAppearance — страница выбора темы (theme=true) или языка.
+func (u *ui) openAppearance(themePage bool) {
 	var pg *subPage
-	themeOpts := []string{L("Dark", "Тёмная"), L("Light", "Светлая")}
-	th := widget.NewRadioGroup(themeOpts, nil)
-	if u.st.Dark() {
-		th.SetSelected(themeOpts[0])
-	} else {
-		th.SetSelected(themeOpts[1])
-	}
-	langOpts := []string{"Русский", "English"}
-	lg := widget.NewRadioGroup(langOpts, nil)
-	if u.st.Language() == "en" {
-		lg.SetSelected(langOpts[1])
-	} else {
-		lg.SetSelected(langOpts[0])
-	}
-	apply := func() {
-		u.st.Theme, u.st.Lang = "dark", "ru"
-		if th.Selected == themeOpts[1] {
-			u.st.Theme = "light"
+	var opts []string
+	var sel string
+	title := L("Language", "Язык")
+	if themePage {
+		title = L("Theme", "Тема")
+		opts = []string{L("Dark", "Тёмная"), L("Light", "Светлая")}
+		sel = opts[0]
+		if !u.st.Dark() {
+			sel = opts[1]
 		}
-		if lg.Selected == langOpts[1] {
-			u.st.Lang = "en"
+	} else {
+		opts = []string{"Русский", "English"}
+		sel = opts[0]
+		if u.st.Language() == "en" {
+			sel = opts[1]
+		}
+	}
+	rg := widget.NewRadioGroup(opts, nil)
+	rg.SetSelected(sel)
+	rg.OnChanged = func(v string) {
+		if themePage {
+			u.st.Theme = "dark"
+			if v == opts[1] {
+				u.st.Theme = "light"
+			}
+		} else {
+			u.st.Lang = "ru"
+			if v == opts[1] {
+				u.st.Lang = "en"
+			}
 		}
 		u.saveSettings()
 		pg.Close()
 		u.rebuildUI()
 	}
-	th.OnChanged = func(string) { apply() }
-	lg.OnChanged = func(string) { apply() }
-	content := container.NewVBox(
-		text(L("Theme", "Тема"), 16, colText, true), th,
-		canvas.NewRectangle(colBackground),
-		text(L("Language", "Язык"), 16, colText, true), lg,
-	)
-	pg = u.openPage(L("Appearance", "Внешний вид"), scrolled(content))
+	pg = u.openPage(title, scrolled(container.NewVBox(rg)))
 }
 
 // rebuildUI пересоздаёт интерфейс после смены темы или языка.

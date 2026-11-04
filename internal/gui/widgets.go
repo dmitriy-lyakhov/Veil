@@ -1,8 +1,8 @@
 package gui
 
 import (
-	"time"
 	"image/color"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -170,9 +170,9 @@ func (r *rowTap) fade(to color.Color) {
 	r.anim.Start()
 }
 
-func (r *rowTap) MouseIn(*desktop.MouseEvent) { r.fade(color.NRGBA{0xff, 0xff, 0xff, 0x0c}) }
+func (r *rowTap) MouseIn(*desktop.MouseEvent)    { r.fade(color.NRGBA{0xff, 0xff, 0xff, 0x0c}) }
 func (r *rowTap) MouseMoved(*desktop.MouseEvent) {}
-func (r *rowTap) MouseOut()                       { r.fade(color.Transparent) }
+func (r *rowTap) MouseOut()                      { r.fade(color.Transparent) }
 func (r *rowTap) Cursor() desktop.Cursor {
 	if r.onTap == nil {
 		return desktop.DefaultCursor
@@ -183,12 +183,12 @@ func (r *rowTap) Cursor() desktop.Cursor {
 // rowText — заголовок и необязательное описание строки (с переносом).
 func rowText(title, sub string, titleColor fyne.ThemeColorName) fyne.CanvasObject {
 	t := widget.NewRichText(&widget.TextSegment{Text: title, Style: widget.RichTextStyle{
-		ColorName: titleColor, SizeName: theme.SizeNameSubHeadingText}})
+		ColorName: titleColor, SizeName: theme.SizeNameSubHeadingText, TextStyle: fyne.TextStyle{Bold: true}}})
 	t.Wrapping = fyne.TextWrapWord
 	if sub == "" {
 		return t
 	}
-	return container.New(tightVBox{gap: -6}, t, prose(sub))
+	return container.New(tightVBox{gap: -12}, t, prose(sub))
 }
 
 // listRow — строка списка в стиле референса: заголовок, описание, элемент справа, разделитель снизу.
@@ -202,15 +202,16 @@ func listRowColored(title, sub string, titleColor fyne.ThemeColorName, trailing 
 		right = vcenter(trailing)
 	}
 	body := container.NewBorder(nil, nil, nil, right, vcenter(rowText(title, sub, titleColor)))
-	padded := container.New(layout.NewCustomPaddedLayout(6, 6, 4, 4), body)
-	line := canvas.NewRectangle(colLine)
-	line.SetMinSize(fyne.NewSize(1, 1))
-	return container.NewVBox(newRowTap(padded, onTap), line)
+	bg := canvas.NewRectangle(colCard)
+	bg.CornerRadius = 14
+	bg.SetMinSize(fyne.NewSize(1, 56))
+	cardRow := container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(0, 0, 16, 16), body))
+	return newRowTap(cardRow, onTap)
 }
 
 // navRow — строка-переход с шевроном.
 func navRow(title, sub string, onTap func()) fyne.CanvasObject {
-	return listRow(title, sub, widget.NewIcon(theme.NavigateNextIcon()), onTap)
+	return listRow(title, sub, container.NewCenter(iconImg("right", colMuted, 22)), onTap)
 }
 
 // switchRow — строка с переключателем; нажатие по строке тоже переключает.

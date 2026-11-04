@@ -71,14 +71,22 @@ type ui struct {
 	curtainA  float32
 	routeLbl  *widget.Label
 
-	traffic     *canvas.Text
-	splitTxt    *canvas.Text
-	serversView fyne.CanvasObject
-	st          *settings.Settings
-	share       *shareState
+	traffic            *canvas.Text
+	splitTxt           *canvas.Text
+	srvNameW, srvAddrW *canvas.Text
+	pills              []pillRef
+	subpages           []*subPage
+	stats              [4]*statTile
+	statAt             time.Time
+	rxPrev, txPrev     uint64
+	statOK             bool
+	serversView        fyne.CanvasObject
+	st                 *settings.Settings
+	share              *shareState
 }
 
 func (u *ui) buildPages() {
+	u.pills = nil
 	u.curtain = canvas.NewRectangle(color.Transparent)
 	u.serversView = u.serversPage()
 	u.pages = container.NewStack(u.homePage(), u.sharePage(), u.settingsPage(), u.addPage(), u.curtain)
@@ -101,6 +109,7 @@ func Run() {
 	applyPalette(u.st.Dark())
 	curLang = u.st.Language()
 	u.buildPages()
+	u.win.SetPadded(false)
 	u.win.SetContent(u.buildShell())
 	u.showPage(0)
 	u.reload()
@@ -201,10 +210,13 @@ func addresses(p *config.Profile) string {
 func (u *ui) refreshHome() {
 	p := u.current()
 	if p == nil {
-		u.srvName.Text, u.srvAddr.Text = "Сервер не выбран", "Добавьте сервер на вкладке «Серверы»"
+		u.srvName.Text, u.srvAddr.Text = L("No server selected", "Сервер не выбран"), L("Add a server with the + button", "Добавьте сервер кнопкой «+»")
 	} else {
 		u.srvName.Text, u.srvAddr.Text = p.Name, addresses(p)
 	}
+	u.srvNameW.Text, u.srvAddrW.Text = u.srvName.Text, u.srvAddr.Text
+	u.srvNameW.Refresh()
+	u.srvAddrW.Refresh()
 	u.srvName.Refresh()
 	u.srvAddr.Refresh()
 	if p != nil && len(p.Entries) > 0 {
@@ -319,6 +331,8 @@ func (u *ui) showReport(r *helper.Report) {
 		}
 		u.power.SetState(powerOn)
 		elapsed := time.Since(u.since).Truncate(time.Second)
+		u.power.SetTimer(clock(elapsed))
+		u.updateStats(r.RxBytes, r.TxBytes, clock(elapsed))
 		sub := fmt.Sprintf("%s · %s · %s", transportShort(r.Transport), r.Family, clock(elapsed))
 		if r.Entry != "" {
 			sub = fmt.Sprintf("вход %s (%.0f мс) → выход %s\n%s", r.Entry, r.EntryRTT, r.Exit, sub)
@@ -350,6 +364,8 @@ func (u *ui) finish(errMsg string) {
 	u.traffic.Text = ""
 	u.traffic.Refresh()
 	netpin.Set(0, 0)
+	u.power.SetTimer("")
+	u.resetStats()
 	u.power.SetState(powerOff)
 	if errMsg != "" {
 		u.setStatus(L("Disconnected", "Отключено"), errMsg, theme.ColorNameError)

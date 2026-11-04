@@ -177,6 +177,7 @@ func text(s string, size float32, c color.Color, bold bool) *canvas.Text {
 }
 
 type tapCard struct {
+	pad float32
 	widget.BaseWidget
 	content fyne.CanvasObject
 	bg      *canvas.Rectangle
@@ -195,6 +196,9 @@ func newTapCard(content fyne.CanvasObject, base, hover color.Color, onTap func()
 }
 
 func (c *tapCard) CreateRenderer() fyne.WidgetRenderer {
+	if c.pad > 0 {
+		return widget.NewSimpleRenderer(container.NewStack(c.bg, container.New(layout.NewCustomPaddedLayout(c.pad, c.pad, c.pad, c.pad), c.content)))
+	}
 	return widget.NewSimpleRenderer(container.NewStack(c.bg, container.NewPadded(container.NewPadded(c.content))))
 }
 
@@ -217,4 +221,12 @@ func cardTight(content fyne.CanvasObject) fyne.CanvasObject {
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 14
 	return container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(4, 4, 10, 6), content))
+}
+
+// newTapCardR — нажимаемая карточка с заданным радиусом и внутренним отступом (по дизайну).
+func newTapCardR(content fyne.CanvasObject, base, hover color.Color, radius, pad float32, onTap func()) *tapCard {
+	c := newTapCard(content, base, hover, onTap)
+	c.bg.CornerRadius = radius
+	c.pad = pad
+	return c
 }

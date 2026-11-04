@@ -1,8 +1,8 @@
 package gui
 
 import (
-	"math"
 	"image/color"
+	"math"
 	"strings"
 	"time"
 	"unicode/utf8"

@@ -29,8 +29,6 @@ type shareState struct {
 func (u *ui) sharePage() fyne.CanvasObject {
 	s := &shareState{u: u, mgrs: map[string]*manager{}, name: L("New client", "Новый клиент")}
 	u.share = s
-	title := text(L("Share access", "Поделиться доступом"), 20, colText, false)
-	title.Alignment = fyne.TextAlignCenter
 	seg := newSegmented([]string{L("Connection", "Подключение"), L("Users", "Пользователи")}, 0, func(i int) {
 		s.tab = i
 		s.render()
@@ -40,9 +38,9 @@ func (u *ui) sharePage() fyne.CanvasObject {
 		s.render()
 	})
 	s.body = newVBoxFit()
-	top := container.NewVBox(container.NewPadded(title), seg, lead(text(L("Server", "Сервер"), 12, colMuted, false)), s.sel)
+	top := container.NewVBox(seg, lead(text(L("Server", "Сервер"), 12, colMuted, false)), s.sel)
 	s.refreshServers()
-	return container.NewPadded(container.NewBorder(top, nil, nil, nil, container.NewVScroll(s.body)))
+	return u.tabPage(L("Share VPN access", "Доступ к VPN"), container.NewBorder(top, nil, nil, nil, container.NewVScroll(s.body)))
 }
 
 // managedNames — серверы, которыми можно управлять из приложения.

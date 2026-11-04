@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
@@ -16,36 +17,53 @@ import (
 // туннелирование и внизу карточка выбранного сервера (по нажатию открывается выбор).
 func (u *ui) homePage() fyne.CanvasObject {
 	u.power = newPowerButton(u.toggle)
-	u.status = text(L("Disconnected", "Отключено"), 20, colText, true)
+	u.power.OnState = func(powerState) { u.refreshPill() }
+	u.status = text(L("Disconnected", "Отключено"), 16, colText, true)
 	u.status.Alignment = fyne.TextAlignCenter
 	u.sub = text(L("Pick a server and press the button", "Выберите сервер и нажмите кнопку"), 13, colMuted, false)
 	u.sub.Alignment = fyne.TextAlignCenter
-	u.traffic = text("", 12, colMuted, false)
+	u.traffic = text("", 13, colMuted, false)
 	u.traffic.Alignment = fyne.TextAlignCenter
 
-	u.splitTxt = text("", 13, colMuted, false)
-	split := newRowTap(container.NewPadded(container.NewHBox(layout.NewSpacer(),
-		widget.NewIcon(theme.MailForwardIcon()), u.splitTxt, widget.NewIcon(theme.MenuDropDownIcon()), layout.NewSpacer())), u.openSplitSheet)
+	u.splitTxt = text("", 13, colText, false)
+	splitIcon := iconImg("split", colText, 18)
+	splitChev := iconImg("down", colMuted, 18)
+	split := centered(newTapCardR(container.NewHBox(container.NewCenter(splitIcon), u.splitTxt, container.NewCenter(splitChev)), colCard, colCardHover, 14, 12, u.openSplitSheet))
 	u.refreshSplitLink()
 
-	u.srvName = text(L("No server selected", "Сервер не выбран"), 22, colText, false)
-	u.srvAddr = text(L("Add a server with the + button", "Добавьте сервер кнопкой «+»"), 13, colMuted, false)
-	u.srvAddr.Alignment = fyne.TextAlignCenter
-	srvTitle := container.NewHBox(layout.NewSpacer(), u.srvName, widget.NewIcon(theme.MenuDropDownIcon()), layout.NewSpacer())
-	server := newTapCard(container.NewVBox(srvTitle, u.srvAddr), colCard, colCardHover, u.openServerSheet)
-
-	u.recheck = widget.NewButtonWithIcon(L("Recheck nearest entry", "Перепроверить ближайший вход"), theme.ViewRefreshIcon(), func() {
+	u.recheck = widget.NewButtonWithIcon(L("Recheck the nearest entry", "Перепроверить ближайший вход"), theme.ViewRefreshIcon(), func() {
 		if p := u.current(); p != nil {
 			u.recheckEntries(p)
 		}
 	})
 	u.recheck.Hide()
-	return container.NewPadded(container.NewBorder(
-		nil,
-		container.NewVBox(u.recheck, split, server),
-		nil, nil,
-		container.NewVBox(layout.NewSpacer(), centered(u.power), u.status, u.sub, u.traffic, layout.NewSpacer()),
-	))
+	hero := container.NewVBox(layout.NewSpacer(), centered(u.power), u.status, u.sub, u.traffic, centered(u.recheck), split, layout.NewSpacer())
+
+	// узкий вид: карточка сервера внизу по центру
+	u.srvName = text(L("No server selected", "Сервер не выбран"), 28, colText, true)
+	u.srvAddr = text(L("Add a server with the + button", "Добавьте сервер кнопкой «+»"), 13, colMuted, false)
+	u.srvAddr.Alignment = fyne.TextAlignCenter
+	bottom := newTapCardR(container.NewVBox(container.NewHBox(layout.NewSpacer(), u.srvName, container.NewCenter(iconImg("down", colMuted, 22)), layout.NewSpacer()), u.srvAddr),
+		colCard, colCardHover, 16, 16, u.openServerSheet)
+
+	// широкий вид: карточка слева и плитки статистики
+	u.srvNameW = text(L("No server selected", "Сервер не выбран"), 20, colText, true)
+	u.srvAddrW = text(L("Add a server with the + button", "Добавьте сервер кнопкой «+»"), 13, colMuted, false)
+	srvW := newTapCardR(container.NewVBox(container.NewHBox(u.srvNameW, container.NewCenter(iconImg("down", colMuted, 22))), u.srvAddrW),
+		colCard, colCardHover, 14, 16, u.openServerSheet)
+	u.stats = [4]*statTile{
+		newStatTile(L("Download", "Загрузка"), L("MB/s", "МБ/с")),
+		newStatTile(L("Upload", "Отдача"), L("MB/s", "МБ/с")),
+		newStatTile(L("Latency", "Задержка"), L("ms", "мс")),
+		newStatTile(L("Session", "Сессия"), ""),
+	}
+	grid := container.New(statsLayout{}, u.stats[0].obj, u.stats[1].obj, u.stats[2].obj, u.stats[3].obj)
+	side := container.NewVBox(srvW, grid)
+
+	title := text(L("Connect", "Подключение"), 24, colText, true)
+	header := container.New(layout.NewCustomPaddedLayout(0, 0, 24, 24),
+		container.NewBorder(nil, nil, container.NewCenter(title), container.NewCenter(u.statusPill()), nil))
+	return container.New(&homeLayout{header: header, hero: hero, side: side, bottom: bottom, power: u.power}, header, hero, side, bottom)
 }
 
 func (u *ui) splitEnabled() bool {
@@ -61,10 +79,13 @@ func (u *ui) refreshSplitLink() {
 	if u.splitTxt == nil {
 		return
 	}
-	if u.splitEnabled() {
-		u.splitTxt.Text = L("Split tunneling is on", "Раздельное туннелирование включено")
-	} else {
-		u.splitTxt.Text = L("Split tunneling is off", "Раздельное туннелирование отключено")
+	u.splitTxt.Text = L("Split access", "Раздельный доступ")
+	if path, err := routing.Path(); err == nil {
+		if cfg, err := routing.Load(path); err == nil && cfg.Enabled && !cfg.Empty() {
+			d1, p1 := cfg.Via.Count()
+			d2, p2 := cfg.Direct.Count()
+			u.splitTxt.Text += fmt.Sprintf(" · %d", d1+p1+d2+p2)
+		}
 	}
 	u.splitTxt.Refresh()
 }

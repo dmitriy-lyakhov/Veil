@@ -132,18 +132,17 @@ func note(s string) fyne.CanvasObject { return lead(prose(s)) }
 // ---------- вкладка «Настройки» ----------
 
 func (u *ui) settingsPage() fyne.CanvasObject {
-	title := text(L("Settings", "Настройки"), 20, colText, false)
-	title.Alignment = fyne.TextAlignCenter
 	rows := container.NewVBox(
-		navRow(L("Servers", "Серверы"), "", u.openServersPage),
+		navRowVal(L("Servers", "Серверы"), fmt.Sprint(len(u.profiles)), u.openServersPage),
 		navRow(L("Connection", "Подключение"), "", u.openConnection),
-		navRow(L("Appearance", "Внешний вид"), "", u.openAppearance),
 		navRow(L("Application", "Приложение"), "", u.openApplication),
 		navRow(L("Backup", "Резервная копия"), "", u.openBackup),
+		navRowVal(L("Theme", "Тема"), themeName(), func() { u.openAppearance(true) }),
+		navRowVal(L("Language", "Язык"), langName(), func() { u.openAppearance(false) }),
 		navRow(L("About Veil", "О Veil"), "", u.openAbout),
 		navRow(L("Quit application", "Закрыть приложение"), "", u.quit),
 	)
-	return container.NewPadded(container.NewBorder(container.NewVBox(container.NewPadded(title)), nil, nil, nil, scrolled(rows)))
+	return u.tabPage(L("Settings", "Настройки"), scrolled(rows))
 }
 
 func (u *ui) openServersPage() {
@@ -641,8 +640,6 @@ func (u *ui) checkUpdates(parent fyne.Window, verbose bool) {
 // ---------- страница «Добавить» ----------
 
 func (u *ui) addPage() fyne.CanvasObject {
-	title := text(L("Connection", "Подключение"), 20, colText, false)
-	title.Alignment = fyne.TextAlignCenter
 	key := widget.NewMultiLineEntry()
 	key.Wrapping = fyne.TextWrapBreak
 	key.SetMinRowsVisible(2)
@@ -679,7 +676,7 @@ func (u *ui) addPage() fyne.CanvasObject {
 		navRow(L("Connection settings file", "Файл с настройками подключения"), L(".veil file issued by the admin panel", "Файл .veil, выданный админ-панелью"), u.showImport),
 		navRow(L("Via the nearest entry", "Через ближайший вход"), L("The exit is set explicitly, the nearest entry is chosen", "Выход задаётся явно, вход выбирается ближайший"), u.openMultiEntryBuilder),
 	)
-	return container.NewPadded(container.NewBorder(container.NewVBox(container.NewPadded(title)), nil, nil, nil, scrolled(rows)))
+	return u.tabPage(L("Add server", "Новый сервер"), scrolled(rows))
 }
 
 var _ = layout.NewSpacer

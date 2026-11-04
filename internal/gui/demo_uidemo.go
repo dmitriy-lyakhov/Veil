@@ -3,6 +3,7 @@
 package gui
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -17,7 +18,18 @@ func init() {
 		page := os.Getenv("VEIL_DEMO")
 		time.AfterFunc(1500*time.Millisecond, func() {
 			fyne.Do(func() {
+				demoAppearance(u)
 				switch page {
+				case "connected":
+					u.power.SetState(powerOn)
+					u.power.SetTimer("00:00:12")
+					u.setStatus("Подключено", "HTTP/3 · QUIC · IPv6 · 00:00:12", "")
+					u.traffic.Text = "↓ 11,2 МБ     ↑ 1,5 МБ"
+					u.traffic.Refresh()
+					u.stats[0].set("11.2", "▼ входящий")
+					u.stats[1].set("1.5", "▲ исходящий")
+					u.stats[2].set("38", "▲ стабильно")
+					u.stats[3].set("00:00:12", "")
 				case "share":
 					u.showPage(1)
 				case "users":
@@ -80,5 +92,25 @@ func init() {
 				}
 			})
 		})
+	}
+}
+
+// demoAppearance: VEIL_SIZE=393x760, VEIL_THEME=light, VEIL_LANG=en.
+func demoAppearance(u *ui) {
+	if s := os.Getenv("VEIL_SIZE"); s != "" {
+		var w, h float32
+		if _, err := fmt.Sscanf(s, "%fx%f", &w, &h); err == nil {
+			u.win.Resize(fyne.NewSize(w, h))
+		}
+	}
+	changed := false
+	if t := os.Getenv("VEIL_THEME"); t != "" {
+		u.st.Theme, changed = t, true
+	}
+	if l := os.Getenv("VEIL_LANG"); l != "" {
+		u.st.Lang, changed = l, true
+	}
+	if changed {
+		u.rebuildUI()
 	}
 }
