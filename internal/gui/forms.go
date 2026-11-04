@@ -41,6 +41,7 @@ func (f flatTheme) Font(s fyne.TextStyle) fyne.Resource {
 func fieldCard(label string, value fyne.CanvasObject, trailing fyne.CanvasObject, onTap func()) fyne.CanvasObject {
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 14
+	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	bg.SetMinSize(fyne.NewSize(1, 64))
 	body := container.New(&vstackLayout{gap: 4}, text(label, 12, colMuted, false), value)
 	var inner fyne.CanvasObject = container.NewBorder(nil, nil, nil, trailing, container.NewVBox(layout.NewSpacer(), body, layout.NewSpacer()))
@@ -134,6 +135,7 @@ func spacerH(h float32) fyne.CanvasObject {
 func infoBG() fyne.CanvasObject {
 	r := canvas.NewRectangle(colCard)
 	r.CornerRadius = 14
+	r.StrokeColor, r.StrokeWidth = colBorder, 1
 	return r
 }
 
@@ -151,6 +153,7 @@ func dangerButton(label string, onTap func()) fyne.CanvasObject {
 func infoRow(label, value string, onTap func()) fyne.CanvasObject {
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 14
+	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	bg.SetMinSize(fyne.NewSize(1, 52))
 	val := newFitText(value, 14, colText, false)
 	val.Alignment = fyne.TextAlignTrailing
@@ -166,6 +169,7 @@ func infoRow(label, value string, onTap func()) fyne.CanvasObject {
 func (u *ui) optionRow(label, current string, options []string, changed func(string)) fyne.CanvasObject {
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 14
+	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	bg.SetMinSize(fyne.NewSize(1, 52))
 	val := newFitText(current, 14, colText, false)
 	val.Alignment = fyne.TextAlignTrailing

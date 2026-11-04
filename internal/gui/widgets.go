@@ -208,6 +208,7 @@ func listRowOf(content, trailing fyne.CanvasObject, onTap func()) fyne.CanvasObj
 	body := container.NewBorder(nil, nil, nil, right, vcenter(content))
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 14
+	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	bg.SetMinSize(fyne.NewSize(1, 56))
 	cardRow := container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(0, 0, 16, 16), body))
 	return newRowTap(cardRow, onTap)
@@ -256,6 +257,7 @@ func newSegmented(options []string, selected int, changed func(int)) fyne.Canvas
 	apply(selected)
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 16
+	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	bg.SetMinSize(fyne.NewSize(1, 52))
 	return container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(4, 4, 4, 4), grid))
 }
@@ -318,13 +320,14 @@ func showSheet(win fyne.Window, content fyne.CanvasObject) *sheet {
 	s.dim = newTapRect(withAlpha(color.NRGBA{}, 0), s.Close)
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 22
+	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	handle := canvas.NewRectangle(colIdle)
 	handle.CornerRadius = 2
 	handle.SetMinSize(fyne.NewSize(40, 4))
 	top := container.NewCenter(container.NewGridWrap(fyne.NewSize(40, 4), handle))
 	body := container.NewVBox(top, content, canvas.NewRectangle(color.Transparent))
 	card := container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(10, sheetBleed, 8, 8), body))
-	s.root = container.New(s.lay, s.dim, card)
+	s.root = container.New(s.lay, s.dim, withShadow(card, 22))
 	c := win.Canvas()
 	s.root.Resize(c.Size())
 	c.Overlays().Add(s.root)

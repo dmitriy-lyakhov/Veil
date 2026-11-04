@@ -85,7 +85,7 @@ func newModal(win fyne.Window, title string, content fyne.CanvasObject) *modalCa
 	m.dim = canvas.NewRectangle(withAlpha(color.NRGBA{}, 0))
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 18
-	bg.StrokeColor = colLine
+	bg.StrokeColor = colBorder
 	bg.StrokeWidth = 1
 	m.curtain = canvas.NewRectangle(colCard)
 	m.curtain.CornerRadius = 18
@@ -94,7 +94,7 @@ func newModal(win fyne.Window, title string, content fyne.CanvasObject) *modalCa
 	heading := container.New(layout.NewCustomPaddedLayout(10, 10, theme.InnerPadding(), 0), text(title, 17, colText, true))
 	body := container.NewVBox(heading, content, m.buttons)
 	card := container.NewStack(bg, container.NewPadded(container.NewPadded(body)), m.curtain)
-	m.root = container.New(m.lay, m.dim, card)
+	m.root = container.New(m.lay, m.dim, withShadow(card, 18))
 	return m
 }
 

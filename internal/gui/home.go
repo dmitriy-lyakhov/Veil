@@ -99,6 +99,10 @@ func (u *ui) openSplitSheet() {
 	if u.splitEnabled() {
 		state = L("On", "Включено")
 	}
+	appState := L("Off", "Отключено")
+	if c := u.routingConfig(); c != nil && c.AppsEnabled {
+		appState = L("On", "Включено")
+	}
 	desc := prose(L("Route some sites and addresses through the VPN and the rest directly", "Позволяет направлять через VPN одни сайты и адреса, а другие — напрямую"))
 	content := container.NewVBox(
 		lead(text(L("Split tunneling", "Раздельное туннелирование"), 20, colText, false)),
@@ -106,6 +110,10 @@ func (u *ui) openSplitSheet() {
 		navRow(L("By sites and addresses", "По сайтам и адресам"), state, func() {
 			s.Close()
 			u.openSplit()
+		}),
+		navRow(L("By apps", "По приложениям"), appState, func() {
+			s.Close()
+			u.openSplitApps()
 		}),
 	)
 	s = showSheet(u.win, content)

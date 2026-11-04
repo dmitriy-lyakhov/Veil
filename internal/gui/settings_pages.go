@@ -167,6 +167,7 @@ func (u *ui) openConnection() {
 	rows := container.NewVBox(
 		navRow(L("DNS servers", "DNS-серверы"), L("Replace the DNS servers from the server profile", "Заменяют DNS-серверы из профиля сервера"), u.openDNS),
 		navRow(L("Split tunneling by site", "Раздельное туннелирование по сайтам"), L("Choose which sites go through the VPN and which connect directly", "Позволяет выбрать, какие сайты открывать через VPN, а какие напрямую"), u.openSplit),
+		navRow(L("Split tunneling by apps", "Раздельное туннелирование по приложениям"), L("Choose which apps bypass the VPN", "Выбрать, какие приложения работают мимо VPN"), u.openSplitApps),
 		navRow("KillSwitch", L("Blocks network connections if the VPN drops", "Блокирует сетевые соединения, если VPN оборвался"), u.openKillSwitch),
 	)
 	u.openPage(L("Connection", "Подключение"), scrolled(rows))

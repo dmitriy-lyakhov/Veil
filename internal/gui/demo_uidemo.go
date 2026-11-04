@@ -75,6 +75,8 @@ func init() {
 					u.openDNS()
 				case "split":
 					u.openSplit()
+				case "splitapps":
+					u.openSplitApps()
 				case "splitsheet":
 					u.openSplitSheet()
 				case "details":

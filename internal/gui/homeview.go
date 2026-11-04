@@ -24,6 +24,7 @@ func newStatTile(label, unit string) *statTile {
 	}
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 14
+	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	body := container.NewVBox(t.label, container.NewHBox(t.val, t.unit), t.delta)
 	t.obj = container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(14, 14, 16, 16), body))
 	return t
@@ -188,6 +189,7 @@ func (u *ui) statusPill() fyne.CanvasObject {
 	u.pills = append(u.pills, pillRef{dotC, txtC})
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 20
+	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	dot := container.NewGridWrap(fyne.NewSize(10, 10), dotC)
 	row := container.NewHBox(container.NewCenter(dot), txtC)
 	u.refreshPill()

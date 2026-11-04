@@ -38,6 +38,9 @@ type Config struct {
 	Enabled bool `json:"enabled"` // раздельное туннелирование включено
 	Via     List `json:"via"`
 	Direct  List `json:"direct"`
+
+	AppsEnabled bool     `json:"apps_enabled,omitempty"`
+	Apps        []string `json:"apps,omitempty"`
 }
 
 func Path() (string, error) {
@@ -94,6 +97,26 @@ func (l List) Count() (domains, prefixes int) {
 		prefixes += len(im.Prefixes)
 	}
 	return
+}
+
+func (c *Config) AddApp(name string) bool {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return false
+	}
+	for _, a := range c.Apps {
+		if strings.EqualFold(a, name) {
+			return false
+		}
+	}
+	c.Apps = append(c.Apps, name)
+	return true
+}
+
+func (c *Config) RemoveApp(i int) {
+	if i >= 0 && i < len(c.Apps) {
+		c.Apps = append(c.Apps[:i], c.Apps[i+1:]...)
+	}
 }
 
 func (c *Config) Empty() bool {

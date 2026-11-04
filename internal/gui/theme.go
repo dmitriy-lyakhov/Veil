@@ -34,6 +34,9 @@ var (
 	colCard       color.NRGBA // surface-raised
 	colCard2      color.NRGBA // surface-high
 	colLine       color.NRGBA // разделители
+	colBorder     color.NRGBA // граница карточек и полей
+	colBorderHot  color.NRGBA // граница под курсором
+	colShadow     color.NRGBA // тень диалогов и панелей
 	colText       color.NRGBA // ink
 	colMuted      color.NRGBA // ink-muted
 	colAccent     color.NRGBA // accent
@@ -71,14 +74,18 @@ func applyPalette(dark bool) {
 		colAccentInk, colOK = nrgba(0xFF393D), nrgba(0x7DE0A0)
 		colBar = nrgba(0x1B1C1F)
 		colScrim = color.NRGBA{0x0B, 0x0B, 0x0C, 0xC7}
+		colShadow = color.NRGBA{0, 0, 0, 0x2e}
 	} else {
 		colBackground, colCard, colCard2 = nrgba(0xFFFFFF), nrgba(0xF2F3F5), nrgba(0xE4E6EA)
 		colText, colMuted = nrgba(0x0B0B0C), nrgba(0x5B6068)
 		colAccentInk, colOK = nrgba(0xDB1E32), nrgba(0x177A44)
 		colBar = nrgba(0xF2F3F5)
 		colScrim = color.NRGBA{0x0B, 0x0B, 0x0C, 0x8C}
+		colShadow = color.NRGBA{0x0B, 0x0B, 0x0C, 0x33}
 	}
 	colLine = colCard2
+	colBorder = mix(colCard2, colText, 0.07)
+	colBorderHot = mix(colCard2, colText, 0.28)
 	colBad = colAccentInk
 	colIdle = colCard2
 	colCardHover = mix(colCard, colText, 0.04)
@@ -107,7 +114,9 @@ func (veilTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
 		return colAccentInk
 	case theme.ColorNameForegroundOnPrimary:
 		return colAccentDark
-	case theme.ColorNameInputBorder, theme.ColorNameSeparator:
+	case theme.ColorNameInputBorder:
+		return colBorder
+	case theme.ColorNameSeparator:
 		return colLine
 	case theme.ColorNameSelection:
 		return color.NRGBA{colAccent.R, colAccent.G, colAccent.B, 0x55}
@@ -120,7 +129,7 @@ func (veilTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
 	case theme.ColorNameError:
 		return colAccentInk
 	case theme.ColorNameShadow:
-		return color.NRGBA{0, 0, 0, 0x2e}
+		return colShadow
 	}
 	return theme.DefaultTheme().Color(n, theme.VariantDark)
 }
@@ -202,6 +211,7 @@ func (veilTheme) Size(n fyne.ThemeSizeName) float32 {
 func card(content fyne.CanvasObject) fyne.CanvasObject {
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 18
+	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	return container.NewStack(bg, container.NewPadded(container.NewPadded(content)))
 }
 
@@ -226,6 +236,7 @@ type tapCard struct {
 func newTapCard(content fyne.CanvasObject, base, hover color.Color, onTap func()) *tapCard {
 	bg := canvas.NewRectangle(base)
 	bg.CornerRadius = 18
+	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	c := &tapCard{content: content, bg: bg, base: base, hover: hover, onTap: onTap}
 	c.ExtendBaseWidget(c)
 	return c
@@ -244,11 +255,17 @@ func (c *tapCard) Tapped(*fyne.PointEvent) {
 	}
 }
 
-func (c *tapCard) MouseIn(*desktop.MouseEvent) { c.fadeTo(c.hover) }
+func (c *tapCard) MouseIn(*desktop.MouseEvent) {
+	c.bg.StrokeColor = colBorderHot
+	c.fadeTo(c.hover)
+}
 
 func (c *tapCard) MouseMoved(*desktop.MouseEvent) {}
 
-func (c *tapCard) MouseOut() { c.fadeTo(c.base) }
+func (c *tapCard) MouseOut() {
+	c.bg.StrokeColor = colBorder
+	c.fadeTo(c.base)
+}
 
 func (c *tapCard) Cursor() desktop.Cursor { return desktop.PointerCursor }
 
@@ -256,6 +273,7 @@ func (c *tapCard) Cursor() desktop.Cursor { return desktop.PointerCursor }
 func cardTight(content fyne.CanvasObject) fyne.CanvasObject {
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 14
+	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	return container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(4, 4, 10, 6), content))
 }
 

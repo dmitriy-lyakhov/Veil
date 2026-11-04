@@ -96,6 +96,7 @@ func matrixPages() []uiPage {
 		{"connection", func(u *ui) { u.openConnection() }},
 		{"dns", func(u *ui) { u.openDNS() }},
 		{"split", func(u *ui) { u.openSplit() }},
+		{"splitapps", func(u *ui) { u.openSplitApps() }},
 		{"splitsheet", func(u *ui) { u.openSplitSheet() }},
 		{"serversheet", func(u *ui) { u.openServerSheet() }},
 		{"details", cur(func(u *ui, p *config.Profile) { u.showDetails(p) })},
