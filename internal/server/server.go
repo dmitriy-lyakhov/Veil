@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	Version         = "0.6.0"
+	Version         = "0.7.0"
 	quicIdleTimeout = 30 * time.Second
 	quicKeepAlive   = 10 * time.Second
 	defaultSiteLang = "ru"
@@ -60,6 +60,7 @@ type Server struct {
 	hopKinds map[string]client.Kind
 
 	tunnelNets []netip.Prefix
+	onFront    func()
 
 	lat           latencyBook
 	tuneMu        sync.Mutex

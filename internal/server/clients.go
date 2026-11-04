@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"slices"
 	"strconv"
 	"strings"
@@ -83,6 +84,7 @@ type ServerInfo struct {
 	Domain     string     `json:"domain"`
 	Cert       certStatus `json:"cert"`
 	AdminURL   string     `json:"admin_url"`
+	Front      FrontInfo  `json:"front"`
 	Started    time.Time  `json:"started"`
 	Clients    int        `json:"clients"`
 	Online     int        `json:"online"`
@@ -168,6 +170,7 @@ func (s *Server) State() State {
 		Domain:     s.cfg.Domain,
 		Cert:       s.certs.Status(),
 		AdminURL:   provision.AdminURL(s.cfg),
+		Front:      s.frontInfoLocked(),
 		Started:    s.started,
 	}, Clients: []ClientInfo{}, Relays: []RelayInfo{}, Upstreams: []UpstreamInfo{}, Latency: latency}
 	relayClients := map[string]int{}
@@ -257,7 +260,8 @@ func (s *Server) clientProfile(name, priv string, info relayResponse) *config.Pr
 	}
 	p := &config.Profile{
 		Name: name, IPv4: link.IPv4, IPv6: link.IPv6, Port: link.Port, ServerName: link.ServerName, Path: link.Path,
-		CertPin: link.CertPin, ServerPublicKey: info.ServerPublicKey, PrivateKey: priv, AuthKey: info.AuthKey,
+		CertPin: link.CertPin, FrontSNI: link.FrontSNI, FrontKey: link.FrontKey,
+		ServerPublicKey: info.ServerPublicKey, PrivateKey: priv, AuthKey: info.AuthKey,
 		Address4: info.Address4, Address6: info.Address6, DNS: append([]string(nil), provision.DefaultDNS...), MTU: mtu,
 	}
 	if len(info.Hops) > 1 {
@@ -443,4 +447,15 @@ func (s *Server) SetAdminPassword(current *string, password string) error {
 	s.admin.dropAll()
 	s.log.Info("admin password changed")
 	return s.saveLocked()
+}
+
+func (s *Server) frontInfoLocked() FrontInfo {
+	if s.cfg.Front == nil || s.cfg.Front.SNI == "" {
+		return FrontInfo{}
+	}
+	dest := s.cfg.Front.Dest
+	if dest == "" {
+		dest = net.JoinHostPort(s.cfg.Front.SNI, "443")
+	}
+	return FrontInfo{Enabled: true, SNI: s.cfg.Front.SNI, Dest: dest}
 }

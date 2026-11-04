@@ -121,3 +121,31 @@ func TestListenerSplice(t *testing.T) {
 	}
 	_ = tls.VersionTLS13
 }
+
+func TestNormalizeSNI(t *testing.T) {
+	good := map[string]string{
+		"ya.ru": "ya.ru", "  YA.RU. ": "ya.ru", "https://vk.com/": "vk.com", "http://mail.ru/path?x=1": "mail.ru",
+		"sub.example.co.uk": "sub.example.co.uk", "яндекс.рф": "xn--d1acpjx3f.xn--p1ai", "": "",
+	}
+	for in, want := range good {
+		got, err := NormalizeSNI(in)
+		if err != nil || got != want {
+			t.Errorf("NormalizeSNI(%q) = %q, %v; want %q", in, got, err, want)
+		}
+	}
+	for _, in := range []string{"localhost", "ya", "ya.ru:443", "a b.ru", "ya.ru;rm -rf /", "$(id).ru", "-bad.ru", "ya..ru", "1.2.3.4", "ya.ru\nx.ru"} {
+		if got, err := NormalizeSNI(in); err == nil {
+			t.Errorf("NormalizeSNI(%q) accepted as %q", in, got)
+		}
+	}
+}
+
+func TestNewKeyHasRightLength(t *testing.T) {
+	k, err := NewKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b, err := DecodeKey(k); err != nil || len(b) != KeyLen {
+		t.Fatalf("key %q: %v", k, err)
+	}
+}

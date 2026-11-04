@@ -188,6 +188,9 @@ func (d *Dialer) verifyPin(rawCerts [][]byte, _ [][]*x509.Certificate) error {
 		return err
 	}
 	if provision.SPKIPin(cert) != d.Profile.CertPin {
+		if d.Profile.FrontKey == "" {
+			return errors.New("certificate pin mismatch (если на сервере включили маскировку под чужой сайт — получите новый конфиг)")
+		}
 		return errors.New("certificate pin mismatch")
 	}
 	return nil

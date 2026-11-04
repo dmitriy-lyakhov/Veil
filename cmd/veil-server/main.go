@@ -106,20 +106,14 @@ func run(cfgPath, socket string, log *slog.Logger) error {
 		return err
 	}
 	fln := front.NewListener(ln, srv.FrontConfig, srv.FrontBypass)
-	h3, err := srv.HTTP3Server()
-	if err != nil {
-		return err
-	}
-	pc, err := net.ListenPacket("udp", cfg.Listen)
-	if err != nil {
-		return err
-	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	errc := make(chan error, 2)
+	errc := make(chan error, 1)
 	go func() { errc <- hs.ServeTLS(fln, "", "") }()
-	go func() { errc <- h3.Serve(pc) }()
-	defer h3.Close()
+	quicSvc := &quicService{srv: srv, addr: cfg.Listen, log: log}
+	srv.OnFrontChange(quicSvc.Sync)
+	quicSvc.Sync()
+	defer quicSvc.Close()
 	if port80 := redirectAddr(cfg.Listen); port80 != "" {
 		if rl, err := net.Listen("tcp", port80); err != nil {
 			log.Warn("http redirect disabled", "addr", port80, "err", err)
@@ -130,7 +124,7 @@ func run(cfgPath, socket string, log *slog.Logger) error {
 			log.Info("http redirect started", "addr", rl.Addr().String())
 		}
 	}
-	log.Info("veil server started", "tcp", ln.Addr().String(), "udp", pc.LocalAddr().String(), "peers", len(cfg.Peers), "iface", ifname)
+	log.Info("veil server started", "tcp", ln.Addr().String(), "peers", len(cfg.Peers), "iface", ifname, "masked", srv.FrontConfig() != nil)
 	select {
 	case <-ctx.Done():
 	case err := <-errc:

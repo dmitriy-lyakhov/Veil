@@ -412,9 +412,13 @@ func (s *Server) transportLink() config.RelayLink {
 		Path:            s.cfg.Path,
 		ServerPublicKey: s.ownPublicKey(),
 	}
-	if s.cfg.Domain != "" && s.certs.Ready() {
+	switch {
+	case s.cfg.Front != nil && s.cfg.Front.SNI != "":
+		l.FrontSNI, l.FrontKey = s.cfg.Front.SNI, s.cfg.Front.Key
+		l.CertPin, _ = provision.CertPin(s.cfg.CertPEM)
+	case s.cfg.Domain != "" && s.certs.Ready():
 		l.ServerName = s.cfg.Domain
-	} else {
+	default:
 		l.CertPin, _ = provision.CertPin(s.cfg.CertPEM)
 	}
 	return l

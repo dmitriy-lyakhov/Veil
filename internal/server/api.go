@@ -194,7 +194,12 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request, path string, 
 			Dest string `json:"dest"`
 		}
 		if decode(&req) {
-			reply(nil, s.SetFront(req.SNI, req.Dest))
+			err := s.SetFront(req.SNI, req.Dest)
+			resp := map[string]string{"ok": "1"}
+			if err == nil && trusted {
+				resp["sni"], resp["key"] = s.FrontInfo().SNI, s.FrontKey()
+			}
+			reply(resp, err)
 		}
 	case "settings/domain":
 		var req domainRequest
