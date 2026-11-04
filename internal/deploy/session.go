@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"golang.org/x/crypto/ssh"
+
 	"veil/internal/config"
 )
 
@@ -60,6 +62,10 @@ func (s *Session) Close() { _ = s.r.c.Close() }
 
 func (s *Session) Call(method, path string, in, out any) error {
 	if _, err := s.r.exec("test -S "+controlSocket, nil, true); err != nil {
+		var ee *ssh.ExitError
+		if !errors.As(err, &ee) {
+			return fmt.Errorf("SSH-соединение с сервером потеряно: %w", err)
+		}
 		return ErrOutdated
 	}
 	cmd := "veil-server ctl " + method + " " + shellQuote(path)
@@ -117,4 +123,37 @@ func (s *Session) Update(ctx context.Context, binDir string, logf Logf) error {
 	}
 	logf("Сервер обновлён")
 	return ctx.Err()
+}
+
+// UpdatePackages обновляет пакеты системы менеджером пакетов дистрибутива (apt, dnf или yum).
+func (s *Session) UpdatePackages(ctx context.Context) error {
+	const script = `if command -v apt-get >/dev/null 2>&1; then
+  export DEBIAN_FRONTEND=noninteractive; apt-get update && apt-get -y upgrade
+elif command -v dnf >/dev/null 2>&1; then
+  dnf -y upgrade
+elif command -v yum >/dev/null 2>&1; then
+  yum -y update
+else
+  echo "менеджер пакетов не найден" >&2; exit 1
+fi`
+	if _, err := s.r.exec(script, nil, true); err != nil {
+		return err
+	}
+	return ctx.Err()
+}
+
+// Reboot перезагружает сервер; соединение оборвётся, поэтому команда уходит в фон.
+func (s *Session) Reboot() error {
+	_, err := s.r.exec("nohup sh -c 'sleep 2; reboot' >/dev/null 2>&1 &", nil, true)
+	return err
+}
+
+// Uninstall останавливает службу и удаляет с сервера всё, что поставил Veil.
+func (s *Session) Uninstall() error {
+	const script = `systemctl stop veil 2>/dev/null; systemctl disable veil >/dev/null 2>&1
+rm -f /etc/systemd/system/veil.service /usr/local/bin/veil-server
+rm -rf /etc/veil /run/veil /var/lib/veil
+systemctl daemon-reload`
+	_, err := s.r.exec(script, nil, true)
+	return err
 }

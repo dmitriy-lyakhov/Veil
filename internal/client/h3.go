@@ -1,6 +1,7 @@
 package client
 
 import (
+	"veil/internal/netpin"
 	"bufio"
 	"bytes"
 	"context"
@@ -106,7 +107,21 @@ func chromeQUICSpec(t config.Target) (*quic.QUICSpec, error) {
 	if err != nil {
 		return nil, err
 	}
+	modernizeChromeQUIC(&spec)
 	return &spec, nil
+}
+
+// modernizeChromeQUIC добавляет к пресету uquic (Chrome 115) ECH GREASE, как у Chrome с 117.
+// Постквантовый key share (X25519MLKEM768, Chrome с 131) добавить нельзя: ClientHello
+// перестаёт помещаться в один Initial-пакет, а uquic не умеет делить его на два — HTTP/3
+// не устанавливается (проверено).
+func modernizeChromeQUIC(spec *quic.QUICSpec) {
+	exts := spec.ClientHelloSpec.Extensions
+	pos := rand.IntN(len(exts) + 1)
+	exts = append(exts, nil)
+	copy(exts[pos+1:], exts[pos:])
+	exts[pos] = &utls.GREASEEncryptedClientHelloExtension{}
+	spec.ClientHelloSpec.Extensions = exts
 }
 
 func (d *Dialer) dialH3(ctx context.Context, t config.Target, authKey []byte) (Transport, error) {
@@ -114,10 +129,16 @@ func (d *Dialer) dialH3(ctx context.Context, t config.Target, authKey []byte) (T
 	if t.Addr.Addr().Is6() {
 		network = "udp6"
 	}
-	udp, err := net.ListenUDP(network, nil)
+	lc := net.ListenConfig{Control: netpin.Control}
+	laddr := "0.0.0.0:0"
+	if network == "udp6" {
+		laddr = "[::]:0"
+	}
+	pc, err := lc.ListenPacket(ctx, network, laddr)
 	if err != nil {
 		return nil, err
 	}
+	udp := pc.(*net.UDPConn)
 	connCtx, cancel := context.WithCancel(context.Background())
 	c := &h3Conn{target: t, udp: udp, ctx: connCtx, cancel: cancel}
 	stop := context.AfterFunc(ctx, c.Close)

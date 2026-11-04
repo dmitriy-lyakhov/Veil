@@ -18,6 +18,8 @@ import (
 	"veil/internal/config"
 	"veil/internal/deploy"
 	"veil/internal/helper"
+	"veil/internal/routing"
+	"veil/internal/settings"
 )
 
 const usage = `Использование:
@@ -46,6 +48,8 @@ func Run(args []string) {
 		err = cmdList()
 	case "tun":
 		err = cmdTun(os.Args[2:], log)
+	case "unblock":
+		err = client.Unblock()
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 	default:
@@ -127,7 +131,17 @@ func cmdConnect(args []string, log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	tn, err := client.StartSystem(prof, log)
+	rc := loadRouting()
+	opt := client.Options{}
+	if sp, err := settings.Path(); err == nil {
+		if st, err := settings.Load(sp); err == nil {
+			opt.KillSwitch = st.KillSwitch
+			if d := st.DNS; len(d) > 0 {
+				prof.DNS = d
+			}
+		}
+	}
+	tn, err := client.StartSystem(prof, rc, opt, log)
 	if err != nil {
 		return err
 	}
@@ -197,8 +211,10 @@ func cmdTun(args []string, log *slog.Logger) error {
 	profile := fs.String("profile", "", "")
 	control := fs.String("control", "", "")
 	tokenFile := fs.String("token-file", "", "")
+	routes := fs.String("routes", "", "")
+	settingsPath := fs.String("settings", "", "")
 	_ = fs.Parse(args)
-	return helper.Serve(*profile, *control, *tokenFile, log)
+	return helper.Serve(*profile, *control, *tokenFile, *routes, *settingsPath, log)
 }
 
 func readSecret(prompt string) (string, error) {
@@ -210,4 +226,18 @@ func readSecret(prompt string) (string, error) {
 	}
 	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
 	return strings.TrimRight(line, "\r\n"), err
+}
+
+// loadRouting читает сохранённые списки «через VPN»/«мимо VPN» (если есть).
+func loadRouting() *routing.Config {
+	path, err := routing.Path()
+	if err != nil {
+		return nil
+	}
+	rc, err := routing.Load(path)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "списки адресов:", err)
+		return nil
+	}
+	return rc
 }

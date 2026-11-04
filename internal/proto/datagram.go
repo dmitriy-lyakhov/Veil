@@ -25,6 +25,10 @@ const (
 	maxLimitRetries      = 3
 
 	http3DatagramOverhead = 8
+
+	// после разогрева каждая датаграмма получает случайный хвост: WireGuard дополняет
+	// пакеты до 16 байт, и без этого длины кучкуются на нескольких остатках от деления на 16
+	steadyDatagramPad = 40
 )
 
 var errDatagramMalformed = errors.New("malformed datagram")
@@ -61,10 +65,11 @@ func (s *DatagramSender) WritePacket(p []byte) error {
 	s.sent++
 	whole := dgWholeHeader + len(p)
 	if whole <= s.limit {
-		pad := 0
+		padMax := steadyDatagramPad
 		if s.sent <= warmupFrames {
-			pad = min(rand.IntN(warmupPadMax), s.limit-whole)
+			padMax = warmupPadMax
 		}
+		pad := min(rand.IntN(padMax), s.limit-whole)
 		err := s.sendWhole(p, pad)
 		if !s.learn(err) {
 			return err

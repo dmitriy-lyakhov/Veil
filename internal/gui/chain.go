@@ -6,7 +6,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -19,7 +18,7 @@ import (
 func randomPassword() string { return provision.NewAdminPassword() }
 
 func (u *ui) openChainBuilder(entry *config.Profile) {
-	w := u.app.NewWindow("Построить каскад")
+	w := u.newSubPage("Построить каскад")
 	chain := []*config.Profile{entry}
 	list := container.NewVBox()
 	addSel := widget.NewSelect(nil, nil)
@@ -82,7 +81,7 @@ func (u *ui) openChainBuilder(entry *config.Profile) {
 	var build *widget.Button
 	build = widget.NewButtonWithIcon("Построить и создать конфиг", theme.ConfirmIcon(), func() {
 		if len(chain) < 2 {
-			dialog.ShowError(fmt.Errorf("добавьте хотя бы один узел после «%s»", entry.Name), w)
+			showError(fmt.Errorf("добавьте хотя бы один узел после «%s»", entry.Name), w)
 			return
 		}
 		build.Disable()

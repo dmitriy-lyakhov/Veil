@@ -1,6 +1,7 @@
 package client
 
 import (
+	"veil/internal/netpin"
 	"context"
 	"crypto/x509"
 	"encoding/base64"
@@ -242,7 +243,7 @@ func (c *h2Conn) Close() {
 func (d *Dialer) dialH2(ctx context.Context, t config.Target, authKey []byte) (Transport, error) {
 	dial := d.Dial
 	if dial == nil {
-		dial = (&net.Dialer{}).DialContext
+		dial = (&net.Dialer{Control: netpin.Control}).DialContext
 	}
 	raw, err := dial(ctx, "tcp", t.Addr.String())
 	if err != nil {
@@ -269,7 +270,7 @@ func (d *Dialer) tlsOnly(raw net.Conn) (*utls.UConn, error) {
 		InsecureSkipVerify:    d.pinned(),
 		NextProtos:            []string{"h2", "http/1.1"},
 		VerifyPeerCertificate: d.verifyPin,
-	}, utls.HelloChrome_Auto)
+	}, utls.HelloChrome_120) // совпадает с QUIC-пресетом: ECH GREASE, без PQ, ALPS 17513
 	if err := uc.Handshake(); err != nil {
 		return nil, fmt.Errorf("tls: %w", err)
 	}

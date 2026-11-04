@@ -13,7 +13,7 @@ func createTUN(mtu int) (tun.Device, error) {
 	return tun.CreateTUN("utun", mtu)
 }
 
-func applyNetwork(nc NetConfig, log *slog.Logger) (func(), error) {
+func applyNetwork(nc NetConfig, log *slog.Logger) (*undoStack, error) {
 	u := &undoStack{}
 	steps := [][]string{
 		{"ifconfig", nc.Iface, "inet", nc.Addr4.String(), nc.Addr4.Addr().String(), "alias"},
@@ -21,6 +21,9 @@ func applyNetwork(nc NetConfig, log *slog.Logger) (func(), error) {
 		{"ifconfig", nc.Iface, "mtu", fmt.Sprint(nc.MTU), "up"},
 	}
 	for _, s := range steps {
+		if !nc.Addr6.IsValid() && stepIsV6(s) {
+			continue
+		}
 		if _, err := run(s...); err != nil {
 			return nil, err
 		}
@@ -30,10 +33,14 @@ func applyNetwork(nc NetConfig, log *slog.Logger) (func(), error) {
 			log.Warn("server bypass route", "server", srv, "err", err)
 		}
 	}
-	for _, r := range []struct{ family, prefix string }{
+	routes := []struct{ family, prefix string }{
 		{"-inet", "0.0.0.0/1"}, {"-inet", "128.0.0.0/1"},
 		{"-inet6", "::/1"}, {"-inet6", "8000::/1"},
-	} {
+	}
+	if !fullTunnel(nc) {
+		routes = nil
+	}
+	for _, r := range routes {
 		if _, err := run("route", "-q", "-n", "add", r.family, r.prefix, "-interface", nc.Iface); err != nil {
 			u.run()
 			return nil, err
@@ -41,10 +48,13 @@ func applyNetwork(nc NetConfig, log *slog.Logger) (func(), error) {
 		r := r
 		u.push(func() { _, _ = run("route", "-q", "-n", "delete", r.family, r.prefix, "-interface", nc.Iface) })
 	}
+	if err := applyPlan(nc, u, log); err != nil {
+		log.Warn("routing lists", "err", err)
+	}
 	if err := setDNS(nc.DNS, u, log); err != nil {
 		log.Warn("dns", "err", err)
 	}
-	return u.run, nil
+	return u, nil
 }
 
 func bypassRoute(srv netip.Addr, u *undoStack) error {

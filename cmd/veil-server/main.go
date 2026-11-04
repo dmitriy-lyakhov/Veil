@@ -118,6 +118,16 @@ func run(cfgPath, socket string, log *slog.Logger) error {
 	go func() { errc <- hs.ServeTLS(ln, "", "") }()
 	go func() { errc <- h3.Serve(pc) }()
 	defer h3.Close()
+	if port80 := redirectAddr(cfg.Listen); port80 != "" {
+		if rl, err := net.Listen("tcp", port80); err != nil {
+			log.Warn("http redirect disabled", "addr", port80, "err", err)
+		} else {
+			rs := server.HTTPRedirectServer()
+			defer rs.Close()
+			go func() { _ = rs.Serve(rl) }()
+			log.Info("http redirect started", "addr", rl.Addr().String())
+		}
+	}
 	log.Info("veil server started", "tcp", ln.Addr().String(), "udp", pc.LocalAddr().String(), "peers", len(cfg.Peers), "iface", ifname)
 	select {
 	case <-ctx.Done():
@@ -130,4 +140,13 @@ func run(cfgPath, socket string, log *slog.Logger) error {
 	defer cancel()
 	_ = hs.Shutdown(shutdown)
 	return nil
+}
+
+// redirectAddr — адрес для редиректа HTTP→HTTPS: тот же хост, порт 80; только если сервис слушает 443.
+func redirectAddr(listen string) string {
+	host, port, err := net.SplitHostPort(listen)
+	if err != nil || port != "443" {
+		return ""
+	}
+	return net.JoinHostPort(host, "80")
 }

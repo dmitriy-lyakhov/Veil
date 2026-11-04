@@ -12,6 +12,9 @@ import (
 	"time"
 
 	"veil/internal/site"
+	"veil/internal/wgconf"
+	"veil/internal/ipsecconf"
+	"veil/internal/ovpnconf"
 )
 
 const (
@@ -139,7 +142,17 @@ type Profile struct {
 	Entries         []Entry  `json:"entries,omitempty"`
 	PreferredEntry  string   `json:"preferred_entry,omitempty"`
 	SSH             *SSHInfo `json:"ssh,omitempty"`
+
+	// Protocol — протокол профиля: пусто или "veil" (по умолчанию), "wireguard", "openvpn".
+	Protocol  string        `json:"protocol,omitempty"`
+	WG        *wgconf.Config `json:"wg,omitempty"`
+	IPsec     *ipsecconf.Config `json:"ipsec,omitempty"`
+	OVPN      *ovpnconf.Config `json:"ovpn,omitempty"`
+	ServerRef string        `json:"server_ref,omitempty"` // имя профиля сервера, с которого поставлен протокол
 }
+
+// IsVeil — профиль работает по протоколу Veil (а не по одному из обычных протоколов).
+func (p *Profile) IsVeil() bool { return p.Protocol == "" || p.Protocol == "veil" }
 
 type Entry struct {
 	Name       string   `json:"name"`

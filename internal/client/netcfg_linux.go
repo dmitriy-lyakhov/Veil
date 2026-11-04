@@ -16,7 +16,7 @@ func createTUN(mtu int) (tun.Device, error) {
 	return tun.CreateTUN(linuxIfname, mtu)
 }
 
-func applyNetwork(nc NetConfig, log *slog.Logger) (func(), error) {
+func applyNetwork(nc NetConfig, log *slog.Logger) (*undoStack, error) {
 	u := &undoStack{}
 	steps := [][]string{
 		{"ip", "addr", "replace", nc.Addr4.String(), "dev", nc.Iface},
@@ -24,6 +24,9 @@ func applyNetwork(nc NetConfig, log *slog.Logger) (func(), error) {
 		{"ip", "link", "set", "dev", nc.Iface, "mtu", fmt.Sprint(nc.MTU), "up"},
 	}
 	for _, s := range steps {
+		if !nc.Addr6.IsValid() && stepIsV6(s) {
+			continue
+		}
 		if _, err := run(s...); err != nil {
 			return nil, err
 		}
@@ -33,14 +36,21 @@ func applyNetwork(nc NetConfig, log *slog.Logger) (func(), error) {
 			log.Warn("server bypass route", "server", srv, "err", err)
 		}
 	}
-	for _, r := range []struct{ family, prefix string }{
+	routes := []struct{ family, prefix string }{
 		{"-4", "0.0.0.0/1"}, {"-4", "128.0.0.0/1"},
 		{"-6", "::/1"}, {"-6", "8000::/1"},
-	} {
+	}
+	if !fullTunnel(nc) {
+		routes = nil
+	}
+	for _, r := range routes {
 		if _, err := run("ip", r.family, "route", "replace", r.prefix, "dev", nc.Iface); err != nil {
 			u.run()
 			return nil, err
 		}
+	}
+	if err := applyPlan(nc, u, log); err != nil {
+		log.Warn("routing lists", "err", err)
 	}
 	if len(nc.DNS) > 0 {
 		if _, err := exec.LookPath("resolvectl"); err == nil {
@@ -59,7 +69,7 @@ func applyNetwork(nc NetConfig, log *slog.Logger) (func(), error) {
 			log.Warn("resolvectl not found, DNS left unchanged")
 		}
 	}
-	return u.run, nil
+	return u, nil
 }
 
 func bypassRoute(srv netip.Addr, u *undoStack) error {

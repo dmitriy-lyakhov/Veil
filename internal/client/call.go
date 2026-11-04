@@ -1,6 +1,7 @@
 package client
 
 import (
+	"veil/internal/netpin"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -30,7 +31,7 @@ func (d *Dialer) Call(ctx context.Context, subpath string, in, out any) error {
 	}
 	dial := d.Dial
 	if dial == nil {
-		dial = (&net.Dialer{}).DialContext
+		dial = (&net.Dialer{Control: netpin.Control}).DialContext
 	}
 	var errs []error
 	for _, t := range targets {

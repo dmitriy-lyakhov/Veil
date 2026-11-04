@@ -1,6 +1,7 @@
 package provision
 
 import (
+	mrand "math/rand/v2"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -26,7 +27,6 @@ import (
 const (
 	tunnelNet4 = "10.66.0.1/24"
 	authKeyLen = 32
-	certYears  = 10
 )
 
 var DefaultDNS = []string{"1.1.1.1", "2606:4700:4700::1111"}
@@ -212,16 +212,20 @@ func selfSignedCert() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	now := time.Now().Add(-time.Duration(1+serial.Int64()%720) * time.Hour)
+	// дата выпуска в прошлом (20-120 дней), срок около года: десятилетний сертификат
+	// с CN=localhost и датой "сегодня" - типичная примета самодельного сервера
+	now := time.Now().Add(-time.Duration(20*24+serial.Int64()%(100*24)) * time.Hour)
+	notAfter := now.AddDate(0, 0, 300+int(serial.Int64()%120))
+	host := randomHostname()
 	tmpl := &x509.Certificate{
 		SerialNumber:          serial,
-		Subject:               pkix.Name{CommonName: "localhost"},
+		Subject:               pkix.Name{CommonName: host},
 		NotBefore:             now,
-		NotAfter:              now.AddDate(certYears, 0, 0),
+		NotAfter:              notAfter,
 		KeyUsage:              x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
-		DNSNames:              []string{"localhost"},
+		DNSNames:              []string{host},
 	}
 	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
 	if err != nil {
@@ -250,4 +254,17 @@ func randomHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// randomHostname — правдоподобное имя вида «abcdefg.com» для самоподписанного сертификата.
+// Подлинность проверяется по закреплённому ключу, а не по имени.
+func randomHostname() string {
+	const letters = "abcdefghijklmnopqrstuvwxyz"
+	n := 6 + mrand.IntN(5)
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letters[mrand.IntN(len(letters))]
+	}
+	tlds := []string{"com", "net", "org", "io"}
+	return string(b) + "." + tlds[mrand.IntN(len(tlds))]
 }

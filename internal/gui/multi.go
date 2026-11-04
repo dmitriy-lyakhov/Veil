@@ -11,7 +11,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -42,10 +41,10 @@ func (u *ui) managedProfiles() []*config.Profile {
 func (u *ui) openMultiEntryBuilder() {
 	servers := u.managedProfiles()
 	if len(servers) == 0 {
-		dialog.ShowInformation("Нет своих серверов", "Сначала добавьте хотя бы один сервер по SSH.", u.win)
+		showInfo("Нет своих серверов", "Сначала добавьте хотя бы один сервер по SSH.", u.win)
 		return
 	}
-	w := u.app.NewWindow("Подключение через ближайший вход")
+	w := u.newSubPage("Подключение через ближайший вход")
 	names := make([]string, len(servers))
 	for i, p := range servers {
 		names[i] = p.Name
@@ -94,7 +93,7 @@ func (u *ui) openMultiEntryBuilder() {
 	build = widget.NewButtonWithIcon("Создать подключение", theme.ConfirmIcon(), func() {
 		exit := findProfile(servers, exitSel.Selected)
 		if exit == nil {
-			dialog.ShowError(errors.New("выберите выходной сервер"), w)
+			showError(errors.New("выберите выходной сервер"), w)
 			return
 		}
 		var entries []*config.Profile
@@ -107,7 +106,7 @@ func (u *ui) openMultiEntryBuilder() {
 			entries = append(entries, exit)
 		}
 		if len(entries) == 0 {
-			dialog.ShowError(errors.New("отметьте хотя бы один вход"), w)
+			showError(errors.New("отметьте хотя бы один вход"), w)
 			return
 		}
 		maxHops := server.AllHops
@@ -299,7 +298,7 @@ func registerOn(s *deploy.Session, j multiJob, entry *config.Profile, pub string
 }
 
 func (u *ui) recheckEntries(p *config.Profile) {
-	prog := dialog.NewCustomWithoutButtons("Проверяем входы…", widget.NewProgressBarInfinite(), u.win)
+	prog := newCustomNoButtons("Проверяем входы…", newThinBar(), u.win)
 	prog.Show()
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -323,12 +322,12 @@ func (u *ui) recheckEntries(p *config.Profile) {
 				}
 			}
 			if len(ranked) == 0 || !ranked[0].OK() {
-				dialog.ShowCustom("Входы", "Закрыть", rows, u.win)
+				showCustom("Входы", "Закрыть", rows, u.win)
 				return
 			}
 			p.PreferredEntry = ranked[0].Name
 			if err := saveProfile(p); err != nil {
-				dialog.ShowError(err, u.win)
+				showError(err, u.win)
 				return
 			}
 			note := "Ближайший вход «" + ranked[0].Name + "» сохранён."
@@ -340,7 +339,7 @@ func (u *ui) recheckEntries(p *config.Profile) {
 			l := widget.NewLabel(note)
 			l.Wrapping = fyne.TextWrapWord
 			rows.Add(l)
-			dialog.ShowCustom("Входы", "Готово", container.NewGridWrap(fyne.NewSize(340, 300), container.NewVScroll(rows)), u.win)
+			showCustom("Входы", "Готово", container.NewGridWrap(fyne.NewSize(340, 300), container.NewVScroll(rows)), u.win)
 			u.refreshHome()
 		})
 	}()

@@ -147,7 +147,7 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) {
 			s.renderLogin(w, "")
 			return
 		}
-		notFound(w)
+		notFound(w, r)
 		return
 	}
 	if r.Method == http.MethodPost && !sameOriginRequest(r) {
@@ -166,7 +166,7 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) {
 		http.SetCookie(w, &http.Cookie{Name: adminCookie, Value: "", Path: adminPrefix, MaxAge: -1, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
 		writeJSON(w, http.StatusOK, map[string]string{"ok": "1"})
 	default:
-		notFound(w)
+		notFound(w, r)
 	}
 }
 

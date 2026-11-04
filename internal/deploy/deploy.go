@@ -20,6 +20,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"veil/internal/config"
+	"veil/internal/netpin"
 	"veil/internal/provision"
 	"veil/internal/site"
 )
@@ -121,7 +122,7 @@ func connect(ctx context.Context, req Request, logf Logf) (*ssh.Client, string, 
 }
 
 func dialSSH(ctx context.Context, addr string, cfg *ssh.ClientConfig) (*ssh.Client, error) {
-	d := net.Dialer{Timeout: sshTimeout}
+	d := net.Dialer{Timeout: sshTimeout, Control: netpin.Control}
 	conn, err := d.DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, err
@@ -209,7 +210,7 @@ func (r *remote) exec(cmd string, stdin []byte, asRoot bool) (string, error) {
 	err = sess.Run(full)
 	out := strings.TrimSpace(stdout.String())
 	if err != nil {
-		return out, fmt.Errorf("%s: %v %s", cmd, err, strings.TrimSpace(stderr.String()+"\n"+out))
+		return out, fmt.Errorf("%s: %w %s", cmd, err, strings.TrimSpace(stderr.String()+"\n"+out))
 	}
 	return out, nil
 }
@@ -344,13 +345,13 @@ func (r *remote) loadOrCreateConfig(siteLang string, logf Logf) (*config.Server,
 
 func (r *remote) openFirewall(logf Logf) {
 	if out, err := r.exec("command -v ufw >/dev/null && ufw status", nil, true); err == nil && strings.Contains(out, "Status: active") {
-		if _, err := r.exec("ufw allow 443/tcp && ufw allow 443/udp", nil, true); err == nil {
-			logf("ufw: открыт порт 443")
+		if _, err := r.exec("ufw allow 80/tcp && ufw allow 443/tcp && ufw allow 443/udp", nil, true); err == nil {
+			logf("ufw: открыты порты 80 и 443")
 		}
 	}
 	if _, err := r.exec("command -v firewall-cmd >/dev/null && firewall-cmd --state", nil, true); err == nil {
-		if _, err := r.exec("firewall-cmd --permanent --add-service=https && firewall-cmd --permanent --add-port=443/udp && firewall-cmd --reload", nil, true); err == nil {
-			logf("firewalld: открыт порт 443")
+		if _, err := r.exec("firewall-cmd --permanent --add-service=http && firewall-cmd --permanent --add-service=https && firewall-cmd --permanent --add-port=443/udp && firewall-cmd --reload", nil, true); err == nil {
+			logf("firewalld: открыты порты 80 и 443")
 		}
 	}
 }

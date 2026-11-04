@@ -35,11 +35,8 @@ const (
 var siteLangs = map[string]string{"Русский": "ru", "English": "en"}
 
 func (u *ui) serversPage() fyne.CanvasObject {
-	add := widget.NewButtonWithIcon("Добавить", theme.ContentAddIcon(), u.showAddChooser)
-	add.Importance = widget.HighImportance
-	u.serverList = container.NewVBox()
-	header := container.NewBorder(nil, nil, nil, add, text("Серверы", 22, colText, true))
-	return container.NewPadded(container.NewBorder(header, nil, nil, nil, container.NewVScroll(u.serverList)))
+	u.serverList = newVBoxFit()
+	return container.NewVScroll(u.serverList)
 }
 
 func (u *ui) rebuildServers() {
@@ -88,12 +85,12 @@ func (u *ui) serverCard(p *config.Profile) fyne.CanvasObject {
 }
 
 func (u *ui) showAddChooser() {
-	var d dialog.Dialog
+	var d modal
 	option := func(icon fyne.Resource, title, desc string, action func()) fyne.CanvasObject {
 		t := text(title, 16, colText, true)
 		l := widget.NewLabel(desc)
 		l.Wrapping = fyne.TextWrapWord
-		return newTapCard(container.NewBorder(nil, nil, widget.NewIcon(icon), nil, container.NewVBox(t, l)), colCard2, colCard2Hover, func() {
+		return newTapCard(container.NewBorder(nil, nil, widget.NewIcon(icon), nil, container.New(tightVBox{gap: -4}, lead(t), l)), colCard2, colCard2Hover, func() {
 			d.Hide()
 			action()
 		})
@@ -103,12 +100,12 @@ func (u *ui) showAddChooser() {
 		option(theme.FileIcon(), "Файл или ссылка", "Импорт конфигурации .veil или ссылки veil://, выданной в админ-панели.", u.showImport),
 		option(theme.MailForwardIcon(), "Через ближайший вход", "Подключение через свои серверы: выход задаётся явно, вход выбирается ближайший при каждом подключении.", u.openMultiEntryBuilder),
 	)
-	d = dialog.NewCustom("Добавить сервер", "Отмена", container.NewGridWrap(fyne.NewSize(360, 380), content), u.win)
+	d = newCustom("Добавить сервер", "Отмена", container.NewGridWrap(fyne.NewSize(360, 352), content), u.win)
 	d.Show()
 }
 
 func (u *ui) showDeployForm() {
-	w := u.app.NewWindow("Новый сервер")
+	w := u.newSubPage("Новый сервер")
 	name := widget.NewEntry()
 	name.SetPlaceHolder("Например: Амстердам")
 	ipv6 := widget.NewEntry()
@@ -159,8 +156,8 @@ func (u *ui) showDeployForm() {
 	)
 	logView := widget.NewMultiLineEntry()
 	logView.Wrapping = fyne.TextWrapWord
-	logView.SetMinRowsVisible(9)
-	progress := widget.NewProgressBarInfinite()
+	logView.SetMinRowsVisible(2)
+	progress := newThinBar()
 	progress.Hide()
 	appendLog := func(s string) {
 		logView.SetText(strings.TrimLeft(logView.Text+"\n"+s, "\n"))
@@ -171,12 +168,12 @@ func (u *ui) showDeployForm() {
 	install = widget.NewButtonWithIcon("Установить и подключить", theme.UploadIcon(), func() {
 		req, err := buildRequest(name.Text, ipv4.Text, ipv6.Text, port.Text, user.Text, method.Selected, password.Text, keyPath.Text, passphrase.Text)
 		if err != nil {
-			dialog.ShowError(err, w)
+			showError(err, w)
 			return
 		}
 		req.SiteLang = siteLangs[lang.Selected]
 		if u.profileExists(req.Name) {
-			dialog.ShowError(fmt.Errorf("сервер «%s» уже есть — выберите другое название", req.Name), w)
+			showError(fmt.Errorf("сервер «%s» уже есть — выберите другое название", req.Name), w)
 			return
 		}
 		install.Disable()
@@ -214,13 +211,13 @@ func (u *ui) showDeployForm() {
 	install.Importance = widget.HighImportance
 	hint := widget.NewLabel("Приложение подключится по SSH, установит Veil (порт 443, TCP и UDP) и сгенерирует сайт-прикрытие. Пароль SSH не сохраняется.")
 	hint.Wrapping = fyne.TextWrapWord
-	w.SetContent(container.NewPadded(container.NewVScroll(container.NewVBox(hint, form, method, authForm, install, progress, logView))))
+	w.SetContent(container.NewPadded(container.NewBorder(container.NewVBox(hint, form, method, authForm, install, progress), nil, nil, nil, logView)))
 	w.Resize(fyne.NewSize(winWidth+40, 700))
 	w.Show()
 }
 
 func (u *ui) showImport() {
-	w := u.app.NewWindow("Импорт конфигурации")
+	w := u.newSubPage("Импорт конфигурации")
 	link := widget.NewMultiLineEntry()
 	link.SetPlaceHolder("veil://…")
 	link.Wrapping = fyne.TextWrapBreak
@@ -230,7 +227,7 @@ func (u *ui) showImport() {
 	status := widget.NewLabel("")
 	status.Wrapping = fyne.TextWrapWord
 	preview := func() {
-		p, err := config.DecodeLink(link.Text)
+		p, err := decodeAny(link.Text)
 		switch {
 		case strings.TrimSpace(link.Text) == "":
 			status.SetText("")
@@ -252,32 +249,32 @@ func (u *ui) showImport() {
 			defer r.Close()
 			b, err := io.ReadAll(io.LimitReader(r, maxImportBytes))
 			if err != nil {
-				dialog.ShowError(err, w)
+				showError(err, w)
 				return
 			}
 			link.SetText(strings.TrimSpace(string(b)))
 		}, w)
-		fd.SetFilter(storage.NewExtensionFileFilter([]string{config.FileExt, ".json", ".txt"}))
+		fd.SetFilter(storage.NewExtensionFileFilter([]string{config.FileExt, ".json", ".txt", ".conf", ".ovpn"}))
 		fd.Show()
 	})
 	pasteBtn := widget.NewButtonWithIcon("Вставить", theme.ContentPasteIcon(), func() {
 		link.SetText(u.app.Clipboard().Content())
 	})
 	add := widget.NewButtonWithIcon("Добавить сервер", theme.ConfirmIcon(), func() {
-		p, err := config.DecodeLink(link.Text)
+		p, err := decodeAny(link.Text)
 		if err != nil {
-			dialog.ShowError(err, w)
+			showError(err, w)
 			return
 		}
 		if n := strings.TrimSpace(name.Text); n != "" {
 			p.Name = n
 		}
 		if u.profileExists(p.Name) {
-			dialog.ShowError(fmt.Errorf("сервер «%s» уже есть — задайте другое название", p.Name), w)
+			showError(fmt.Errorf("сервер «%s» уже есть — задайте другое название", p.Name), w)
 			return
 		}
 		if err := saveProfile(p); err != nil {
-			dialog.ShowError(err, w)
+			showError(err, w)
 			return
 		}
 		u.reload()
@@ -294,7 +291,7 @@ func (u *ui) showImport() {
 }
 
 func (u *ui) showDetails(p *config.Profile) {
-	var d dialog.Dialog
+	var d modal
 	rows := container.NewVBox(text(p.Name, 18, colText, true), text(addresses(p), 12, colMuted, false))
 	if p.Via != "" {
 		v := widget.NewLabel("Каскад: " + p.Via)
@@ -322,7 +319,7 @@ func (u *ui) showDetails(p *config.Profile) {
 			p.Transports = []string{"h2"}
 		}
 		if err := saveProfile(p); err != nil {
-			dialog.ShowError(err, u.win)
+			showError(err, u.win)
 		}
 	}
 	rows.Add(widget.NewSeparator())
@@ -360,7 +357,7 @@ func (u *ui) showDetails(p *config.Profile) {
 	}
 
 	remove := widget.NewButtonWithIcon("Удалить профиль", theme.DeleteIcon(), func() {
-		dialog.ShowConfirm("Удалить профиль", "Удалить «"+p.Name+"» с этого устройства? Сервер не изменится.", func(ok bool) {
+		showConfirm("Удалить профиль", "Удалить «"+p.Name+"» с этого устройства? Сервер не изменится.", func(ok bool) {
 			if !ok {
 				return
 			}
@@ -377,7 +374,7 @@ func (u *ui) showDetails(p *config.Profile) {
 	}
 	rows.Add(layout.NewSpacer())
 	rows.Add(remove)
-	d = dialog.NewCustom("Сервер", "Закрыть", container.NewGridWrap(fyne.NewSize(360, 480), container.NewVScroll(rows)), u.win)
+	d = newCustom("Сервер", "Закрыть", container.NewGridWrap(fyne.NewSize(360, 480), container.NewVScroll(rows)), u.win)
 	d.Show()
 }
 

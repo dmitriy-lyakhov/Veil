@@ -7,6 +7,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
@@ -18,8 +19,8 @@ var (
 	colLine       = color.NRGBA{0x2e, 0x2f, 0x39, 0xff}
 	colText       = color.NRGBA{0xec, 0xec, 0xf1, 0xff}
 	colMuted      = color.NRGBA{0x8b, 0x8d, 0x98, 0xff}
-	colAccent     = color.NRGBA{0xf4, 0xb8, 0x60, 0xff}
-	colAccentDark = color.NRGBA{0x1a, 0x12, 0x05, 0xff}
+	colAccent     = color.NRGBA{0x63, 0x66, 0xf1, 0xff}
+	colAccentDark = color.NRGBA{0xff, 0xff, 0xff, 0xff} // текст и ползунок на акцентном фоне
 	colOK         = color.NRGBA{0x4a, 0xde, 0x80, 0xff}
 	colBad        = color.NRGBA{0xf8, 0x71, 0x71, 0xff}
 	colIdle       = color.NRGBA{0x3a, 0x3c, 0x47, 0xff}
@@ -50,7 +51,7 @@ func (veilTheme) Color(n fyne.ThemeColorName, v fyne.ThemeVariant) color.Color {
 	case theme.ColorNameInputBorder, theme.ColorNameSeparator:
 		return colLine
 	case theme.ColorNameSelection:
-		return color.NRGBA{0xf4, 0xb8, 0x60, 0x40}
+		return color.NRGBA{colAccent.R, colAccent.G, colAccent.B, 0x55}
 	case theme.ColorNameHover:
 		return color.NRGBA{0xff, 0xff, 0xff, 0x0f}
 	case theme.ColorNamePressed:
@@ -81,6 +82,8 @@ func (veilTheme) Size(n fyne.ThemeSizeName) float32 {
 		return 6
 	case theme.SizeNameInnerPadding:
 		return 10
+	case theme.SizeNameCaptionText:
+		return 12
 	case theme.SizeNameText:
 		return 14
 	case theme.SizeNameHeadingText:
@@ -111,6 +114,7 @@ type tapCard struct {
 	base    color.Color
 	hover   color.Color
 	onTap   func()
+	anim    *fyne.Animation
 }
 
 func newTapCard(content fyne.CanvasObject, base, hover color.Color, onTap func()) *tapCard {
@@ -131,16 +135,17 @@ func (c *tapCard) Tapped(*fyne.PointEvent) {
 	}
 }
 
-func (c *tapCard) MouseIn(*desktop.MouseEvent) {
-	c.bg.FillColor = c.hover
-	c.bg.Refresh()
-}
+func (c *tapCard) MouseIn(*desktop.MouseEvent) { c.fadeTo(c.hover) }
 
 func (c *tapCard) MouseMoved(*desktop.MouseEvent) {}
 
-func (c *tapCard) MouseOut() {
-	c.bg.FillColor = c.base
-	c.bg.Refresh()
-}
+func (c *tapCard) MouseOut() { c.fadeTo(c.base) }
 
 func (c *tapCard) Cursor() desktop.Cursor { return desktop.PointerCursor }
+
+// cardTight — компактная карточка для списков (меньше полей, чем у card).
+func cardTight(content fyne.CanvasObject) fyne.CanvasObject {
+	bg := canvas.NewRectangle(colCard)
+	bg.CornerRadius = 14
+	return container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(4, 4, 10, 6), content))
+}

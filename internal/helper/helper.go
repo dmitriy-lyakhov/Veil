@@ -21,6 +21,9 @@ import (
 
 	"veil/internal/client"
 	"veil/internal/config"
+	"veil/internal/netpin"
+	"veil/internal/routing"
+	"veil/internal/settings"
 )
 
 const (
@@ -35,6 +38,8 @@ type Report struct {
 	Iface string `json:"iface,omitempty"`
 	Error string `json:"error,omitempty"`
 	PID   int    `json:"pid"`
+	PinV4 uint32 `json:"pin_v4,omitempty"`
+	PinV6 uint32 `json:"pin_v6,omitempty"`
 }
 
 type service struct {
@@ -51,6 +56,7 @@ func (s *service) report() Report {
 	defer s.mu.Unlock()
 	s.lastPoll = time.Now()
 	r := Report{PID: os.Getpid(), Status: client.Status{State: client.StateConnecting}}
+	r.PinV4, r.PinV6 = netpin.Get()
 	switch {
 	case s.err != nil:
 		r.State = client.StateStopped
@@ -64,10 +70,28 @@ func (s *service) report() Report {
 
 func (s *service) shutdown() { s.stopOnce.Do(func() { close(s.stop) }) }
 
-func Serve(profilePath, controlAddr, tokenFile string, log *slog.Logger) error {
+func Serve(profilePath, controlAddr, tokenFile, routesPath, settingsPath string, log *slog.Logger) error {
 	prof, err := config.Load[config.Profile](profilePath)
 	if err != nil {
 		return err
+	}
+	var opt client.Options
+	if settingsPath != "" {
+		if st, err := settings.Load(settingsPath); err != nil {
+			log.Warn("settings ignored", "err", err)
+		} else {
+			opt.KillSwitch = st.KillSwitch
+			if len(st.DNS) > 0 {
+				prof.DNS = st.DNS
+			}
+		}
+	}
+	var rc *routing.Config
+	if routesPath != "" {
+		if rc, err = routing.Load(routesPath); err != nil {
+			log.Warn("routing config ignored", "err", err)
+			rc = nil
+		}
 	}
 	tokenBytes, err := os.ReadFile(tokenFile)
 	if err != nil {
@@ -112,7 +136,7 @@ func Serve(profilePath, controlAddr, tokenFile string, log *slog.Logger) error {
 	}()
 
 	go func() {
-		tn, err := client.StartSystem(prof, log)
+		tn, err := client.StartSystem(prof, rc, opt, log)
 		svc.mu.Lock()
 		defer svc.mu.Unlock()
 		if err != nil {
@@ -199,6 +223,12 @@ func Launch(profilePath string) (*Handle, error) {
 	}
 	logFile := filepath.Join(runDir, "tunnel.log")
 	args := []string{exe, "tun", "--profile", profilePath, "--control", addr, "--token-file", tokenFile}
+	if rp, err := routing.Path(); err == nil {
+		args = append(args, "--routes", rp)
+	}
+	if sp, err := settings.Path(); err == nil {
+		args = append(args, "--settings", sp)
+	}
 	if err := elevate(args, logFile); err != nil {
 		return nil, err
 	}
@@ -275,4 +305,23 @@ func runtimeDir() (string, error) {
 
 func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+// RunDir — каталог служебных файлов (журналы, токен).
+func RunDir() (string, error) { return runtimeDir() }
+
+// Unblock запускает с правами администратора снятие остатков блокировки KillSwitch.
+func Unblock() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	if exe, err = filepath.EvalSymlinks(exe); err != nil {
+		return err
+	}
+	dir, err := runtimeDir()
+	if err != nil {
+		return err
+	}
+	return elevate([]string{exe, "unblock"}, filepath.Join(dir, "unblock.log"))
 }

@@ -1,6 +1,7 @@
 package client
 
 import (
+	"veil/internal/netpin"
 	"context"
 	"errors"
 	"fmt"
@@ -28,7 +29,7 @@ func (e EntryRTT) OK() bool { return e.Err == "" }
 
 func ProbeEntries(ctx context.Context, p *config.Profile, dial DialFunc) []EntryRTT {
 	if dial == nil {
-		dial = (&net.Dialer{}).DialContext
+		dial = (&net.Dialer{Control: netpin.Control}).DialContext
 	}
 	out := make([]EntryRTT, len(p.Entries))
 	var wg sync.WaitGroup

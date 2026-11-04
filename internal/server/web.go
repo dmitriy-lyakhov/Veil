@@ -3,7 +3,11 @@ package server
 import (
 	"context"
 	"io"
+	"log"
+	"net"
 	"net/http"
+	"strings"
+	"time"
 
 	"veil/internal/site"
 )
@@ -51,16 +55,70 @@ func (ws *webSite) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write(ws.thanks)
 	default:
-		notFound(w)
+		notFound(w, r)
 	}
 }
 
-func notFound(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "text/html")
+// msiePadding — блок, который nginx добавляет к страницам ошибок для MSIE и Chrome
+// (msie_padding on), чтобы они не подменяли страницу своей «дружелюбной».
+const msiePadding = "<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n" +
+	"<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n" +
+	"<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n" +
+	"<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n" +
+	"<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n" +
+	"<!-- a padding to disable MSIE and Chrome friendly error page -->\r\n"
+
+func notFound(w http.ResponseWriter, r *http.Request) {
+	body := notFoundHTML
+	if ua := r.UserAgent(); strings.Contains(ua, "Chrome/") || strings.Contains(ua, "MSIE ") {
+		body += msiePadding
+	}
+	h := w.Header()
+	h.Set("Content-Type", "text/html")
+	if r.ProtoMajor == 1 {
+		h.Set("Connection", "keep-alive") // nginx всегда сообщает его для HTTP/1.1
+	}
 	w.WriteHeader(http.StatusNotFound)
-	_, _ = w.Write([]byte(notFoundHTML))
+	_, _ = w.Write([]byte(body))
 }
 
 func contextWithCancel(r *http.Request) (context.Context, context.CancelFunc) {
 	return context.WithCancel(r.Context())
+}
+
+const movedHTML = "<html>\r\n<head><title>301 Moved Permanently</title></head>\r\n<body>\r\n<center><h1>301 Moved Permanently</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+
+// HTTPRedirectServer — порт 80: как у обычного сайта, всё перенаправляется на https
+// (nginx: return 301 https://$host$request_uri). Без него порт 80 отвечает отказом
+// в соединении, чего у настоящих сайтов почти не бывает.
+func HTTPRedirectServer() *http.Server {
+	return &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			host := r.Host
+			if h, _, err := net.SplitHostPort(host); err == nil {
+				host = h
+			}
+			if strings.Contains(host, ":") && !strings.HasPrefix(host, "[") {
+				host = "[" + host + "]" // IPv6-литерал
+			}
+			if host == "" {
+				w.Header().Set("Server", serverHeader)
+				notFound(w, r)
+				return
+			}
+			h := w.Header()
+			h.Set("Server", serverHeader)
+			h.Set("Content-Type", "text/html")
+			h.Set("Location", "https://"+host+r.URL.RequestURI())
+			if r.ProtoMajor == 1 {
+				h.Set("Connection", "keep-alive")
+			}
+			w.WriteHeader(http.StatusMovedPermanently)
+			if r.Method != http.MethodHead {
+				_, _ = w.Write([]byte(movedHTML))
+			}
+		}),
+		ReadHeaderTimeout: 10 * time.Second,
+		ErrorLog:          log.New(io.Discard, "", 0),
+	}
 }

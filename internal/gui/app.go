@@ -2,6 +2,7 @@ package gui
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"image/color"
 	"os"
@@ -21,16 +22,20 @@ import (
 	"veil/internal/config"
 	"veil/internal/deploy"
 	"veil/internal/helper"
+	"veil/internal/netpin"
+	"veil/internal/settings"
 )
 
 const (
 	appID        = "net.veil.client"
-	appVersion   = "0.4.0"
+	appVersion   = "0.5.0"
 	pollInterval = time.Second
 	readyTimeout = 3 * time.Minute
 	prefSelected = "selected"
 	winWidth     = 420
 	winHeight    = 780
+	winMinWidth  = 400
+	winMinHeight = 760
 )
 
 type ui struct {
@@ -58,6 +63,19 @@ type ui struct {
 	connected bool
 	since     time.Time
 	stop      chan struct{}
+
+	curtain   *canvas.Rectangle
+	pageAnim  *fyne.Animation
+	pageShown bool
+	curPage   int
+	curtainA  float32
+	routeLbl  *widget.Label
+
+	traffic     *canvas.Text
+	splitTxt    *canvas.Text
+	serversView fyne.CanvasObject
+	st          *settings.Settings
+	share       *shareState
 }
 
 func Run() {
@@ -67,17 +85,17 @@ func Run() {
 		a.SetIcon(icon)
 	}
 	u := &ui{app: a, win: a.NewWindow("Veil"), selected: a.Preferences().String(prefSelected), sessions: map[string]*deploy.Session{}}
-	u.pages = container.NewStack(u.homePage(), u.serversPage(), u.settingsPage())
-	u.win.SetContent(container.NewBorder(nil, u.navBar(theme.HomeIcon(), theme.StorageIcon(), theme.SettingsIcon()), nil, nil, u.pages))
+	u.loadSettings()
+	u.curtain = canvas.NewRectangle(color.Transparent)
+	u.serversView = u.serversPage()
+	u.pages = container.NewStack(u.homePage(), u.sharePage(), u.settingsPage(), u.addPage(), u.curtain)
+	minSize := canvas.NewRectangle(color.Transparent)
+	minSize.SetMinSize(fyne.NewSize(winMinWidth, winMinHeight))
+	u.win.SetContent(container.NewStack(minSize, container.NewBorder(nil, u.navBar(theme.HomeIcon(), theme.AccountIcon(), theme.SettingsIcon(), theme.ContentAddIcon()), nil, nil, u.pages)))
 	u.showPage(0)
 	u.reload()
-	u.win.SetCloseIntercept(func() {
-		for name := range u.sessions {
-			u.dropSession(name)
-		}
-		u.disconnect()
-		u.win.Close()
-	})
+	u.win.SetCloseIntercept(u.quit)
+	u.afterStart()
 	u.win.Resize(fyne.NewSize(winWidth, winHeight))
 	u.win.ShowAndRun()
 }
@@ -106,13 +124,20 @@ func (u *ui) navBar(icons ...fyne.Resource) fyne.CanvasObject {
 }
 
 func (u *ui) showPage(i int) {
-	for n, o := range u.pages.Objects {
+	pages := u.pages.Objects[:4]
+	if u.pageShown && i == u.curPage {
+		return
+	}
+	prev := u.curPage
+	first := !u.pageShown
+	for n, o := range pages {
 		if n == i {
 			o.Show()
 		} else {
 			o.Hide()
 		}
 	}
+	u.pageShown, u.curPage = true, i
 	for n, b := range u.navBtns {
 		if n == i {
 			b.Importance = widget.HighImportance
@@ -121,59 +146,25 @@ func (u *ui) showPage(i int) {
 		}
 		b.Refresh()
 	}
-	u.pages.Refresh()
+	if !first {
+		u.animatePage(pages[i], prev, i)
+	}
 }
 
+//go:embed icon.png
+var embeddedIcon []byte
+
 func bundledIcon() fyne.Resource {
-	exe, err := os.Executable()
-	if err != nil {
-		return nil
+	if exe, err := os.Executable(); err == nil {
+		if b, err := os.ReadFile(filepath.Join(filepath.Dir(exe), "..", "Resources", "icon.png")); err == nil {
+			return fyne.NewStaticResource("icon.png", b)
+		}
 	}
-	b, err := os.ReadFile(filepath.Join(filepath.Dir(exe), "..", "Resources", "icon.png"))
-	if err != nil {
-		return nil
-	}
-	return fyne.NewStaticResource("icon.png", b)
+	return fyne.NewStaticResource("icon.png", embeddedIcon)
 }
 
 func centered(o fyne.CanvasObject) fyne.CanvasObject {
 	return container.NewHBox(layout.NewSpacer(), o, layout.NewSpacer())
-}
-
-func (u *ui) homePage() fyne.CanvasObject {
-	brand := text("Veil", 20, colText, true)
-	tagline := text("HTTPS-маскировка · IPv6 first", 12, colMuted, false)
-	u.power = newPowerButton(u.toggle)
-	u.status = text("Отключено", 26, colText, true)
-	u.status.Alignment = fyne.TextAlignCenter
-	u.sub = text("Выберите сервер и нажмите кнопку", 13, colMuted, false)
-	u.sub.Alignment = fyne.TextAlignCenter
-
-	u.rx = text("0 Б", 18, colText, true)
-	u.tx = text("0 Б", 18, colText, true)
-	stat := func(label string, v *canvas.Text) fyne.CanvasObject {
-		return card(container.NewVBox(text(label, 12, colMuted, false), v))
-	}
-	stats := container.NewGridWithColumns(2, stat("↓ Получено", u.rx), stat("↑ Отправлено", u.tx))
-
-	u.srvName = text("Сервер не выбран", 16, colText, true)
-	u.srvAddr = text("Добавьте сервер на вкладке «Серверы»", 12, colMuted, false)
-	chevron := widget.NewIcon(theme.NavigateNextIcon())
-	server := newTapCard(container.NewBorder(nil, nil, widget.NewIcon(theme.StorageIcon()), chevron,
-		container.NewVBox(u.srvName, u.srvAddr)), colCard, colCardHover, func() { u.showPage(1) })
-
-	u.recheck = widget.NewButtonWithIcon("Перепроверить ближайший вход", theme.ViewRefreshIcon(), func() {
-		if p := u.current(); p != nil {
-			u.recheckEntries(p)
-		}
-	})
-	u.recheck.Hide()
-	return container.NewPadded(container.NewBorder(
-		container.NewVBox(brand, tagline),
-		container.NewVBox(u.recheck, stats, server),
-		nil, nil,
-		container.NewVBox(layout.NewSpacer(), centered(u.power), u.status, u.sub, layout.NewSpacer()),
-	))
 }
 
 func (u *ui) reload() {
@@ -188,6 +179,9 @@ func (u *ui) reload() {
 	u.app.Preferences().SetString(prefSelected, u.selected)
 	u.rebuildServers()
 	u.refreshHome()
+	if u.share != nil {
+		u.share.refreshServers()
+	}
 }
 
 func (u *ui) current() *config.Profile {
@@ -266,7 +260,7 @@ func (u *ui) toggle() {
 	}
 	p := u.current()
 	if p == nil {
-		u.showPage(1)
+		u.showPage(3)
 		return
 	}
 	path, err := config.ProfilePath(p.Name)
@@ -274,7 +268,13 @@ func (u *ui) toggle() {
 		u.toast(err.Error())
 		return
 	}
+	if err := checkOpenVPNInstalled(p); err != nil {
+		showError(err, u.win)
+		return
+	}
+	u.logf("подключение к «%s»", p.Name)
 	u.power.SetState(powerBusy)
+// открытые SSH-сессии установлены без привязки к физическому интерфейсу:	// после подъёма туннеля их пакеты ушли бы внутрь него	for n := range u.sessions {		u.dropSession(n)	}
 	u.setStatus("Подключение…", "Подтвердите права администратора", "")
 	name := p.Name
 	go func() {
@@ -326,6 +326,7 @@ func (u *ui) poll(h *helper.Handle, stop chan struct{}) {
 }
 
 func (u *ui) showReport(r *helper.Report) {
+	netpin.Set(r.PinV4, r.PinV6)
 	switch r.State {
 	case client.StateConnecting:
 		u.power.SetState(powerBusy)
@@ -333,6 +334,7 @@ func (u *ui) showReport(r *helper.Report) {
 	case client.StateConnected:
 		if !u.connected {
 			u.connected, u.since = true, time.Now()
+			u.logf("подключено: %s %s", r.Transport, r.Family)
 			u.rebuildServers()
 		}
 		u.power.SetState(powerOn)
@@ -346,9 +348,8 @@ func (u *ui) showReport(r *helper.Report) {
 		u.power.SetState(powerBusy)
 		u.setStatus("Переподключение…", r.LastError, "")
 	}
-	u.rx.Text, u.tx.Text = humanBytes(r.RxBytes), humanBytes(r.TxBytes)
-	u.rx.Refresh()
-	u.tx.Refresh()
+	u.traffic.Text = "↓ " + humanBytes(r.RxBytes) + "     ↑ " + humanBytes(r.TxBytes)
+	u.traffic.Refresh()
 }
 
 func (u *ui) disconnect() {
@@ -360,11 +361,15 @@ func (u *ui) disconnect() {
 }
 
 func (u *ui) finish(errMsg string) {
+	u.logf("отключено: %s", errMsg)
 	if u.stop != nil {
 		close(u.stop)
 		u.stop = nil
 	}
 	u.handle, u.active, u.connected = nil, "", false
+	u.traffic.Text = ""
+	u.traffic.Refresh()
+	netpin.Set(0, 0)
 	u.power.SetState(powerOff)
 	if errMsg != "" {
 		u.setStatus("Отключено", errMsg, theme.ColorNameError)
@@ -373,21 +378,6 @@ func (u *ui) finish(errMsg string) {
 	}
 	u.rebuildServers()
 	u.refreshHome()
-}
-
-func (u *ui) settingsPage() fyne.CanvasObject {
-	u.logPath = widget.NewLabel("")
-	u.logPath.Wrapping = fyne.TextWrapBreak
-	if dir, err := config.ProfilesDir(); err == nil {
-		u.logPath.SetText("Профили: " + dir)
-	}
-	about := widget.NewLabel("Ядро WireGuard внутри HTTPS на порту 443. Основной транспорт — HTTP/3 (QUIC) с отпечатком Chrome, запасной — HTTP/2 поверх TLS 1.3. Сначала IPv6, затем IPv4.")
-	about.Wrapping = fyne.TextWrapWord
-	return container.NewPadded(container.NewVBox(
-		text("Настройки", 22, colText, true),
-		card(container.NewVBox(text("О приложении", 15, colText, true), text("Veil "+appVersion, 13, colMuted, false), about)),
-		card(container.NewVBox(text("Данные", 15, colText, true), u.logPath)),
-	))
 }
 
 func transportShort(kind string) string {

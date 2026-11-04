@@ -10,7 +10,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -30,7 +29,7 @@ func nodeName(p *config.Profile) string {
 	return strings.ReplaceAll(strings.TrimSpace(p.Name), "/", "-")
 }
 
-func managed(p *config.Profile) bool { return p.SSH != nil }
+func managed(p *config.Profile) bool { return p.SSH != nil && p.IsVeil() }
 
 func (u *ui) withSession(parent fyne.Window, p *config.Profile, done func(*deploy.Session, error)) {
 	if s, ok := u.sessions[p.Name]; ok {
@@ -54,15 +53,96 @@ func (u *ui) withSession(parent fyne.Window, p *config.Profile, done func(*deplo
 		open("")
 		return
 	}
+	u.askSSHPassword(parent, p, func(s *deploy.Session, err error) {
+		if err == nil {
+			u.sessions[p.Name] = s
+		}
+		done(s, err)
+	})
+}
+
+func isAuthError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "unable to authenticate")
+}
+
+// askSSHPassword — окно ввода пароля SSH с проверкой прямо в нём: пока идёт
+// подключение, показывается индикатор; при неверном пароле окно остаётся
+// открытым, карточка трясётся и появляется сообщение под полем.
+func (u *ui) askSSHPassword(parent fyne.Window, p *config.Profile, done func(*deploy.Session, error)) {
 	pw := widget.NewPasswordEntry()
-	items := []*widget.FormItem{widget.NewFormItem("Пароль SSH", pw)}
-	dialog.ShowForm("Вход на «"+p.Name+"»", "Войти", "Отмена", items, func(ok bool) {
-		if !ok {
-			done(nil, errors.New("отменено"))
+	errLbl := canvas.NewText("", colBad)
+	errLbl.TextSize = 12
+	errBox := container.New(layout.NewCustomPaddedLayout(0, 0, theme.InnerPadding(), 0), errLbl)
+	errBox.Hide()
+	progress := newThinBar()
+	barBox := container.New(layout.NewCustomPaddedLayout(0, 0, theme.InnerPadding(), 0), progress)
+	barBox.Hide()
+	content := container.NewVBox(widget.NewForm(widget.NewFormItem("Пароль SSH", pw)), errBox, barBox)
+
+	m := newModal(parent, "Вход на «"+p.Name+"»", content)
+	cancel := widget.NewButton("Отмена", nil)
+	login := widget.NewButton("Войти", nil)
+	login.Importance = widget.HighImportance
+	m.buttons.Add(cancel)
+	m.buttons.Add(login)
+
+	fail := func(msg string) {
+		errLbl.Text = msg
+		errLbl.Refresh()
+		errBox.Show()
+		progress.Stop()
+		barBox.Hide()
+		pw.Enable()
+		login.Enable()
+		parent.Canvas().Focus(pw)
+		m.shake()
+	}
+	var submit func()
+	submit = func() {
+		if pw.Text == "" {
+			fail("Введите пароль")
 			return
 		}
-		open(pw.Text)
-	}, parent)
+		errBox.Hide()
+		pw.Disable()
+		login.Disable()
+		barBox.Show()
+		progress.Start()
+		pass := pw.Text
+		go func() {
+			ctx, stop := context.WithTimeout(context.Background(), sshOpenTimeout)
+			defer stop()
+			s, err := deploy.Open(ctx, p, pass, "")
+			fyne.Do(func() {
+				switch {
+				case err == nil:
+					m.Hide()
+					done(s, nil)
+				case isAuthError(err):
+					pw.SetText("")
+					fail("Неверный пароль")
+				default:
+					fail("Не удалось подключиться: " + shortErr(err))
+				}
+			})
+		}()
+	}
+	login.OnTapped = submit
+	pw.OnSubmitted = func(string) { submit() }
+	cancel.OnTapped = func() {
+		m.Hide()
+		done(nil, errors.New("отменено"))
+	}
+	m.Show()
+	parent.Canvas().Focus(pw)
+}
+
+func shortErr(err error) string {
+	s := err.Error()
+	if r := []rune(s); len(r) > 90 {
+		s = string(r[:90]) + "…"
+	}
+	return s
 }
 
 func (u *ui) dropSession(name string) {
@@ -79,34 +159,54 @@ type manager struct {
 	sess    *deploy.Session
 	state   server.State
 	body    *fyne.Container
-	status  *widget.Label
+	status  *statusLine
 	tabs    []*widget.Button
 	section int
+
+	loaded      bool   // состояние сервера загружено (был вход по SSH)
+	clientsOnly bool   // менеджер встроен в раздел «Поделиться»: рисует только клиентов
+	onLoaded    func() // вызывается после обновления данных (для встроенного режима)
 }
 
 func (u *ui) openManager(p *config.Profile) {
-	m := &manager{u: u, p: p, w: u.app.NewWindow("Управление · " + p.Name)}
-	m.status = widget.NewLabel("Подключение по SSH…")
-	m.status.Wrapping = fyne.TextWrapWord
-	m.body = container.NewVBox()
-	seg := container.NewGridWithColumns(3)
-	for i, title := range []string{"Клиенты", "Каскад", "Сервер"} {
+	m := &manager{u: u, p: p, w: u.newSubPage(p.Name)}
+	m.status = newStatusLine()
+	m.body = newVBoxFit()
+	seg := container.NewGridWithColumns(4)
+	for i, title := range []string{"Протокол", "Сервисы", "Каскад", "Управление"} {
 		b := widget.NewButton(title, func() { m.show(i) })
 		m.tabs = append(m.tabs, b)
 		seg.Add(b)
 	}
-	header := container.NewVBox(text(p.Name, 20, colText, true), text(addresses(p), 12, colMuted, false), seg, m.status)
+	header := container.NewVBox(lead(text(sshSummary(p), 14, colMuted, false)), seg, m.status.Label)
 	m.w.SetContent(container.NewPadded(container.NewBorder(header, nil, nil, nil, container.NewVScroll(m.body))))
 	m.w.Resize(fyne.NewSize(winWidth+80, 720))
 	m.w.Show()
 	m.highlight()
-	u.withSession(m.w, p, func(s *deploy.Session, err error) {
+	// вход по SSH не требуется для просмотра страницы: пароль спросим, когда он понадобится
+	if s, ok := u.sessions[p.Name]; ok {
+		m.sess = s
+		m.refresh()
+	} else {
+		m.render()
+	}
+}
+
+// ensureSession выполняет ok, когда есть SSH-сессия; при необходимости спрашивает пароль.
+func (m *manager) ensureSession(ok func(), fail func(error)) {
+	if m.sess != nil {
+		ok()
+		return
+	}
+	m.u.withSession(m.w, m.p, func(s *deploy.Session, err error) {
 		if err != nil {
-			m.status.SetText("Ошибка: " + err.Error())
+			if fail != nil {
+				fail(err)
+			}
 			return
 		}
 		m.sess = s
-		m.refresh()
+		ok()
 	})
 }
 
@@ -129,7 +229,7 @@ func (m *manager) show(i int) {
 
 func (m *manager) call(method, path string, in, out any, done func(error)) {
 	if m.sess == nil {
-		done(errors.New("нет SSH-подключения"))
+		m.ensureSession(func() { m.call(method, path, in, out, done) }, done)
 		return
 	}
 	m.status.SetText("Выполняется…")
@@ -153,35 +253,60 @@ func (m *manager) refresh() {
 	var st server.State
 	m.call("GET", "/state", nil, &st, func(err error) {
 		if err != nil {
+			if err.Error() == "отменено" {
+				m.render()
+				return
+			}
 			m.renderError(err)
 			return
 		}
 		m.state = st
+		m.loaded = true
 		m.status.SetText(fmt.Sprintf("Сайт-прикрытие: %s · клиентов %d, онлайн %d", st.Server.Company, st.Server.Clients, st.Server.Online))
 		m.render()
 	})
 }
 
 func (m *manager) renderError(err error) {
+	if m.clientsOnly {
+		showError(err, m.w)
+		return
+	}
 	m.body.RemoveAll()
 	msg := widget.NewLabel(err.Error())
 	msg.Wrapping = fyne.TextWrapWord
 	m.body.Add(card(msg))
 	if errors.Is(err, deploy.ErrOutdated) {
-		m.body.Add(m.updateButton())
+		m.body.Add(m.updateButton(""))
 	}
 	m.body.Refresh()
 }
 
 func (m *manager) render() {
+	if m.clientsOnly {
+		if m.onLoaded != nil {
+			m.onLoaded()
+		}
+		return
+	}
 	m.body.RemoveAll()
 	switch m.section {
 	case 0:
-		m.renderClients()
+		m.renderProtocol()
 	case 1:
-		m.renderCascade()
+		if m.loaded {
+			m.renderServer()
+		} else {
+			m.renderLogin("Настройки сайта-прикрытия, домена и пароля админ-панели хранятся на сервере. Чтобы их открыть, войдите по SSH.")
+		}
+	case 2:
+		if m.loaded {
+			m.renderCascade()
+		} else {
+			m.renderLogin("Каскад настраивается на сервере. Чтобы его открыть, войдите по SSH.")
+		}
 	default:
-		m.renderServer()
+		m.renderManagement()
 	}
 	m.body.Refresh()
 }
@@ -193,7 +318,7 @@ func iconButton(icon fyne.Resource, tap func()) *widget.Button {
 }
 
 func (m *manager) confirm(title, msg string, yes func()) {
-	dialog.ShowConfirm(title, msg, func(ok bool) {
+	showConfirm(title, msg, func(ok bool) {
 		if ok {
 			yes()
 		}
@@ -228,9 +353,9 @@ func (m *manager) clientCard(c server.ClientInfo) fyne.CanvasObject {
 	case c.Online:
 		dot.FillColor = colOK
 	}
-	lines := container.NewVBox(text(c.Name, 15, colText, true))
+	lines := container.New(tightVBox{gap: -7, afterFirst: -12}, richText(c.Name, false, true))
 	if c.Note != "" {
-		lines.Add(text(c.Note, 12, colMuted, false))
+		lines.Add(richText(c.Note, true, false))
 	}
 	route := "выход на этом сервере"
 	if len(c.Route) > 0 {
@@ -245,8 +370,8 @@ func (m *manager) clientCard(c server.ClientInfo) fyne.CanvasObject {
 	if c.Disabled {
 		route = "заблокирован · " + route
 	}
-	lines.Add(text(route, 12, colMuted, false))
-	lines.Add(text(fmt.Sprintf("↓ %s  ↑ %s", humanBytes(c.TxBytes), humanBytes(c.RxBytes)), 12, colMuted, false))
+	lines.Add(richText(route, true, false))
+	lines.Add(richText(fmt.Sprintf("↓ %s  ↑ %s", humanBytes(c.TxBytes), humanBytes(c.RxBytes)), true, false))
 
 	edit := iconButton(theme.DocumentCreateIcon(), func() { m.editClient(c) })
 	lockIcon := theme.VisibilityOffIcon()
@@ -281,8 +406,9 @@ func (m *manager) clientCard(c server.ClientInfo) fyne.CanvasObject {
 			})
 		})
 	})
-	actions := container.NewHBox(edit, lock, reissue, del)
-	return card(container.NewBorder(nil, nil, container.NewCenter(container.NewGridWrap(fyne.NewSize(10, 10), dot)), container.NewCenter(actions), lines))
+	sq := func(b fyne.CanvasObject) fyne.CanvasObject { return container.NewGridWrap(fyne.NewSize(34, 34), b) }
+	actions := container.NewHBox(sq(edit), sq(lock), sq(reissue), sq(del))
+	return cardTight(container.NewBorder(nil, nil, container.NewCenter(container.NewGridWrap(fyne.NewSize(10, 10), dot)), container.NewCenter(actions), lines))
 }
 
 func (m *manager) editClient(c server.ClientInfo) {
@@ -290,7 +416,7 @@ func (m *manager) editClient(c server.ClientInfo) {
 	name.SetText(c.Name)
 	note := widget.NewEntry()
 	note.SetText(c.Note)
-	dialog.ShowForm("Клиент", "Сохранить", "Отмена", []*widget.FormItem{
+	showForm("Клиент", "Сохранить", "Отмена", []*widget.FormItem{
 		widget.NewFormItem("Имя", name), widget.NewFormItem("Заметка", note),
 	}, func(ok bool) {
 		if !ok {
@@ -359,14 +485,14 @@ func (m *manager) addClient() {
 		widget.NewForm(widget.NewFormItem("Имя", name), widget.NewFormItem("Заметка", note)),
 		text("Маршрут", 14, colText, true), routeBox,
 	)
-	d := dialog.NewCustomConfirm("Новый клиент", "Создать", "Отмена", container.NewGridWrap(fyne.NewSize(380, 360), container.NewVScroll(content)), func(ok bool) {
+	d := newCustomConfirm("Новый клиент", "Создать", "Отмена", container.NewGridWrap(fyne.NewSize(380, 360), container.NewVScroll(content)), func(ok bool) {
 		if !ok {
 			return
 		}
 		var r server.LinkResponse
 		m.call("POST", "/clients", map[string]any{"name": name.Text, "note": note.Text, "route": route}, &r, func(err error) {
 			if err != nil {
-				dialog.ShowError(err, m.w)
+				showError(err, m.w)
 				return
 			}
 			m.u.showShare(m.w, "Клиент «"+r.Name+"»", r, "Отсканируйте QR в приложении Veil на устройстве клиента, отправьте файл или ссылку. Показывается один раз: в конфиге приватный ключ.", true)
@@ -438,7 +564,7 @@ func (m *manager) renderCascade() {
 					}
 					msg = strings.Join(lines, "\n")
 				}
-				dialog.ShowInformation("Автомаршруты", msg, m.w)
+				showInfo("Автомаршруты", msg, m.w)
 				m.refresh()
 			})
 		})
@@ -484,7 +610,7 @@ func (m *manager) otherManaged() []*config.Profile {
 func (m *manager) linkOwnServer() {
 	others := m.otherManaged()
 	if len(others) == 0 {
-		dialog.ShowInformation("Каскад", "Других своих серверов в приложении нет. Добавьте ещё один сервер по SSH.", m.w)
+		showInfo("Каскад", "Других своих серверов в приложении нет. Добавьте ещё один сервер по SSH.", m.w)
 		return
 	}
 	names := make([]string, len(others))
@@ -493,7 +619,7 @@ func (m *manager) linkOwnServer() {
 	}
 	sel := widget.NewSelect(names, nil)
 	sel.SetSelected(names[0])
-	dialog.ShowForm("Следующий узел", "Связать", "Отмена", []*widget.FormItem{widget.NewFormItem("Сервер", sel)}, func(ok bool) {
+	showForm("Следующий узел", "Связать", "Отмена", []*widget.FormItem{widget.NewFormItem("Сервер", sel)}, func(ok bool) {
 		if !ok {
 			return
 		}
@@ -502,7 +628,7 @@ func (m *manager) linkOwnServer() {
 				m.status.SetText("Связываем «" + m.p.Name + "» → «" + p.Name + "»…")
 				m.u.linkPair(m.w, m.p, p, func(err error) {
 					if err != nil {
-						dialog.ShowError(err, m.w)
+						showError(err, m.w)
 					}
 					m.refresh()
 				})
@@ -564,7 +690,7 @@ func (m *manager) addUpstreamByKey() {
 	key.SetPlaceHolder("veil-relay://…")
 	key.Wrapping = fyne.TextWrapBreak
 	key.SetMinRowsVisible(4)
-	dialog.ShowForm("Узел по ключу каскада", "Подключить", "Отмена", []*widget.FormItem{
+	showForm("Узел по ключу каскада", "Подключить", "Отмена", []*widget.FormItem{
 		widget.NewFormItem("Название", name), widget.NewFormItem("Ключ", key),
 	}, func(ok bool) {
 		if !ok {
@@ -572,7 +698,7 @@ func (m *manager) addUpstreamByKey() {
 		}
 		m.call("POST", "/upstreams", map[string]string{"name": name.Text, "link": key.Text}, nil, func(err error) {
 			if err != nil {
-				dialog.ShowError(err, m.w)
+				showError(err, m.w)
 				return
 			}
 			m.refresh()
@@ -583,14 +709,14 @@ func (m *manager) addUpstreamByKey() {
 func (m *manager) issueRelay() {
 	name := widget.NewEntry()
 	name.SetPlaceHolder("Название предыдущего узла")
-	dialog.ShowForm("Ключ каскада", "Выдать", "Отмена", []*widget.FormItem{widget.NewFormItem("Для узла", name)}, func(ok bool) {
+	showForm("Ключ каскада", "Выдать", "Отмена", []*widget.FormItem{widget.NewFormItem("Для узла", name)}, func(ok bool) {
 		if !ok {
 			return
 		}
 		var r server.LinkResponse
 		m.call("POST", "/relays", map[string]string{"name": name.Text}, &r, func(err error) {
 			if err != nil {
-				dialog.ShowError(err, m.w)
+				showError(err, m.w)
 				return
 			}
 			m.u.showShare(m.w, "Ключ каскада для «"+r.Name+"»", r, "Вставьте этот ключ на узле «"+r.Name+"»: Каскад → Добавить узел по ключу каскада.", false)
@@ -601,13 +727,13 @@ func (m *manager) issueRelay() {
 
 func (m *manager) renderServer() {
 	st := m.state.Server
-	info := container.NewVBox(
+	info := container.New(tightVBox{gap: -4},
 		text("Сервер", 15, colText, true),
-		text("Версия: "+st.Version, 12, colMuted, false),
-		text("Сайт-прикрытие: "+st.Company, 12, colMuted, false),
+		richText("Версия: "+st.Version, true, false),
+		richText("Сайт-прикрытие: "+st.Company, true, false),
 	)
 	if st.AdminURL != "" {
-		info.Add(text("Админ-панель (через VPN): "+st.AdminURL, 12, colMuted, false))
+		info.Add(richText("Админ-панель (через VPN): "+st.AdminURL, true, false))
 	}
 	m.body.Add(card(info))
 
@@ -632,7 +758,7 @@ func (m *manager) renderServer() {
 	})
 	hint := widget.NewLabel("Укажите домен, A/AAAA-записи которого ведут на этот сервер. Сайт-прикрытие откроется по домену, сертификат выпустится автоматически.")
 	hint.Wrapping = fyne.TextWrapWord
-	m.body.Add(card(container.NewVBox(text("Домен", 15, colText, true), hint, domain, saveDomain, certLbl)))
+	m.body.Add(card(container.NewVBox(lead(text("Домен", 15, colText, true)), hint, domain, saveDomain, certLbl)))
 
 	pw := widget.NewPasswordEntry()
 	rep := widget.NewPasswordEntry()
@@ -645,13 +771,13 @@ func (m *manager) renderServer() {
 	})
 	savePw := widget.NewButton("Сменить пароль админки", func() {
 		if pw.Text != rep.Text {
-			dialog.ShowError(errors.New("пароли не совпадают"), m.w)
+			showError(errors.New("пароли не совпадают"), m.w)
 			return
 		}
 		newPw := pw.Text
 		m.call("POST", "/settings/password", map[string]string{"new": newPw}, nil, func(err error) {
 			if err != nil {
-				dialog.ShowError(err, m.w)
+				showError(err, m.w)
 				return
 			}
 			m.p.AdminPassword = newPw
@@ -659,22 +785,26 @@ func (m *manager) renderServer() {
 				m.p.AdminUser = "admin"
 			}
 			if err := saveProfile(m.p); err != nil {
-				dialog.ShowError(err, m.w)
+				showError(err, m.w)
 				return
 			}
-			dialog.ShowInformation("Готово", "Пароль админки изменён и сохранён в карточке сервера.", m.w)
+			showInfo("Готово", "Пароль админки изменён и сохранён в карточке сервера.", m.w)
 		})
 	})
 	savePw.Importance = widget.HighImportance
-	m.body.Add(card(container.NewVBox(text("Пароль админ-панели", 15, colText, true),
+	m.body.Add(card(container.NewVBox(lead(text("Пароль админ-панели", 15, colText, true)),
 		widget.NewForm(widget.NewFormItem("Новый", pw), widget.NewFormItem("Ещё раз", rep)),
-		container.NewGridWithColumns(2, gen, savePw))))
-	m.body.Add(m.updateButton())
+		container.NewVBox(gen, savePw))))
+	m.body.Add(m.updateButton(st.Version))
 	m.body.Add(layout.NewSpacer())
 }
 
-func (m *manager) updateButton() fyne.CanvasObject {
-	return widget.NewButtonWithIcon("Обновить серверную часть до версии "+appVersion, theme.UploadIcon(), func() {
+func (m *manager) updateButton(serverVersion string) fyne.CanvasObject {
+	label := "Обновить сервер до " + appVersion
+	if serverVersion == appVersion {
+		label = "Переустановить серверную часть (" + appVersion + ")"
+	}
+	return widget.NewButtonWithIcon(label, theme.UploadIcon(), func() {
 		if m.sess == nil {
 			return
 		}
@@ -686,7 +816,7 @@ func (m *manager) updateButton() fyne.CanvasObject {
 			})
 			fyne.Do(func() {
 				if err != nil {
-					dialog.ShowError(err, m.w)
+					showError(err, m.w)
 					return
 				}
 				m.refresh()

@@ -62,7 +62,7 @@ func (u *ui) showShare(parent fyne.Window, title string, r server.LinkResponse, 
 			}
 			defer w.Close()
 			if _, err := w.Write([]byte(r.Link + "\n")); err != nil {
-				dialog.ShowError(err, parent)
+				showError(err, parent)
 			}
 		}, parent)
 		name := r.File
@@ -78,7 +78,7 @@ func (u *ui) showShare(parent fyne.Window, title string, r server.LinkResponse, 
 		install := widget.NewButtonWithIcon("Добавить на это устройство", theme.ContentAddIcon(), func() {
 			p, err := config.DecodeLink(r.Link)
 			if err != nil {
-				dialog.ShowError(err, parent)
+				showError(err, parent)
 				return
 			}
 			base := p.Name
@@ -86,16 +86,16 @@ func (u *ui) showShare(parent fyne.Window, title string, r server.LinkResponse, 
 				p.Name = fmt.Sprintf("%s %d", base, i)
 			}
 			if err := saveProfile(p); err != nil {
-				dialog.ShowError(err, parent)
+				showError(err, parent)
 				return
 			}
 			u.reload()
 			u.selectProfile(p.Name)
-			dialog.ShowInformation("Готово", "Сервер «"+p.Name+"» добавлен в приложение.", parent)
+			showInfo("Готово", "Сервер «"+p.Name+"» добавлен в приложение.", parent)
 		})
 		install.Importance = widget.HighImportance
 		rows.Add(install)
 	}
-	d := dialog.NewCustom(title, "Закрыть", container.NewGridWrap(fyne.NewSize(380, 560), container.NewVScroll(rows)), parent)
+	d := newCustom(title, "Закрыть", container.NewGridWrap(fyne.NewSize(380, 560), container.NewVScroll(rows)), parent)
 	d.Show()
 }
