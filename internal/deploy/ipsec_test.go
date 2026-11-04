@@ -21,7 +21,7 @@ func TestValidateIPsecHost(t *testing.T) {
 func TestIPsecScript(t *testing.T) {
 	s := ipsecScript("203.0.113.5")
 	for _, want := range []string{
-		"HOST=203.0.113.5", "addrs = 10.9.0.0/24", "--san \"$HOST\"", "--flag serverAuth", "--flag ikeIntermediate",
+		"HOST=203.0.113.5", "addrs = 10.10.0.0/24", "--san \"$HOST\"", "--flag serverAuth", "--flag ikeIntermediate",
 		"eap-mschapv2", "ufw allow 500/udp", "ufw allow 4500/udp", "firewall-cmd --permanent --add-service=ipsec",
 		"net.ipv4.ip_forward=1", "MASQUERADE", "swanctl --load-all", "systemctl enable --now veil-ipsec-nat.service",
 		"/etc/strongswan/swanctl",
@@ -66,5 +66,19 @@ func TestIPsecCertScript(t *testing.T) {
 	s := strings.NewReplacer("@NAME@", "bob", "@PASS@", "pw").Replace(ipsecCertScript)
 	if !strings.Contains(s, "--flag clientAuth") || !strings.Contains(s, "-passout pass:pw") || strings.Contains(s, "@") {
 		t.Error(s)
+	}
+}
+
+func TestDefaultPoolsDoNotOverlap(t *testing.T) {
+	pools := map[string]string{
+		"Veil": "10.66.0.0/24", "WireGuard": WGDefaultSubnet, "AmneziaWG": AWGDefaultSubnet,
+		"OpenVPN": OVDefaultSubnet, "IPsec": IPsecDefaultPool,
+	}
+	seen := map[string]string{}
+	for name, cidr := range pools {
+		if other, dup := seen[cidr]; dup {
+			t.Errorf("%s and %s share the default subnet %s: both on one server would clash", name, other, cidr)
+		}
+		seen[cidr] = name
 	}
 }

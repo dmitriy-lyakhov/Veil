@@ -15,7 +15,7 @@ import (
 // Файлы Veil: <swanctl>/conf.d/veil.conf (соединения и пул), veil-users.conf (логины),
 // <swanctl>/veil/ca.key (ключ центра), служба veil-ipsec-nat (NAT и пересылка).
 const (
-	IPsecDefaultPool = "10.9.0.0/24"
+	IPsecDefaultPool = "10.10.0.0/24"
 	ipsecPool        = IPsecDefaultPool
 )
 
