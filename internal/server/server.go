@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	Version         = "0.7.0"
+	Version         = "0.7.1"
 	quicIdleTimeout = 30 * time.Second
 	quicKeepAlive   = 10 * time.Second
 	defaultSiteLang = "ru"

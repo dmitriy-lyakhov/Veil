@@ -1,6 +1,6 @@
 # Android-клиент Veil
 
-Клиент для Android 8.0+ (minSdk 26, targetSdk 34, `net.veil.android`, версия 0.7.0). Протоколы: **Veil** (WireGuard внутри HTTPS),
+Клиент для Android 8.0+ (minSdk 26, targetSdk 34, `net.veil.android`, версия 0.7.1). Протоколы: **Veil** (WireGuard внутри HTTPS),
 **WireGuard** и **AmneziaWG**. Интерфейс по дизайну Veil: кольцо подключения, страницы вместо диалогов, тёмная и светлая тема, ru/en.
 
 ## Возможности
