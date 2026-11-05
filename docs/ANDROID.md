@@ -58,7 +58,8 @@ adb shell am start -a android.intent.action.VIEW -d "$(cat link.txt)" net.veil.a
 
 ## Ограничения
 
-- только протокол Veil (профили WireGuard/OpenVPN/IPsec отклоняются);
+- протоколы: Veil, WireGuard и AmneziaWG (импорт `.conf` и JSON-профиля). OpenVPN и IPsec не поддерживаются: им нужны внешний
+  процесс `openvpn` и модуль ядра/служба strongSwan, которых нет в приложении Android; при импорте показывается сообщение;
 - нет QR-сканера (ссылка — вставкой или через intent `veil://`);
 - нет раздельного туннелирования: весь трафик (IPv4 и IPv6) идёт в туннель;
 - kill switch — только системный «Always-on VPN» + «Блокировать соединения без VPN» в настройках Android;

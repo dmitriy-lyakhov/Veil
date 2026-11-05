@@ -29,6 +29,10 @@ class RingView(ctx: Context) : View(ctx) {
     private val rect = RectF()
     private var attached = false
 
+    /** Системная настройка «убрать анимацию» (animator_duration_scale = 0): кольцо рисуется статично. */
+    private fun motionOff() = android.provider.Settings.Global.getFloat(
+        context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+
     fun setState(s: RingState) {
         if (s == state) return
         val prev = state
@@ -48,7 +52,8 @@ class RingView(ctx: Context) : View(ctx) {
     override fun onDetachedFromWindow() { attached = false; super.onDetachedFromWindow() }
 
     override fun onDraw(c: Canvas) {
-        val now = SystemClock.uptimeMillis()
+        val still = motionOff()
+        val now = if (still) stateSince else SystemClock.uptimeMillis()
         val t = (now - stateSince) / 1000f
         val cx = width / 2f; val cy = height / 2f
         var r = dp(98).toFloat() // диаметр 196 dp
@@ -56,12 +61,12 @@ class RingView(ctx: Context) : View(ctx) {
 
         c.save()
         // встряска при ошибке: затухающее колебание 0.6 с
-        if (state == RingState.ERROR && now - shakeAt < 700) {
+        if (!still && state == RingState.ERROR && now - shakeAt < 700) {
             val st = (now - shakeAt) / 1000f
             c.translate((sin(st * 2 * PI * 7) * exp(-st * 5) * dp(10)).toFloat(), 0f)
         }
         // «хлопок»: перелёт масштаба с затуханием
-        if (now - popAt < 600) {
+        if (!still && now - popAt < 600) {
             val st = (now - popAt) / 1000f
             val s = 1f + (0.10f * exp(-st * 7) * sin(st * 2 * PI * 3.2 + PI / 2)).toFloat()
             c.scale(s, s, cx, cy)
@@ -107,7 +112,7 @@ class RingView(ctx: Context) : View(ctx) {
             else -> p.muted
         }
         c.drawText(label, cx, cy + tp.textSize / 3f, tp)
-        if (attached) postInvalidateOnAnimation()
+        if (attached && !still) postInvalidateOnAnimation()
     }
 
     private fun ring(c: Canvas, cx: Float, cy: Float, r: Float, color: Int, w: Float, alpha: Float) {
