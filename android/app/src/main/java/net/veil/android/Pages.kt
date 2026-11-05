@@ -89,65 +89,77 @@ class HomePage(a: MainActivity) : Page(a) {
         val midScroll = android.widget.ScrollView(a).apply { isFillViewport = true; isVerticalScrollBarEnabled = false; clipChildren = false; clipToPadding = false }
         midScroll.addView(mid, android.view.ViewGroup.LayoutParams(MATCH, WRAP))
         col.addView(midScroll, lp(MATCH, 0, 1f))
+        // место под свёрнутую панель сервера (высота уточняется после раскладки)
+        val spacer = View(a)
+        col.addView(spacer, lp(MATCH, dp(150)))
 
-        // нижняя панель: радиус 16 сверху, поля 12/20/20; ручка 44x5; имя сервера 28/600 (22 при малой высоте) + шеврон 22; подпись «протокол | адрес»
-        val panel = a.vbox().apply {
-            background = android.graphics.drawable.GradientDrawable().apply {
-                setColor(T.p.raised); val r = dp(16).toFloat(); cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
-            }
-            setPadding(dp(20), dp(12), dp(20), dp(20))
-            gravity = Gravity.CENTER_HORIZONTAL
-            isClickable = true
-            // нажатие или смахивание вверх открывают список серверов (ручка вверху панели подсказывает жест)
-            var downY = 0f; var swiped = false
-            val slop = android.view.ViewConfiguration.get(a).scaledTouchSlop
-            setOnTouchListener { v, e ->
-                when (e.actionMasked) {
-                    android.view.MotionEvent.ACTION_DOWN -> { downY = e.rawY; swiped = false; v.isPressed = true }
-                    android.view.MotionEvent.ACTION_MOVE -> if (!swiped && downY - e.rawY > maxOf(slop * 2, dp(24))) {
-                        swiped = true; v.isPressed = false; openServers()
-                    }
-                    android.view.MotionEvent.ACTION_UP -> {
-                        v.isPressed = false
-                        if (!swiped && Math.abs(e.rawY - downY) < slop) { v.performClick(); openServers() }
-                    }
-                    android.view.MotionEvent.ACTION_CANCEL -> v.isPressed = false
-                }
-                true
-            }
-        }
-        panel.addView(View(a).apply { background = rounded(T.p.high, 3f) }, lp(dp(44), dp(5)).apply { bottomMargin = dp(6) })
+        // выдвижная панель сервера (как в AmneziaVPN): ручка, имя сервера 28/600 (22 при малой высоте) со стрелкой, подпись «протокол | адрес»;
+        // ниже — список серверов. Тянется за пальцем вверх/вниз, нажатие на верхнюю часть раскрывает и сворачивает её.
+        val topSec = a.vbox().apply { gravity = Gravity.CENTER_HORIZONTAL; setPadding(0, 0, 0, dp(20)); isClickable = true }
+        topSec.addView(View(a).apply { background = rounded(T.p.high, 3f) }, lp(dp(44), dp(5)).apply { bottomMargin = dp(6) })
         val sc = a.vbox().apply { gravity = Gravity.CENTER_HORIZONTAL; minimumHeight = dp(44); setPadding(0, dp(8), 0, dp(8)) }
         val line = a.hbox().apply { gravity = Gravity.CENTER }
         serverName = a.text("", if (tight) 22f else 28f, 600, lines = 1)
         serverName.gravity = Gravity.CENTER
         line.addView(serverName, LinearLayout.LayoutParams(0, WRAP, 1f))
-        line.addView(a.icon(R.drawable.ic_down, 22f, T.p.muted).also { (it.layoutParams as LinearLayout.LayoutParams).leftMargin = dp(8) })
+        val arrow = a.icon(R.drawable.ic_down, 22f, T.p.muted).also { (it.layoutParams as LinearLayout.LayoutParams).leftMargin = dp(8) }
+        line.addView(arrow)
         sc.addView(line, lp(MATCH, WRAP))
         serverSub = a.text("", 13f, 500, T.p.muted, lines = 1); serverSub.setPadding(0, dp(6), 0, 0)
         serverSub.gravity = Gravity.CENTER
         sc.addView(serverSub, lp(MATCH, WRAP))
-        panel.addView(sc, lp(MATCH, WRAP))
-        col.addView(panel, lp(MATCH, WRAP))
-        return col
+        topSec.addView(sc, lp(MATCH, WRAP))
+        topSec.setOnClickListener { drawer.toggle() }
+        drawer = ServerDrawer(a, topSec, serverList()).apply {
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(T.p.raised); val r = dp(16).toFloat(); cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+            }
+            setPadding(dp(20), dp(12), dp(20), 0)
+            onProgress = { f -> arrow.rotation = 180f * f }
+        }
+        // панель занимает всю область под шапкой и сдвинута вниз: родитель обрезает невидимую часть
+        val root = FrameLayout(a)
+        root.addView(col, FrameLayout.LayoutParams(MATCH, MATCH))
+        root.addView(drawer, FrameLayout.LayoutParams(MATCH, dp(300), Gravity.BOTTOM))
+        root.addOnLayoutChangeListener { v, _, t0, _, b0, _, _, _, _ ->
+            val h = (b0 - t0) - dp(56)
+            val p = drawer.layoutParams
+            if (h > 0 && p.height != h) { p.height = h; drawer.layoutParams = p }
+            val c = drawer.collapsedHeight
+            if (c > 0 && spacer.layoutParams.height != c) { spacer.layoutParams.height = c; spacer.requestLayout() }
+        }
+        return root
     }
 
-    private fun openServers() {
-        val body = a.vbox()
+    private lateinit var drawer: ServerDrawer
+
+    /** Назад: если панель серверов открыта — свернуть её. */
+    override fun onBack(): Boolean {
+        if (!::drawer.isInitialized || drawer.t <= 0f) return false
+        drawer.animateTo(0f)
+        return true
+    }
+
+    /** Содержимое выдвижной панели: заголовок «Серверы», строки профилей с радио, «Добавить сервер». */
+    private fun serverList(): View {
+        val body = a.vbox().apply { setPadding(0, dp(12), 0, dp(16)) }
+        body.addView(a.text(a.getString(R.string.servers), 20f, 600).also { it.setPadding(dp(4), 0, 0, dp(12)) })
         val list = Profiles.all(a)
         val act = Profiles.active(a)?.id
         if (list.isEmpty()) {
-            body.addView(a.text(a.getString(R.string.no_profiles), 14f, 500, T.p.muted))
-            body.addView(a.space(12f))
+            body.addView(a.text(a.getString(R.string.no_profiles), 14f, 500, T.p.muted).also { it.setPadding(dp(4), 0, 0, dp(12)) })
         }
         for (p in list) {
-            body.addView(a.row(p.name, protoName(a, p.protocol), null, a.radio(p.id == act), bg = T.p.high) { a.switchProfile(p.id) }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
+            // выбор сервера: панель сворачивается, затем профиль становится активным
+            body.addView(a.row(p.name, protoName(a, p.protocol), null, a.radio(p.id == act), bg = T.p.high) {
+                if (p.id == act) drawer.animateTo(0f) else drawer.animateTo(0f) { a.switchProfile(p.id) }
+            }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
         }
         if (a.running() && Profiles.active(a)?.protocol == "veil") {
-            body.addView(a.row(a.getString(R.string.reselect), a.getString(R.string.reselect_sub), R.drawable.ic_server, bg = T.p.high) { Veilcore.reselect(); a.closeSheet() }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
+            body.addView(a.row(a.getString(R.string.reselect), a.getString(R.string.reselect_sub), R.drawable.ic_server, bg = T.p.high) { Veilcore.reselect(); drawer.animateTo(0f) }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
         }
         body.addView(a.row(a.getString(R.string.add_server), null, R.drawable.ic_plus, bg = T.p.high) { a.selectTab(3) }, lp(MATCH, WRAP))
-        a.openSheet(a.getString(R.string.choose_server), body)
+        return body
     }
 
     override fun refresh() {

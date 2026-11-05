@@ -29,6 +29,8 @@ abstract class Page(val a: MainActivity) {
     open val scroll = true
     abstract fun build(): View
     open fun refresh() {}
+    /** Кнопка «назад»: true — страница обработала сама (например, свернула панель). */
+    open fun onBack(): Boolean = false
 }
 
 class MainActivity : Activity() {
@@ -212,6 +214,7 @@ class MainActivity : Activity() {
     override fun onBackPressed() {
         when {
             overlay.visibility == View.VISIBLE -> closeSheet()
+            stack.lastOrNull()?.onBack() == true -> Unit
             stack.size > 1 -> pop()
             tab != 0 -> selectTab(0)
             else -> super.onBackPressed()
