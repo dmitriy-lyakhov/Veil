@@ -80,4 +80,5 @@ func (u *ui) rebuildUI() {
 	u.showPage(cur)
 	u.reload()
 	u.win.Content().Refresh()
+	u.updateTray() // меню в трее: тема и язык
 }

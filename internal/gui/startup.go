@@ -78,6 +78,7 @@ func (u *ui) updateTray() {
 		fyne.NewMenuItemSeparator(),
 		fyne.NewMenuItem(L("Quit", "Выход"), func() { fyne.Do(u.quit) }),
 	)
+	setTrayMenuDark(u.st.Dark())
 	desk.SetSystemTrayMenu(menu)
 	icon := fyne.NewStaticResource("tray_off.png", trayOffPNG)
 	if on {

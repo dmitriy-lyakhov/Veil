@@ -111,6 +111,12 @@ func connect(ctx context.Context, req Request, logf Logf) (*ssh.Client, string, 
 	}
 	var errs []error
 	for _, t := range targets {
+		if !netpin.Reachable(t.Addr.Addr().Is6()) {
+			// VPN включён, а до адресов этого семейства нет прямого пути: SSH ушёл бы в туннель и оборвался бы
+			logf("SSH: %s пропущен — до него нет прямого пути мимо туннеля", t.Family)
+			errs = append(errs, fmt.Errorf("%s: нет прямого пути мимо туннеля", t.Family))
+			continue
+		}
 		addr := netip.AddrPortFrom(t.Addr.Addr(), uint16(req.SSHPort)).String()
 		logf("SSH: подключение к %s (%s)…", addr, t.Family)
 		client, err := dialSSH(ctx, addr, sshCfg)

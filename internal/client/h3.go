@@ -108,6 +108,7 @@ func chromeQUICSpec(t config.Target) (*quic.QUICSpec, error) {
 		return nil, err
 	}
 	modernizeChromeQUIC(&spec)
+	guardFrameBuilder(&spec)
 	return &spec, nil
 }
 
