@@ -58,7 +58,14 @@ type Status struct {
 	LatencyMS float64 `json:"latency_ms,omitempty"`
 	// Skipped — входы каскада, которые не удалось использовать перед этим подключением.
 	Skipped []string `json:"skipped_entries,omitempty"`
+	// AdminHosts — удалось ли прописать имя «admin» в hosts: AdminHostsOK или AdminHostsFailed (нет прав); пусто — не нужно.
+	AdminHosts string `json:"admin_hosts,omitempty"`
 }
+
+const (
+	AdminHostsOK     = "ok"
+	AdminHostsFailed = "failed"
+)
 
 type Tunnel struct {
 	dialer     *Dialer

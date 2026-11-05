@@ -9,7 +9,11 @@ import (
 
 	"fyne.io/fyne/v2"
 
+	"veil/internal/client"
+	"veil/internal/config"
+	"veil/internal/helper"
 	"veil/internal/routing"
+	"veil/internal/server"
 )
 
 // Сборка с -tags uidemo: после запуска открывает страницу из VEIL_DEMO (для снимков экрана).
@@ -106,6 +110,55 @@ func init() {
 					u.openBackup()
 				case "about":
 					u.openAbout()
+				case "iface", "ifacebad":
+					if page == "ifacebad" {
+						u.st.Interface = "Ethernet 2"
+					}
+					u.openInterface()
+				case "coversite", "coversitebusy", "coversiteerr":
+					p := demoServer()
+					m := &manager{u: u, p: p, w: u.win, status: newStatusLine(), body: newVBoxFit()}
+					now := time.Now().Add(-14 * time.Minute)
+					m.state.SiteRepo = server.SiteRepoInfo{Enabled: true, URL: "https://gitlab.admortgage.com/sites/cover.git", Ref: "main", Dir: "public", HasToken: true, Active: true, Updated: &now, Files: 42, Bytes: 3 << 20}
+					if page == "coversitebusy" {
+						m.state.SiteRepo.Syncing = true
+					}
+					if page == "coversiteerr" {
+						m.state.SiteRepo.Error = "ошибка аутентификации. Проверьте токен."
+					}
+					m.openCoverSite()
+				case "access":
+					u.profiles = append(u.profiles, demoServer())
+					u.showPage(1)
+					u.share.refreshServers()
+				case "clientnew":
+					m := &manager{u: u, p: demoServer(), w: u.win, status: newStatusLine(), body: newVBoxFit(), sess: nil}
+					m.addClient()
+				case "admindetails":
+					p := demoServer()
+					p.Role = "admin"
+					p.AdminURL = "https://10.66.0.1/admin"
+					u.profiles = append(u.profiles, p)
+					u.showDetails(p)
+				case "admindetailsfail":
+					p := demoServer()
+					p.Role = "admin"
+					p.AdminURL = "https://10.66.0.1/admin"
+					u.profiles = append(u.profiles, p)
+					u.active, u.connected, u.adminHosts = p.Name, true, client.AdminHostsFailed
+					u.showDetails(p)
+				case "sharedcascade":
+					a, b := demoServer(), demoServer()
+					a.Name, b.Name = "Амстердам", "Франкфурт"
+					job := multiJob{u: u, exit: b, entries: []*config.Profile{a, b}}
+					u.showSharedCascade(u.win, server.LinkResponse{Name: "Каскад команды", Link: "veil://eyJjYXNj"}, job)
+				case "switching":
+					p := demoServer()
+					p.Entries = []config.Entry{{Name: "Амстердам"}, {Name: "Токио"}}
+					u.profiles = append(u.profiles, p)
+					u.active = p.Name
+					u.power.SetState(powerBusy)
+					u.showReport(&helper.Report{Status: client.Status{State: client.StateReconnecting, Entry: "Амстердам"}})
 				}
 			})
 		})
@@ -130,4 +183,8 @@ func demoAppearance(u *ui) {
 	if changed {
 		u.rebuildUI()
 	}
+}
+
+func demoServer() *config.Profile {
+	return &config.Profile{Name: "Амстердам", IPv4: "203.0.113.10", SSH: &config.SSHInfo{Port: 22, User: "root"}}
 }

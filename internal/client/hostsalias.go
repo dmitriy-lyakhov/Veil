@@ -68,16 +68,18 @@ func adminAliasIP(p *config.Profile) string {
 
 // installAdminAlias прописывает имя «admin» на адрес админки сервера на время подключения,
 // чтобы внутри туннеля она открывалась по https://admin. Без прав на запись в hosts — только предупреждение.
-func installAdminAlias(p *config.Profile, u *undoStack, log *slog.Logger) {
+// Возвращает AdminHostsOK, AdminHostsFailed или "" (у профиля нет админки по IP-адресу).
+func installAdminAlias(p *config.Profile, u *undoStack, log *slog.Logger) string {
 	ip := adminAliasIP(p)
 	if ip == "" {
-		return
+		return ""
 	}
 	if err := rewriteHosts(ip); err != nil {
 		log.Warn("hosts: имя admin не прописано", "err", err)
-		return
+		return AdminHostsFailed
 	}
 	u.push(func() { _ = rewriteHosts("") })
+	return AdminHostsOK
 }
 
 // removeStaleAdminAlias убирает запись от прошлого сеанса, завершённого аварийно.

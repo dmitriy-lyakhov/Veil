@@ -160,17 +160,19 @@ func (u *ui) openCascadeBuilder(shareMode bool) {
 				return
 			}
 			noteTxt := fmt.Sprintf(L("On every connection the client will pick the nearest entry itself; the exit is always “%s”.", "При каждом подключении клиент сам выберет ближайший вход; выход всегда «%s»."), exit.Name)
+			resp := server.LinkResponse{Name: p.Name, Link: link, File: config.SafeFileName(p.Name) + config.FileExt}
 			if shareMode {
-				noteTxt = L("The recipient adds one connection: all entries are inside it and switch automatically. Shown once: the config contains a private key.", "Получатель добавит одно подключение: все входы внутри него и переключаются автоматически. Показывается один раз: в конфиге приватный ключ.")
+				u.showSharedCascade(w, resp, job)
+				return
 			}
-			u.showShare(w, L("Connection ready", "Подключение готово"), server.LinkResponse{Name: p.Name, Link: link, File: config.SafeFileName(p.Name) + config.FileExt}, noteTxt, true)
+			u.showShare(w, L("Connection ready", "Подключение готово"), resp, noteTxt, true)
 		})
 	})
 	content := newVBoxFit()
 	content.Add(note(L("The exit is the server through which traffic goes to the internet; it is set explicitly. Entries are the servers a client may connect to: the one with the lowest latency is chosen on every connection.", "Выход — сервер, через который трафик уходит в интернет, задаётся явно. Входы — серверы, к которым может подключаться клиент: при каждом подключении выбирается ближайший по задержке.")))
 	content.Add(fieldEntry(L("Client name", "Имя клиента"), clientName))
 	if shareMode {
-		content.Add(roleField(u, cascadeRole, func(v string) { cascadeRole = v }))
+		content.Add(roleBlock(cascadeRole, func(v string) { cascadeRole = v }))
 	}
 	content.Add(exitField)
 	content.Add(sectionLabel(L("Entries", "Входы")))
@@ -364,6 +366,7 @@ func (u *ui) recheckEntries(p *config.Profile) {
 					rows.Add(text("   "+r.Via, 11, colMuted, false))
 				}
 			}
+			rows.Add(noteIcon("warn", L("Unavailable entries are skipped: the connection switches to the next one when an entry stops responding.", "Недоступные входы пропускаются: если вход перестал отвечать, подключение переключается на следующий."), colAccentInk))
 			if len(ranked) == 0 || !ranked[0].OK() {
 				showCustom(L("Entries", "Входы"), L("Close", "Закрыть"), rows, u.win)
 				return

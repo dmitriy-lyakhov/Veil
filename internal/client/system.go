@@ -39,6 +39,8 @@ type SystemTunnel struct {
 	Engine
 	Iface string
 
+	adminHosts string // результат записи имени «admin» в hosts: AdminHostsOK, AdminHostsFailed или ""
+
 	nc      NetConfig
 	log     *slog.Logger
 	u       *undoStack
@@ -127,13 +129,13 @@ func StartSystem(prof *config.Profile, rc *routing.Config, opt Options, log *slo
 		tn.Close()
 		return nil, fmt.Errorf("настройка сети: %w", err)
 	}
-	installAdminAlias(prof, u, log)
+	adminHosts := installAdminAlias(prof, u, log)
 	if opt.KillSwitch {
 		if err := armKillSwitch(nc, u, log); err != nil {
 			log.Warn("kill switch", "err", err)
 		}
 	}
-	st := &SystemTunnel{Engine: tn, Iface: nc.Iface, nc: nc, log: log, u: u, rcfg: rc, stop: make(chan struct{}),
+	st := &SystemTunnel{Engine: tn, Iface: nc.Iface, adminHosts: adminHosts, nc: nc, log: log, u: u, rcfg: rc, stop: make(chan struct{}),
 		appliedVia: map[netip.Prefix]bool{}, appliedDirect: map[netip.Prefix]bool{}}
 	if nc.Plan != nil {
 		for _, p := range nc.Plan.Via {
@@ -148,6 +150,13 @@ func StartSystem(prof *config.Profile, rc *routing.Config, opt Options, log *slo
 	}
 	log.Info("tunnel up", "iface", nc.Iface, "status", tn.Status())
 	return st, nil
+}
+
+// Status дополняет состояние движка сведением о записи «admin» в hosts.
+func (s *SystemTunnel) Status() Status {
+	st := s.Engine.Status()
+	st.AdminHosts = s.adminHosts
+	return st
 }
 
 func (s *SystemTunnel) Close() {

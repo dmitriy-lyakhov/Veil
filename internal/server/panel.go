@@ -131,7 +131,7 @@ section.card h2.m14{margin-bottom:14px}
 body.fresh .stat,body.fresh .crow:not(.head),body.fresh .ccard{animation:aRise .35s both}
 body.fresh .gnode{animation:aRise .4s both}
 .ctable{display:block}.ccards{display:none}
-.crow{display:grid;grid-template-columns:1.3fr 1.3fr 1.3fr .9fr .9fr 410px;gap:0 12px;padding:12px 8px;border-bottom:1px solid var(--card2);align-items:start}
+.crow{display:grid;grid-template-columns:1.3fr 1.3fr 1.3fr .9fr .9fr 460px;gap:0 12px;padding:12px 8px;border-bottom:1px solid var(--card2);align-items:start}
 .crow.head{font-size:12px;font-weight:500;color:var(--ink2);padding:0 8px 8px}
 .crow>div,.crow>span{min-width:0}
 .cname{display:flex;align-items:center;gap:8px}.cname strong{font-size:14px;word-break:break-word}
@@ -212,13 +212,27 @@ select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer
 .bars div.last{background:var(--acc)}.bars div.fail{background:var(--accInk)}
 .rbox{font-size:12px;line-height:1.5}.rbox .k{color:var(--ink2)}.rbox .v{font-weight:600}.rbox .n{font-family:Arimo,Arial,sans-serif;margin-top:4px}
 
+.tgt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tgt.tight{margin-bottom:10px}
+.tgt .cap{margin-right:4px}
+.tbtn{display:inline-flex;align-items:center;gap:8px;min-height:36px;padding:0 14px;border:0;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;background:var(--card);color:var(--ink)}
+.tbtn.on{background:var(--acc);color:var(--onacc)}
+.tbtn .dot{width:8px;height:8px}
+.tnote{background:var(--card);border-radius:12px;padding:10px 14px;margin-bottom:16px;font-size:13px;line-height:1.45;color:var(--ink2)}
+.tdown{background:var(--card);border:1px dashed var(--accInk);border-radius:14px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tdown>div{min-width:0}.tdown strong{color:var(--accInk);font-size:14px}.tdown div div{font-size:13px;color:var(--ink2);line-height:1.45;margin-top:2px}
+#pbody.dim{opacity:.45;pointer-events:none}
+.bar{height:8px;border-radius:4px;background:var(--card2);overflow:hidden;margin-bottom:12px}
+.bar i{display:block;height:100%;width:40%;background:var(--acc);border-radius:4px;animation:aInd 1.2s linear infinite}
+@keyframes aInd{from{margin-left:-40%}to{margin-left:100%}}
+.srmeta{font-size:12px;color:var(--ink2);margin-left:10px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 18px;font-size:14px;font-weight:600;z-index:20;animation:aRise .25s both;max-width:calc(100% - 32px);white-space:pre-line;text-align:center;display:none}
 .toast.show{display:block}
 
 @media(max-width:899px){
 .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
 .grid2{grid-template-columns:1fr}
-.crow{grid-template-columns:1.3fr 1.2fr 1.3fr .9fr 230px}
+.crow{grid-template-columns:1.3fr 1.2fr 1.3fr .9fr 260px}
 .crow .chs{display:none}
 .bbody{flex-direction:column}
 .bbody aside.pal,.bbody aside.ins{width:100%;border:0}
@@ -244,13 +258,17 @@ select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer
 <div style="min-width:0"><h1 data-i="title"></h1><small id="cover"></small></div>
 </div>
 <div class="hbtns">
-<div class="sel" id="node-wrap" style="display:none;min-width:180px"><select id="node-sel" aria-label="Cascade node"></select></div>
 <button type="button" class="btn icon" id="lang-btn"></button>
 <button type="button" class="btn icon" id="theme-btn"></button>
 <button type="button" class="btn acc" id="add">+ <span data-i="client"></span></button>
 <button type="button" class="btn" id="logout" data-i="logout"></button>
 </div>
 </header>
+
+<div class="tgt" id="tgt" style="display:none"><span class="cap" data-i="targetL"></span><span id="tgt-btns" style="display:contents"></span></div>
+<div class="tnote" id="tnote" style="display:none"></div>
+<div class="tdown" id="tdown" style="display:none"><div><strong id="td-t"></strong><div id="td-x"></div></div><button type="button" class="btn sm" id="td-retry" data-i="retry"></button></div>
+<div id="pbody">
 
 <div class="stats" id="stats"></div>
 
@@ -297,6 +315,18 @@ select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer
 <p class="hint" style="margin:10px 0 0" id="front-state"></p>
 <p class="hint" style="margin:6px 0 0" id="front-note"></p>
 </section>
+<section class="card">
+<h2 data-i="cover2"></h2>
+<p class="hint" data-i="coverHint"></p>
+<div style="margin-bottom:12px"><span class="tag" id="sr-status" style="margin:0"></span><span class="srmeta" id="sr-meta" style="display:none"></span></div>
+<div class="bar" id="sr-bar" style="display:none"><i></i></div>
+<div class="warn" id="sr-err" style="display:none"></div>
+<label data-i="srUrl"></label><input id="sr-url" placeholder="https://" autocomplete="off" spellcheck="false">
+<label data-i="srRef"></label><input id="sr-ref" placeholder="main" autocomplete="off" spellcheck="false">
+<label data-i="srDir"></label><input id="sr-dir" placeholder="public" autocomplete="off" spellcheck="false">
+<label data-i="srToken"></label><input id="sr-token" type="password" autocomplete="new-password">
+<div class="end"><button type="button" class="btn" id="sr-reset" data-i="srReset"></button><button type="button" class="btn acc" id="sr-update" data-i="srUpd"></button></div>
+</section>
 <section class="card pwd">
 <h2 class="m14" data-i="password"></h2>
 <label data-i="pwCur"></label><input id="pw-cur" type="password" autocomplete="current-password">
@@ -307,9 +337,11 @@ select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer
 </section>
 </div>
 
+</div>
 </div></div>
 
 <div class="modal" id="m-client"><div class="dialog" role="dialog"><h3 data-i="newClient"></h3>
+<div class="warn" id="c-warn" style="display:none" data-i="newAdminWarn"></div>
 <label data-i="name"></label><input id="c-name" maxlength="40" autocomplete="off">
 <label data-i="roleLabel"></label><div class="sel"><select id="c-role"><option value="user" data-i="roleUser"></option><option value="admin" data-i="roleAdmin"></option></select></div>
 <label data-i="note"></label><input id="c-note" maxlength="200" autocomplete="off">
@@ -322,14 +354,24 @@ select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer
 
 <div class="modal" id="m-edit"><div class="dialog" role="dialog"><h3 data-i="clientT"></h3>
 <label data-i="name"></label><input id="e-name" maxlength="40"><label data-i="note"></label><input id="e-note" maxlength="200">
+<label data-i="roleLabel"></label><div class="sel"><select id="e-role"><option value="user" data-i="roleUser"></option><option value="admin" data-i="roleAdmin"></option></select></div>
 <div class="err" id="e-err"></div><div class="end"><button type="button" class="btn" data-close data-i="cancel"></button><button type="button" class="btn acc" id="e-save" data-i="save"></button></div></div></div>
+
+<div class="modal" id="m-role"><div class="dialog" role="dialog"><h3 data-i="roleT"></h3>
+<div class="warn" data-i="roleWarn"></div>
+<p class="hint" id="ro-client"></p>
+<label data-i="roleLabel"></label><div class="sel"><select id="ro-role"><option value="user" data-i="roleUser"></option><option value="admin" data-i="roleAdmin"></option></select></div>
+<p class="hint" data-i="roleHint"></p>
+<div class="err" id="ro-err"></div><div class="end"><button type="button" class="btn" data-close data-i="cancel"></button><button type="button" class="btn acc" id="ro-save" data-i="save"></button></div></div></div>
 
 <div class="modal" id="m-up"><div class="dialog" role="dialog"><h3 data-i="upTitle"></h3>
 <label data-i="nodeName"></label><input id="u-name" maxlength="40"><label data-i="upKey"></label><textarea id="u-link"></textarea>
 <div class="err" id="u-err"></div><div class="end"><button type="button" class="btn" data-close data-i="cancel"></button><button type="button" class="btn acc" id="u-save" data-i="connect"></button></div></div></div>
 
 <div class="modal" id="m-rel"><div class="dialog" role="dialog"><h3 data-i="relTitle"></h3>
+<div class="warn" id="r-warn" style="display:none" data-i="relAdminWarn"></div>
 <label data-i="relFor"></label><input id="r-name" maxlength="40">
+<label data-i="relAdminL"></label><div class="sel"><select id="r-admin"><option value="0" data-i="no"></option><option value="1" data-i="yes"></option></select></div>
 <div class="err" id="r-err"></div><div class="end"><button type="button" class="btn" data-close data-i="cancel"></button><button type="button" class="btn acc" id="r-save" data-i="issue"></button></div></div></div>
 
 <div class="modal" id="m-link"><div class="dialog" role="dialog"><h3 id="l-title"></h3>
@@ -382,7 +424,7 @@ agoS:'{0} с назад',agoM:'{0} мин назад',agoH:'{0} ч назад',a
 units:['Б','КБ','МБ','ГБ','ТБ'],
 noUps:'Нет — этот сервер является выходом.',noKeys:'Ключи не выдавались.',measuring:'замер…',noLink:'нет связи',clientsN:'клиентов: {0}',online:'на связи',offline:'не на связи',
 confirmDelNode:'Отключить узел «{0}»?',confirmRevoke:'Отозвать ключ «{0}»? Все клиенты, идущие через этот узел, будут удалены.',confirmReissue:'Выпустить новый конфиг для «{0}»? Старый перестанет работать.',confirmDelClient:'Удалить клиента «{0}»?',
-newClient:'Новый клиент',roleLabel:'Уровень доступа',roleUser:'Пользователь — только пользуется VPN',roleAdmin:'Администратор — может настраивать сервер и каскад',nodeThis:'Этот сервер',nodeLabel:'Узел каскада',name:'Имя',note:'Заметка',modeManualOpt:'Вручную — выбрать узлы по порядку',modeAutoOpt:'Автоматически по задержкам',exitNode:'Выходной узел',hopsCount:'Промежуточных узлов',allAvail:'все доступные',
+newClient:'Новый клиент',roleLabel:'Роль',roleUser:'Пользователь',roleAdmin:'Администратор',nodeThis:'Этот сервер',nodeLabel:'Узел каскада',name:'Имя',note:'Заметка',modeManualOpt:'Вручную — выбрать узлы по порядку',modeAutoOpt:'Автоматически по задержкам',exitNode:'Выходной узел',hopsCount:'Промежуточных узлов',allAvail:'все доступные',
 autoHint:'Вход и выход фиксированы, промежуточные узлы упорядочиваются по минимальной суммарной задержке и перестраиваются автоматически, когда другой путь стабильно быстрее на 20%. Конфиг клиента при этом не меняется.',
 cancel:'Отмена',create:'Создать',clientT:'Клиент',upTitle:'Следующий узел каскада',nodeName:'Название узла',upKey:'Ключ каскада (veil-relay://…), выданный тем узлом',connect:'Подключить',
 relTitle:'Новый ключ каскада',relFor:'Для какого узла (название)',issue:'Выдать',copy:'Скопировать',copied:'Скопировано',download:'Скачать файл',done:'Готово',
@@ -401,7 +443,17 @@ nodesShort:'узл.',routeTotalFirst:'до первого узла: {0}',routeTo
 wMany:'Больше 5 узлов: задержка растёт с каждым переходом.',wAuto:'Вход и выход фиксированы. Промежуточные узлы упорядочиваются по минимальной задержке и перестраиваются, когда другой путь быстрее на 20% и на 5 мс два замера подряд.',wOff:'Нет связи с узлами: {0}.',wOk:'Маршрут корректен: все узлы на связи.',
 checkOk:'Маршрут принят сервером, узлов: {0}',applyEmpty:'Добавьте хотя бы один узел',
 byKey:'Узел по ключу…',issueKey:'Выдать ключ…',
-themeDark:'Тёмная тема',themeLight:'Светлая тема',langSwitch:'English'
+themeDark:'Тёмная тема',themeLight:'Светлая тема',langSwitch:'English',
+targetL:'Узел',nodeNote:'Панель узла «{0}» открыта через каскад. Изменения применяются к этому узлу; это разрешено, потому что узел выдал ключ с правом администрирования.',
+downTitle:'Узел «{0}» не отвечает',downText:'Нет связи с узлом. Данные этого узла недоступны, пока связь не восстановится.',retry:'Повторить',stillDown:'Узел по-прежнему не отвечает',
+tagAdmin:'Администратор',roleAct:'Роль',roleT:'Роль клиента',roleWarn:'Администратор получает полный доступ к админ-панели этого сервера. Меняйте роль только для тех, кому доверяете.',
+roleHint:'Пользователь: только подключается к VPN. Администратор: также открывает админ-панель по адресу https://admin.',roleClient:'Клиент: {0}',
+newAdminWarn:'Администратор получает полный доступ к админ-панели этого сервера.',
+relAdminL:'Разрешить администрирование',yes:'Да',no:'Нет',relAdminWarn:'Внимание: узел получает полный доступ к админ-панели этого сервера: клиенты, каскад, ключи и пароль. Выдавайте ключ только своим серверам.',relAdminSub:'администрирование',
+cover2:'Сайт-прикрытие',coverHint:'Сайт, который видят посторонние, можно брать из Git-репозитория вместо сгенерированного.',
+srUrl:'Адрес репозитория',srRef:'Ветка',srDir:'Подкаталог',srToken:'Токен доступа',srUpd:'Обновить',srReset:'Сбросить на сгенерированный',
+srOk:'Обновлён {0}',srBusy:'Идёт загрузка…',srErr:'Ошибка',srErrText:'Не удалось загрузить репозиторий: {0}',srNone:'Используется сгенерированный сайт',srWait:'Ещё не загружен',
+srNeedUrl:'Укажите адрес репозитория',srResetDone:'Восстановлен сгенерированный сайт',srQueued:'Обновление запущено',srMeta:'коммит {0} · файлов: {1}'
 },en:{
 title:'Veil · control panel',cover:'Cover site: {0}',client:'Client',clients:'Clients',logout:'Sign out',
 stClients:'Clients',stOnline:'Online',stRx:'Received',stTx:'Sent',stUp:'Uptime',
@@ -424,7 +476,7 @@ agoS:'{0} s ago',agoM:'{0} min ago',agoH:'{0} h ago',agoD:'{0} d ago',dd:'d',hh:
 units:['B','KB','MB','GB','TB'],
 noUps:'None: this server is the exit.',noKeys:'No keys issued.',measuring:'measuring…',noLink:'no connection',clientsN:'clients: {0}',online:'online',offline:'offline',
 confirmDelNode:'Disconnect node "{0}"?',confirmRevoke:'Revoke key "{0}"? All clients going through this node will be deleted.',confirmReissue:'Issue a new config for "{0}"? The old one will stop working.',confirmDelClient:'Delete client "{0}"?',
-newClient:'New client',roleLabel:'Access level',roleUser:'User: can only use the VPN',roleAdmin:'Administrator: can manage the server and the cascade',nodeThis:'This server',nodeLabel:'Cascade node',name:'Name',note:'Note',modeManualOpt:'Manual: choose the nodes in order',modeAutoOpt:'Automatic by latency',exitNode:'Exit node',hopsCount:'Intermediate nodes',allAvail:'all available',
+newClient:'New client',roleLabel:'Role',roleUser:'User',roleAdmin:'Administrator',nodeThis:'This server',nodeLabel:'Cascade node',name:'Name',note:'Note',modeManualOpt:'Manual: choose the nodes in order',modeAutoOpt:'Automatic by latency',exitNode:'Exit node',hopsCount:'Intermediate nodes',allAvail:'all available',
 autoHint:'Entry and exit are fixed, intermediate nodes are ordered by the lowest total latency and rebuilt automatically when another path is consistently 20% faster. The client config does not change.',
 cancel:'Cancel',create:'Create',clientT:'Client',upTitle:'Next cascade node',nodeName:'Node name',upKey:'Cascade key (veil-relay://…) issued by that node',connect:'Connect',
 relTitle:'New cascade key',relFor:'For which node (name)',issue:'Issue',copy:'Copy',copied:'Copied',download:'Download file',done:'Done',
@@ -443,7 +495,17 @@ nodesShort:'nodes',routeTotalFirst:'to the first node: {0}',routeTotalUnk:'chain
 wMany:'More than 5 nodes: the latency grows with every hop.',wAuto:'Entry and exit are fixed. Intermediate nodes are ordered by the lowest total latency and rebuilt when another path is faster by 20% and 5 ms twice in a row.',wOff:'No connection to nodes: {0}.',wOk:'The route is valid: all nodes are online.',
 checkOk:'The server accepted the route, nodes: {0}',applyEmpty:'Add at least one node',
 byKey:'Node by key…',issueKey:'Issue a key…',
-themeDark:'Dark theme',themeLight:'Light theme',langSwitch:'Русский'
+themeDark:'Dark theme',themeLight:'Light theme',langSwitch:'Русский',
+targetL:'Node',nodeNote:'The panel of node "{0}" is opened through the cascade. Changes apply to that node; this is allowed because the node issued an administration key.',
+downTitle:'Node "{0}" is not responding',downText:'No link to the node. The data of this node is unavailable until the link is restored.',retry:'Retry',stillDown:'Still no answer from the node',
+tagAdmin:'Administrator',roleAct:'Role',roleT:'Client role',roleWarn:'An administrator gets full access to the admin panel of this server. Change the role only for people you trust.',
+roleHint:'User: connects to the VPN only. Administrator: also opens the admin panel through https://admin.',roleClient:'Client: {0}',
+newAdminWarn:'An administrator gets full access to the admin panel of this server.',
+relAdminL:'Allow administration',yes:'Yes',no:'No',relAdminWarn:'Warning: the node gets full access to the admin panel of this server: clients, cascade, keys and password. Issue the key only to servers you control.',relAdminSub:'administration',
+cover2:'Cover site',coverHint:'Take the site that outsiders see from a Git repository instead of the generated one.',
+srUrl:'Repository address',srRef:'Branch',srDir:'Subdirectory',srToken:'Access token',srUpd:'Update',srReset:'Reset to the generated site',
+srOk:'Updated {0}',srBusy:'Loading…',srErr:'Error',srErrText:'Could not load the repository: {0}',srNone:'The generated site is in use',srWait:'Not loaded yet',
+srNeedUrl:'Enter the repository address',srResetDone:'The generated site is restored',srQueued:'Update started',srMeta:'commit {0} · files: {1}'
 }};
 function t(k){let s=D[lang][k];if(s===undefined)s=D.ru[k];if(s===undefined)return k;if(typeof s!=='string')return s;for(let i=1;i<arguments.length;i++)s=s.split('{'+(i-1)+'}').join(arguments[i]);return s}
 function store(k,v){try{localStorage.setItem(k,v)}catch(e){}}
@@ -460,14 +522,26 @@ function ms1(v,d){return num(v.toFixed(d||0))+' '+t('ms')}
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e}
 function btn(text,cls,fn){const b=el('button',cls,text);b.type='button';b.onclick=fn;return b}
 let toastT=0;function toast(msg,len){const e=$('toast');e.textContent=msg;e.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('show'),len||2600)}
-async function api(path,body){const r=await fetch('/admin/api/'+path+((NODE&&path!=='cascade/nodes')?'?node='+encodeURIComponent(NODE):''),body?{method:'POST',headers:H,body:JSON.stringify(body)}:{headers:H});if(r.status===404&&path==='state'){location.reload();throw new Error('session')}let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||t('errN',r.status));return j}
+async function api(path,body){const r=await fetch('/admin/api/'+path+((NODE&&path!=='cascade/nodes')?'?node='+encodeURIComponent(NODE):''),body?{method:'POST',headers:H,body:JSON.stringify(body)}:{headers:H});if(r.status===404&&path==='state'&&!NODE){location.reload();throw new Error('session')}let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||t('errN',r.status));return j}
 function open(id){$(id).classList.add('show')}function close(id){$(id).classList.remove('show')}
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('show'));
 function showLink(title,r,warn){$('l-title').textContent=title;$('l-warn').textContent=warn;$('l-text').value=r.link;$('l-qr').src=r.qr||'';$('l-qr').style.display=r.qr?'block':'none';$('l-via').textContent=r.via?t('routeVia',r.via):'';$('l-via').style.display=r.via?'block':'none';dlName=r.file||((r.name||'relay')+'.txt');open('m-link')}
 const hist={};
 function latMap(){const m={};for(const x of (state&&state.latency||[]))m[x.name]=x;return m}
 function pushHist(){const lat=latMap();for(const u of state.upstreams){const a=hist[u.name]||(hist[u.name]=[]);const x=lat[u.name];if(x)a.push(x.ok?x.rtt_ms:-1);while(a.length>16)a.shift()}}
-async function refresh(){try{state=await api('state')}catch(e){return}pushHist();render()}
+let nodes=[],nodeDown={},nodeErr='';
+function nodeKey(n){return n.route.join('>')}
+function nodeName(){const n=nodes.find(x=>nodeKey(x)===NODE);return n&&n.name||t('thisServer')}
+async function refresh(){const k=NODE;let st;try{st=await api('state')}catch(e){if(k!==NODE)return;if(NODE){nodeDown[NODE]=true;nodeErr=e.message}renderTargets();return}
+if(k!==NODE)return;delete nodeDown[k];nodeErr='';state=st;pushHist();render()}
+function nodeBad(n){const k=nodeKey(n);if(nodeDown[k])return true;if(n.route.length===1&&state){const x=latMap()[n.route[0]];if(x&&!x.ok)return true}return false}
+function renderTargets(){const box=$('tgt-btns');box.replaceChildren();$('tgt').style.display=nodes.length>1?'flex':'none';
+nodes.forEach(n=>{const k=nodeKey(n);const b=el('button','tbtn'+(k===NODE?' on':''));b.type='button';const d=el('span','dot');d.style.background=nodeBad(n)?'var(--accInk)':'var(--ok)';b.append(d,document.createTextNode(n.name||t('nodeThis')));b.onclick=()=>{if(k===NODE)return;NODE=k;srDirty=false;renderTargets();refresh()};box.append(b)});
+const down=!!(NODE&&nodeDown[NODE]);const note=$('tnote'),dn=$('tdown');
+note.style.display=NODE&&!down?'block':'none';if(NODE&&!down)note.textContent=t('nodeNote',nodeName());
+dn.style.display=down?'flex':'none';if(down){$('td-t').textContent=t('downTitle',nodeName());$('td-x').textContent=t('downText')+(nodeErr?' ('+nodeErr+')':'')}
+$('tgt').classList.toggle('tight',!!NODE);$('pbody').classList.toggle('dim',down)}
+$('td-retry').onclick=async()=>{await refresh();if(NODE&&nodeDown[NODE])toast(t('stillDown'))};
 
 function render(){const s=state.server;
 $('cover').textContent=t('cover',s.company+(s.domain?' · '+s.domain:''));
@@ -476,17 +550,19 @@ const box=$('stats');box.replaceChildren();st.forEach((x,i)=>{const d=el('div','
 $('v6').textContent=s.public_ipv6?('['+s.public_ipv6+']:'+s.port):'—';$('v4').textContent=s.public_ipv4?(s.public_ipv4+':'+s.port):'—';$('ver').textContent=s.version;
 if(document.activeElement!==$('domain'))$('domain').value=s.domain||'';
 const cs={none:t('certNone'),pending:t('certPending'),ready:t('certReady',s.cert.expires?new Date(s.cert.expires).toLocaleDateString(lang==='ru'?'ru-RU':'en-GB'):'—'),error:s.cert.message||t('certErr')};$('cert').textContent=cs[s.cert.state]||'';
-renderFront(s);renderClients();renderLists();renderScheme();if($('builder').classList.contains('show'))renderBuilder()}
+renderFront(s);renderClients();renderLists();renderSite();renderTargets();renderScheme();if($('builder').classList.contains('show'))renderBuilder()}
 
 function clientTags(c){const a=[];
+if(c.role==='admin')a.push(el('span','tag acc',t('tagAdmin')));
 if(c.auto){let x=t('auto')+' → '+c.auto.exit;if(c.auto.cost_ms>0)x+=' · '+ms1(c.auto.cost_ms);else if(c.auto.cost_ms<0)x+=' · '+t('unreachable');a.push(el('span','tag acc',x))}
 if(c.relay_of)a.push(el('span','tag acc',t('transitFrom',c.relay_of)));
 if(c.route.length)a.push(el('span','tag','→ '+c.route.join(' → ')));else if(!c.relay_of)a.push(el('span','tag',t('exitHere')));
 return a}
 function clientSess(c){const w=el('div','csess');if(c.sessions.length)for(const x of c.sessions){const d=el('div');d.append(el('span','tag',x.transport),el('span','num',x.remote));w.append(d)}else w.append(el('span','muted','—'));return w}
 function clientActs(c){const box=el('div','cact');if(c.relay_of)return box;
-box.append(btn(t('edit'),'lnk',()=>{editing=c.name;$('e-name').value=c.name;$('e-note').value=c.note||'';$('e-err').textContent='';open('m-edit')}));
+box.append(btn(t('edit'),'lnk',()=>{editing=c.name;$('e-name').value=c.name;$('e-note').value=c.note||'';editRole=c.role==='admin'?'admin':'user';$('e-role').value=editRole;$('e-err').textContent='';open('m-edit')}));
 box.append(btn(c.disabled?t('unblock'):t('block'),'lnk',async()=>{try{await api('clients/update',{name:c.name,disabled:!c.disabled});refresh()}catch(e){toast(e.message)}}));
+box.append(btn(t('roleAct'),'lnk',()=>{editing=c.name;$('ro-client').textContent=t('roleClient',c.name);$('ro-role').value=c.role==='admin'?'admin':'user';$('ro-err').textContent='';open('m-role')}));
 box.append(btn(t('newCfg'),'lnk',async()=>{if(!confirm(t('confirmReissue',c.name)))return;try{const r=await api('clients/reissue',{name:c.name});showLink(t('newCfgTitle',c.name),r,t('newCfgWarn'));refresh()}catch(e){toast(e.message)}}));
 box.append(btn(t('del'),'lnk bad',async()=>{if(!confirm(t('confirmDelClient',c.name)))return;try{await api('clients/delete',{name:c.name});refresh()}catch(e){toast(e.message)}}));
 return box}
@@ -510,7 +586,7 @@ for(const u of state.upstreams){const it=el('div','item');const l=el('div');cons
 l.append(el('strong','',u.name+' · '+m),el('div','',u.company+' · '+(u.domain||u.ipv6||u.ipv4)+' · '+t('clientsN',u.clients)));
 it.append(l,btn(t('remove'),'lnk bad',async()=>{if(!confirm(t('confirmDelNode',u.name)))return;try{await api('upstreams/delete',{name:u.name});refresh()}catch(e){toast(e.message)}}));ups.append(it)}
 const rels=$('rels');rels.replaceChildren();if(!state.relays.length)rels.append(el('div','hint',t('noKeys')));
-for(const r of state.relays){const it=el('div','item');const l=el('div');l.append(el('strong','',r.name),el('div','',(r.online?t('online'):t('offline'))+' · '+t('clientsN',r.clients)));
+for(const r of state.relays){const it=el('div','item');const l=el('div');l.append(el('strong','',r.name),el('div','',(r.online?t('online'):t('offline'))+' · '+t('clientsN',r.clients)+(r.admin?' · '+t('relAdminSub'):'')));
 it.append(l,btn(t('revoke'),'lnk bad',async()=>{if(!confirm(t('confirmRevoke',r.name)))return;try{await api('relays/delete',{name:r.name});refresh()}catch(e){toast(e.message)}}));rels.append(it)}}
 
 /* ---------- схема каскада ---------- */
@@ -607,7 +683,7 @@ $('b-check').onclick=async()=>{const ord=bOrder();try{await api('explore',{route
 $('b-apply').onclick=()=>{const ord=bOrder();if(!ord.length){toast(t('applyEmpty'));return}$('builder').classList.remove('show');openNewClient(bmode==='auto'&&ord.length>1?{mode:'auto',exit:ord[ord.length-1],hops:ord.length-1}:{mode:'manual',route:ord})};
 
 /* ---------- диалоги ---------- */
-let route=[];
+let route=[],editRole='user';
 async function renderRoute(){const box=$('c-route');box.replaceChildren();
 route.forEach((h,i)=>{const d=el('div','hop');d.append(el('span','tag',(i+1)+'. '+h));if(i===route.length-1)d.append(btn(t('undo'),'lnk',()=>{route.pop();renderRoute()}));box.append(d)});
 let opts=[];try{opts=(await api('explore',{route})).upstreams||[]}catch(e){box.append(el('div','err',e.message));return}
@@ -615,7 +691,7 @@ opts=opts.filter(o=>!route.includes(o));const d=el('div','hop');const w=el('div'
 sel.onchange=()=>{if(sel.value){route.push(sel.value);renderRoute()}};w.append(sel);if(opts.length)d.append(w);else d.append(el('span','muted',route.length?t('noMoreNodes'):t('noCascade')));box.append(d)}
 function syncMode(){const auto=$('c-mode').value==='auto';$('c-auto').style.display=auto?'block':'none';$('c-manual').style.display=auto?'none':'block'}
 $('c-mode').onchange=syncMode;
-function openNewClient(pre){pre=pre||{};$('c-name').value='';$('c-note').value='';$('c-err').textContent='';route=(pre.route||[]).slice();renderRoute();
+function openNewClient(pre){pre=pre||{};$('c-name').value='';$('c-note').value='';$('c-role').value='user';$('c-warn').style.display='none';$('c-err').textContent='';route=(pre.route||[]).slice();renderRoute();
 const ex=$('c-exit');ex.replaceChildren();for(const u of state.upstreams)ex.append(new Option(u.name+' ('+u.company+')',u.name));
 const hp=$('c-hops');hp.replaceChildren();hp.append(new Option(t('allAvail'),'-1'));for(let i=0;i<state.upstreams.length;i++)hp.append(new Option(String(i),String(i)));
 if(pre.mode==='auto'){ex.value=pre.exit;hp.value=String(pre.hops)}
@@ -623,11 +699,14 @@ $('c-mode').value=pre.mode==='auto'?'auto':'manual';$('c-mode').disabled=!state.
 $('add').onclick=()=>openNewClient();
 $('optimize').onclick=async()=>{$('optimize').disabled=true;try{const r=await api('cascade/optimize',{});const ev=r.events||[];toast(ev.length?ev.map(e=>e.error?(e.client+': '+e.error):(e.client+': '+e.from+' → '+e.to+' ('+(e.old_ms<0?t('unreachable'):ms1(e.old_ms))+' → '+ms1(e.new_ms)+')')).join('\n'):t('optNone'),ev.length?6000:4000);refresh()}catch(e){toast(e.message)}finally{$('optimize').disabled=false}};
 $('c-create').onclick=async()=>{$('c-create').disabled=true;try{const auto=$('c-mode').value==='auto';const body=auto?{name:$('c-name').value,note:$('c-note').value,role:$('c-role').value,auto:true,exit:$('c-exit').value,max_hops:parseInt($('c-hops').value,10)}:{name:$('c-name').value,note:$('c-note').value,route,role:$('c-role').value};const r=await api('clients',body);close('m-client');showLink(t('createdTitle',r.name),r,t('createdWarn'));refresh()}catch(e){$('c-err').textContent=e.message}finally{$('c-create').disabled=false}};
-$('e-save').onclick=async()=>{try{await api('clients/update',{name:editing,new_name:$('e-name').value,note:$('e-note').value});close('m-edit');refresh()}catch(e){$('e-err').textContent=e.message}};
+$('e-save').onclick=async()=>{try{const body={name:editing,new_name:$('e-name').value,note:$('e-note').value};if($('e-role').value!==editRole)body.role=$('e-role').value;await api('clients/update',body);close('m-edit');refresh()}catch(e){$('e-err').textContent=e.message}};
+$('ro-save').onclick=async()=>{try{await api('clients/update',{name:editing,role:$('ro-role').value});close('m-role');refresh()}catch(e){$('ro-err').textContent=e.message}};
+$('c-role').onchange=()=>{$('c-warn').style.display=$('c-role').value==='admin'?'block':'none'};
+$('r-admin').onchange=()=>{$('r-warn').style.display=$('r-admin').value==='1'?'block':'none'};
 $('up-add').onclick=()=>{$('u-name').value='';$('u-link').value='';$('u-err').textContent='';open('m-up')};
 $('u-save').onclick=async()=>{$('u-save').disabled=true;try{await api('upstreams',{name:$('u-name').value,link:$('u-link').value});close('m-up');refresh()}catch(e){$('u-err').textContent=e.message}finally{$('u-save').disabled=false}};
-$('rel-add').onclick=()=>{$('r-name').value='';$('r-err').textContent='';open('m-rel')};
-$('r-save').onclick=async()=>{try{const r=await api('relays',{name:$('r-name').value});close('m-rel');showLink(t('relKeyTitle',r.name),r,t('relKeyWarn',r.name));refresh()}catch(e){$('r-err').textContent=e.message}};
+$('rel-add').onclick=()=>{$('r-name').value='';$('r-admin').value='0';$('r-warn').style.display='none';$('r-err').textContent='';open('m-rel')};
+$('r-save').onclick=async()=>{try{const r=await api('relays',{name:$('r-name').value,admin:$('r-admin').value==='1'});close('m-rel');showLink(t('relKeyTitle',r.name),r,t('relKeyWarn',r.name));refresh()}catch(e){$('r-err').textContent=e.message}};
 const FRONT_PRESETS=['ya.ru','yandex.ru','vk.com','mail.ru'];
 function frontChoice(){const v=$('front-sel').value;return v==='custom'?$('front-domain').value.trim().toLowerCase():v}
 function renderFront(s){const f=s.front||{};const sel=$('front-sel');
@@ -642,6 +721,25 @@ $('front-save').onclick=async()=>{const sni=frontChoice();const cur=state.server
 if($('front-sel').value==='custom'&&!sni){toast(t('frontBad'));return}
 if(sni&&sni!==cur.sni&&!confirm(t('frontConfirm',sni)))return;
 try{await api('settings/front',{sni,dest:sni&&sni===cur.sni?cur.dest:''});toast(t(sni?'frontDoneOn':'frontDoneOff'));refresh()}catch(e){toast(e.message)}};
+let srDirty=false;
+['sr-url','sr-ref','sr-dir','sr-token'].forEach(id=>$(id).addEventListener('input',()=>{srDirty=true}));
+function renderSite(){const r=state.site_repo||{};const st=$('sr-status'),bar=$('sr-bar'),er=$('sr-err');
+let txt,cls='tag';
+if(r.syncing){txt=t('srBusy');cls='tag acc'}
+else if(r.error){txt=t('srErr');cls='tag bad'}
+else if(!r.enabled){txt=t('srNone')}
+else if(r.active&&r.updated){txt=t('srOk',ago(r.updated))}
+else txt=t('srWait');
+st.className=cls;st.style.margin=cls==='tag bad'?'6px 0 0':'0';st.textContent=txt;
+bar.style.display=r.syncing?'block':'none';
+const e=r.error&&!r.syncing;er.style.display=e?'block':'none';if(e)er.textContent=t('srErrText',r.error);
+const mt=$('sr-meta');const m=r.enabled&&r.active&&r.commit;mt.style.display=m?'inline':'none';if(m)mt.textContent=t('srMeta',String(r.commit).slice(0,8),r.files||0);
+if(!srDirty&&!['sr-url','sr-ref','sr-dir','sr-token'].some(id=>document.activeElement===$(id))){$('sr-url').value=r.url||'';$('sr-ref').value=r.ref||'';$('sr-dir').value=r.dir||'';$('sr-token').value='';$('sr-token').placeholder=r.has_token?'••••••••••••':''}
+$('sr-update').disabled=!!r.syncing;$('sr-reset').disabled=!r.enabled}
+$('sr-update').onclick=async()=>{const r=state.site_repo||{};const url=$('sr-url').value.trim();if(!url){toast(t('srNeedUrl'));return}
+const same=r.enabled&&url===r.url&&$('sr-ref').value.trim()===(r.ref||'')&&$('sr-dir').value.trim()===(r.dir||'')&&!$('sr-token').value;
+$('sr-update').disabled=true;try{if(same)await api('settings/siterepo/refresh',{});else await api('settings/siterepo',{url,ref:$('sr-ref').value.trim(),dir:$('sr-dir').value.trim(),token:$('sr-token').value});srDirty=false;$('sr-token').value='';toast(t('srQueued'));await refresh()}catch(e){toast(e.message,4000)}finally{$('sr-update').disabled=false}};
+$('sr-reset').onclick=async()=>{try{await api('settings/siterepo',{url:''});srDirty=false;toast(t('srResetDone'));await refresh()}catch(e){toast(e.message)}};
 $('domain-save').onclick=async()=>{try{await api('settings/domain',{domain:$('domain').value});refresh()}catch(e){toast(e.message)}};
 $('pw-save').onclick=async()=>{$('pw-err').textContent='';if($('pw-new').value!==$('pw-rep').value){$('pw-err').textContent=t('pwMismatch');return}
 try{await api('settings/password',{current:$('pw-cur').value,new:$('pw-new').value});toast(t('pwDone'),1500);setTimeout(()=>{location.href='/admin'},1500)}catch(e){$('pw-err').textContent=e.message}};
@@ -652,6 +750,6 @@ $('lang-btn').onclick=()=>{lang=lang==='ru'?'en':'ru';store('veil-lang',lang);ap
 $('theme-btn').onclick=()=>{theme=theme==='dark'?'light':'dark';store('veil-theme',theme);applyStatic()};
 let rz=0;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(state){renderScheme();if($('builder').classList.contains('show'))renderBuilder()}},120)});
 applyStatic();refresh().then(()=>setTimeout(()=>document.body.classList.remove("fresh"),1200));setInterval(()=>{if(!document.querySelector('.modal.show'))refresh()},3000);
-(async()=>{try{const r=await api('cascade/nodes');const ns=r.nodes||[];if(ns.length>1){const sel=$('node-sel');ns.forEach(n=>{const o=document.createElement('option');o.value=n.route.join('>');o.textContent=n.name||t('nodeThis');sel.appendChild(o)});$('node-wrap').style.display='';sel.onchange=()=>{NODE=sel.value;refresh()}}}catch(e){}})();
+(async()=>{try{const r=await api('cascade/nodes');nodes=r.nodes||[];renderTargets()}catch(e){}})();
 </script>
 </body></html>`

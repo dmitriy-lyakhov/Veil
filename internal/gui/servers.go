@@ -19,6 +19,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
+	"veil/internal/client"
 	"veil/internal/config"
 	"veil/internal/deploy"
 )
@@ -305,11 +306,8 @@ func (u *ui) showDetails(p *config.Profile) {
 	var w *subPage
 	w = u.newSubPage(p.Name)
 	rows := container.NewVBox(infoRow(L("Address", "Адрес"), addresses(p), nil))
-	switch p.Role {
-	case "admin":
-		rows.Add(infoRow(L("Access level", "Уровень доступа"), L("Administrator", "Администратор"), nil))
-	case "user":
-		rows.Add(infoRow(L("Access level", "Уровень доступа"), L("User", "Пользователь"), nil))
+	if p.Role == "admin" || p.Role == "user" {
+		rows.Add(infoRow(L("Role on the server", "Роль на сервере"), roleName(p.Role), nil))
 	}
 	if p.Via != "" {
 		rows.Add(infoRow(L("Cascade", "Каскад"), p.Via, nil))
@@ -330,6 +328,30 @@ func (u *ui) showDetails(p *config.Profile) {
 
 	if p.AdminURL != "" {
 		rows.Add(sectionLabel(L("Admin panel", "Админ-панель")))
+		// имя «admin» клиент прописывает в hosts при подключении; без прав на запись — запасной адрес по IP
+		aliasURL := adminAliasURL(p)
+		hostsFailed := p.Name == u.active && u.connected && u.adminHosts == client.AdminHostsFailed
+		openURL := aliasURL
+		if openURL == "" || hostsFailed {
+			openURL = p.AdminURL
+		}
+		openAdmin := func() {
+			if p.Name != u.active || !u.connected {
+				showError(errors.New(L("connect to this server first", "сначала подключитесь к этому серверу")), u.win)
+				return
+			}
+			if target, err := url.Parse(openURL); err == nil {
+				_ = u.app.OpenURL(target)
+			}
+		}
+		shown := openURL
+		if aliasURL != "" && !hostsFailed {
+			shown = aliasURL
+		}
+		rows.Add(navRow(L("Open the admin panel", "Открыть админку"), shown, openAdmin))
+		if hostsFailed {
+			rows.Add(noteIcon("warn", fmt.Sprintf(L("No write access to the hosts file: “%s” does not open. Use the address by IP: %s.", "Нет прав на запись в hosts, поэтому адрес «%s» не откроется. Используйте адрес по IP: %s."), aliasURL, p.AdminURL), colAccentInk))
+		}
 		rows.Add(infoRow(L("Address", "Адрес"), p.AdminURL, func() { u.app.Clipboard().SetContent(p.AdminURL) }))
 		if p.AdminUser != "" {
 			rows.Add(infoRow(L("Login", "Логин"), p.AdminUser, func() { u.app.Clipboard().SetContent(p.AdminUser) }))
@@ -337,15 +359,6 @@ func (u *ui) showDetails(p *config.Profile) {
 		if p.AdminPassword != "" {
 			rows.Add(infoRow(L("Password", "Пароль"), strings.Repeat("•", 12), func() { u.app.Clipboard().SetContent(p.AdminPassword) }))
 		}
-		rows.Add(bigButton(L("Open in browser", "Открыть в браузере"), "", false, func() {
-			if p.Name != u.active || !u.connected {
-				showError(errors.New(L("connect to this server first", "сначала подключитесь к этому серверу")), u.win)
-				return
-			}
-			if target, err := url.Parse(p.AdminURL); err == nil {
-				_ = u.app.OpenURL(target)
-			}
-		}))
 		rows.Add(infoNote(L("The panel is only available over VPN: connect to this server first. The browser will warn about a self-signed certificate — this is expected.", "Панель доступна только через VPN: сначала подключитесь к этому серверу. Браузер предупредит о самоподписанном сертификате — это ожидаемо.")))
 	}
 	if managed(p) {

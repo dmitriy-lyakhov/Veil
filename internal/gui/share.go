@@ -37,7 +37,13 @@ func qrImage(link, dataURI string) fyne.CanvasObject {
 	return container.NewCenter(container.NewGridWrap(fyne.NewSize(qrDisplay, qrDisplay), container.NewStack(bg, container.NewPadded(img))))
 }
 
-func (u *ui) showShare(parent fyne.Window, title string, r server.LinkResponse, note string, installable bool) {
+// extra — дополнительные строки под маршрутом (например, «Роль»).
+func (u *ui) showShare(parent fyne.Window, title string, r server.LinkResponse, note string, installable bool, extra ...fyne.CanvasObject) {
+	u.showShareX(parent, title, r, note, installable, extra, nil)
+}
+
+// showShareX — то же, плюс строки after: в самом низу окна, под кнопками (например, «Отозвать»).
+func (u *ui) showShareX(parent fyne.Window, title string, r server.LinkResponse, note string, installable bool, extra, after []fyne.CanvasObject) {
 	link := widget.NewMultiLineEntry()
 	link.SetText(r.Link)
 	link.Wrapping = fyne.TextWrapBreak
@@ -49,6 +55,9 @@ func (u *ui) showShare(parent fyne.Window, title string, r server.LinkResponse, 
 		v := widget.NewLabel(L("Route: ", "Маршрут: ") + r.Via)
 		v.Wrapping = fyne.TextWrapWord
 		rows.Add(v)
+	}
+	for _, e := range extra {
+		rows.Add(e)
 	}
 	rows.Add(hint)
 	rows.Add(link)
@@ -95,6 +104,9 @@ func (u *ui) showShare(parent fyne.Window, title string, r server.LinkResponse, 
 		})
 		install.Importance = widget.HighImportance
 		rows.Add(install)
+	}
+	for _, a := range after {
+		rows.Add(a)
 	}
 	d := newCustom(title, L("Close", "Закрыть"), container.NewGridWrap(fyne.NewSize(380, 560), container.NewVScroll(rows)), parent)
 	d.Show()

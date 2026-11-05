@@ -41,7 +41,8 @@ type ClientInfo struct {
 	Address6      string        `json:"address6"`
 	Created       time.Time     `json:"created,omitzero"`
 	Disabled      bool          `json:"disabled"`
-	Route         []string      `json:"route"`
+	Role          string        `json:"role,omitempty"` // "user" | "admin" | "" (клиент без роли — вход в панель по паролю)
+	Route        []string      `json:"route"`
 	RelayOf       string        `json:"relay_of,omitempty"`
 	Online        bool          `json:"online"`
 	Sessions      []SessionInfo `json:"sessions"`
@@ -63,6 +64,7 @@ type RelayInfo struct {
 	Created time.Time `json:"created,omitzero"`
 	Clients int       `json:"clients"`
 	Online  bool      `json:"online"`
+	Admin   bool      `json:"admin,omitempty"` // узлу разрешено администрировать этот сервер
 }
 
 type UpstreamInfo struct {
@@ -179,7 +181,7 @@ func (s *Server) State() State {
 	for _, p := range s.cfg.Peers {
 		ci := ClientInfo{
 			Name: p.Name, Note: p.Note, Address4: p.Address4, Address6: p.Address6, Created: p.Created,
-			Disabled: p.Disabled, Route: p.Route, RelayOf: p.RelayOf, Sessions: live[p.Name],
+			Disabled: p.Disabled, Role: p.Role, Route: p.Route, RelayOf: p.RelayOf, Sessions: live[p.Name],
 		}
 		if ci.Route == nil {
 			ci.Route = []string{}
@@ -223,7 +225,7 @@ func (s *Server) State() State {
 		st.Clients = append(st.Clients, ci)
 	}
 	for _, r := range s.cfg.Relays {
-		st.Relays = append(st.Relays, RelayInfo{Name: r.Name, Created: r.Created, Clients: relayClients[r.Name], Online: len(live[relayPrefix+r.Name]) > 0})
+		st.Relays = append(st.Relays, RelayInfo{Name: r.Name, Created: r.Created, Clients: relayClients[r.Name], Online: len(live[relayPrefix+r.Name]) > 0, Admin: r.Admin})
 	}
 	for _, u := range s.cfg.Upstreams {
 		st.Upstreams = append(st.Upstreams, UpstreamInfo{Name: u.Name, Company: u.Link.Company, IPv4: u.Link.IPv4, IPv6: u.Link.IPv6, Domain: u.Link.ServerName, Added: u.Added, Clients: upClients[u.Name]})
@@ -353,6 +355,7 @@ type ClientUpdate struct {
 	NewName  string  `json:"new_name,omitempty"`
 	Note     *string `json:"note,omitempty"`
 	Disabled *bool   `json:"disabled,omitempty"`
+	Role     *string `json:"role,omitempty"` // "user" | "admin"
 }
 
 func (s *Server) UpdateClient(name string, u ClientUpdate) error {
@@ -363,6 +366,15 @@ func (s *Server) UpdateClient(name string, u ClientUpdate) error {
 		return fmt.Errorf("клиент «%s» не найден", name)
 	}
 	p := &s.cfg.Peers[idx]
+	role := p.Role
+	if u.Role != nil {
+		r, err := normalizeRole(*u.Role)
+		if err != nil {
+			s.mu.Unlock()
+			return err
+		}
+		role = r
+	}
 	newName := strings.TrimSpace(u.NewName)
 	if newName != "" && newName != name {
 		if err := validClientName(newName); err != nil {
@@ -392,6 +404,7 @@ func (s *Server) UpdateClient(name string, u ClientUpdate) error {
 		p.Disabled = *u.Disabled
 	}
 	p.Name = newName
+	p.Role = role
 	authKey, disabled := p.AuthKey, p.Disabled
 	if err := s.saveLocked(); err != nil {
 		s.log.Error("save config", "err", err)

@@ -159,6 +159,7 @@ type manager struct {
 	w       fyne.Window
 	sess    *deploy.Session
 	state   server.State
+	roles   map[string]string // роли клиентов по имени (из последнего ответа сервера)
 	body    *fyne.Container
 	status  *statusLine
 	tabs    []*widget.Button
@@ -257,7 +258,7 @@ func (m *manager) call(method, path string, in, out any, done func(error)) {
 }
 
 func (m *manager) refresh() {
-	var st server.State
+	var st stateRoles
 	m.call("GET", "/state", nil, &st, func(err error) {
 		if err != nil {
 			if err.Error() == "отменено" {
@@ -267,7 +268,7 @@ func (m *manager) refresh() {
 			m.renderError(err)
 			return
 		}
-		m.state = st
+		m.state, m.roles = st.State, st.roles
 		m.loaded = true
 		m.status.SetText(fmt.Sprintf(L("Cover site: %s · clients %d, online %d", "Сайт-прикрытие: %s · клиентов %d, онлайн %d"), st.Server.Company, st.Server.Clients, st.Server.Online))
 		m.render()
@@ -359,7 +360,11 @@ func (m *manager) clientCard(c server.ClientInfo) fyne.CanvasObject {
 	case c.Online:
 		dot.FillColor = colOK
 	}
-	lines := container.New(tightVBox{gap: -7, afterFirst: -12}, richText(c.Name, false, true))
+	var title fyne.CanvasObject = richText(c.Name, false, true)
+	if m.roles[c.Name] == "admin" {
+		title = container.NewHBox(title, container.NewCenter(roleBadge()))
+	}
+	lines := container.New(tightVBox{gap: -7, afterFirst: -12}, title)
 	if c.Note != "" {
 		lines.Add(richText(c.Note, true, false))
 	}
@@ -422,9 +427,22 @@ func (m *manager) editClient(c server.ClientInfo) {
 	name.SetText(c.Name)
 	note := widget.NewEntry()
 	note.SetText(c.Note)
-	showForm(L("Client", "Клиент"), L("Save", "Сохранить"), L("Cancel", "Отмена"), []*widget.FormItem{
-		widget.NewFormItem(L("Name", "Имя"), name), widget.NewFormItem(L("Note", "Заметка"), note),
-	}, func(ok bool) {
+	cur := normRole(m.roles[c.Name])
+	next := "admin"
+	toggleTitle, toggleSub := L("Make an administrator", "Сделать администратором"), L("Full access to the admin panel of this server", "Полный доступ к админ-панели этого сервера")
+	if cur == "admin" {
+		next = "user"
+		toggleTitle, toggleSub = L("Make a user", "Сделать пользователем"), L("Admin panel access will be removed", "Доступ к админ-панели будет закрыт")
+	}
+	// смена роли — отдельное действие со своим подтверждением, не часть «Сохранить»
+	toggle := listRow(toggleTitle, toggleSub, widget.NewIcon(theme.NavigateNextIcon()), func() {
+		m.confirm(toggleTitle, fmt.Sprintf(L("“%s”: %s. Continue?", "«%s»: %s. Продолжить?"), c.Name, toggleSub), func() {
+			m.setRole(c.Name, next)
+		})
+	})
+	form := widget.NewForm(widget.NewFormItem(L("Name", "Имя"), name), widget.NewFormItem(L("Note", "Заметка"), note))
+	content := container.NewVBox(infoRow(L("Role", "Роль"), roleName(cur), nil), form, toggle)
+	d := newCustomConfirm(L("Client", "Клиент"), L("Save", "Сохранить"), L("Cancel", "Отмена"), container.NewGridWrap(fyne.NewSize(380, 330), container.NewVScroll(content)), func(ok bool) {
 		if !ok {
 			return
 		}
@@ -434,9 +452,22 @@ func (m *manager) editClient(c server.ClientInfo) {
 			}
 		})
 	}, m.w)
+	d.Show()
+}
+
+// setRole меняет роль клиента на сервере (clients/update с полем role).
+func (m *manager) setRole(name, role string) {
+	m.call("POST", "/clients/update", map[string]any{"name": name, "role": role}, nil, func(err error) {
+		if err != nil {
+			showError(err, m.w)
+			return
+		}
+		m.refresh()
+	})
 }
 
 func (m *manager) addClient() {
+	role := "user"
 	name := widget.NewEntry()
 	name.SetPlaceHolder(L("For example: Anna's phone", "Например: телефон Ани"))
 	note := widget.NewEntry()
@@ -490,19 +521,20 @@ func (m *manager) addClient() {
 	rebuild()
 	content := container.NewVBox(
 		widget.NewForm(widget.NewFormItem(L("Name", "Имя"), name), widget.NewFormItem(L("Note", "Заметка"), note)),
+		roleBlock(role, func(v string) { role = v }),
 		text(L("Route", "Маршрут"), 14, colText, true), routeBox,
 	)
-	d := newCustomConfirm(L("New client", "Новый клиент"), L("Create", "Создать"), L("Cancel", "Отмена"), container.NewGridWrap(fyne.NewSize(380, 360), container.NewVScroll(content)), func(ok bool) {
+	d := newCustomConfirm(L("New client", "Новый клиент"), L("Create", "Создать"), L("Cancel", "Отмена"), container.NewGridWrap(fyne.NewSize(380, 460), container.NewVScroll(content)), func(ok bool) {
 		if !ok {
 			return
 		}
 		var r server.LinkResponse
-		m.call("POST", "/clients", map[string]any{"name": name.Text, "note": note.Text, "route": route}, &r, func(err error) {
+		m.call("POST", "/clients", map[string]any{"name": name.Text, "note": note.Text, "route": route, "role": role}, &r, func(err error) {
 			if err != nil {
 				showError(err, m.w)
 				return
 			}
-			m.u.showShare(m.w, fmt.Sprintf(L("Client “%s”", "Клиент «%s»"), r.Name), r, L("Scan the QR in the Veil app on the client's device, or send the file or link. Shown once: the config contains a private key.", "Отсканируйте QR в приложении Veil на устройстве клиента, отправьте файл или ссылку. Показывается один раз: в конфиге приватный ключ."), true)
+			m.u.showShare(m.w, fmt.Sprintf(L("Client “%s”", "Клиент «%s»"), r.Name), r, L("Scan the QR in the Veil app on the client's device, or send the file or link. Shown once: the config contains a private key.", "Отсканируйте QR в приложении Veil на устройстве клиента, отправьте файл или ссылку. Показывается один раз: в конфиге приватный ключ."), true, infoRow(L("Role", "Роль"), roleName(role), nil))
 			m.refresh()
 		})
 	}, m.w)
@@ -714,12 +746,23 @@ func (m *manager) addUpstreamByKey() {
 func (m *manager) issueRelay() {
 	name := widget.NewEntry()
 	name.SetPlaceHolder(L("Name of the previous node", "Название предыдущего узла"))
-	showForm(L("Cascade key", "Ключ каскада"), L("Issue", "Выдать"), L("Cancel", "Отмена"), []*widget.FormItem{widget.NewFormItem(L("For node", "Для узла"), name)}, func(ok bool) {
+	admin := false
+	warn := container.NewStack()
+	allow := widget.NewCheck(L("Allow administration: the node can manage this server from its own admin panel", "Разрешить администрирование: узел сможет управлять этим сервером из своей админ-панели"), func(on bool) {
+		admin = on
+		warn.RemoveAll()
+		if on {
+			warn.Add(noteIcon("warn", L("Warning: the node gets full access to the admin panel of this server: clients, cascade, keys and password. Issue it only to servers you control.", "Внимание: узел получает полный доступ к админ-панели этого сервера: клиенты, каскад, ключи и пароль. Выдавайте только своим серверам."), colAccentInk))
+		}
+		warn.Refresh()
+	})
+	content := container.NewVBox(widget.NewForm(widget.NewFormItem(L("For node", "Для узла"), name)), allow, warn)
+	d := newCustomConfirm(L("Cascade key", "Ключ каскада"), L("Issue", "Выдать"), L("Cancel", "Отмена"), container.NewGridWrap(fyne.NewSize(380, 280), container.NewVScroll(content)), func(ok bool) {
 		if !ok {
 			return
 		}
 		var r server.LinkResponse
-		m.call("POST", "/relays", map[string]string{"name": name.Text}, &r, func(err error) {
+		m.call("POST", "/relays", map[string]any{"name": name.Text, "admin": admin}, &r, func(err error) {
 			if err != nil {
 				showError(err, m.w)
 				return
@@ -728,6 +771,7 @@ func (m *manager) issueRelay() {
 			m.refresh()
 		})
 	}, m.w)
+	d.Show()
 }
 
 func (m *manager) renderServer() {

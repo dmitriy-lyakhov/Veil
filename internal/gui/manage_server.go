@@ -21,6 +21,7 @@ func (m *manager) renderManagement() {
 	needSSH := func(f func()) func() {
 		return func() { m.ensureSession(f, nil) }
 	}
+	m.body.Add(listRow(L("Cover site", "Сайт-прикрытие"), L("Repository, branch, status", "Репозиторий, ветка, статус"), arrow(), needSSH(m.loadCoverSite)))
 	m.body.Add(listRow(L("Check server", "Проверить сервер"), L("Refresh version and client information", "Обновить сведения о версии и клиентах"), arrow(), needSSH(m.refresh)))
 	m.body.Add(listRowColored(L("Update server packages", "Обновить пакеты сервера"), L("Install system updates with the distribution package manager", "Установить обновления системы менеджером пакетов дистрибутива"), theme.ColorNameError, arrow(), needSSH(func() {
 		showConfirm(L("Update packages", "Обновить пакеты"), L("System packages will be updated on the server. This may take a few minutes. Continue?", "На сервере будет запущено обновление системных пакетов. Это может занять несколько минут. Продолжить?"), func(ok bool) {

@@ -134,7 +134,7 @@ func (s *shareState) renderConnection(m *manager) {
 					showError(err, s.u.win)
 					return
 				}
-				s.u.showShare(s.u.win, L("Client \""+r.Name+"\"", "Клиент «"+r.Name+"»"), r, L("Scan the QR in the Veil app on the client device, or send the file or link. Shown once: the config contains a private key.", "Отсканируйте QR в приложении Veil на устройстве клиента, отправьте файл или ссылку. Показывается один раз: в конфиге приватный ключ."), true)
+				s.u.showShare(s.u.win, L("Client \""+r.Name+"\"", "Клиент «"+r.Name+"»"), r, L("Scan the QR in the Veil app on the client device, or send the file or link. Shown once: the config contains a private key.", "Отсканируйте QR в приложении Veil на устройстве клиента, отправьте файл или ссылку. Показывается один раз: в конфиге приватный ключ."), true, infoRow(L("Role", "Роль"), roleName(s.roleValue()), nil))
 				s.name = L("New client", "Новый клиент")
 				m.refresh()
 				s.render()
@@ -150,7 +150,7 @@ func (s *shareState) renderConnection(m *manager) {
 		s.render()
 	}))
 	s.body.Add(s.u.fieldSelect(L("Connection format", "Формат подключения"), fmtApp, []string{fmtApp}, func(string) {}))
-	s.body.Add(roleField(s.u, s.role, func(v string) { s.role = v }))
+	s.body.Add(roleBlock(s.role, func(v string) { s.role = v }))
 	cascade := bigButton(L("Share a cascade…", "Поделиться каскадом…"), "", false, func() { s.u.openCascadeBuilder(true) })
 	s.body.Add(spacerH(8))
 	s.body.Add(share)
@@ -229,19 +229,3 @@ func normRole(r string) string {
 
 func (s *shareState) roleValue() string { return normRole(s.role) }
 
-// roleField — выбор роли выдаваемого доступа: пользователь (только пользуется VPN) или администратор
-// (может открыть админку и настраивать сервер и каскад).
-func roleField(u *ui, current string, changed func(string)) fyne.CanvasObject {
-	user, admin := L("User — can only use the VPN", "Пользователь — только пользуется VPN"), L("Administrator — can manage the server and the cascade", "Администратор — может настраивать сервер и каскад")
-	cur := user
-	if current == "admin" {
-		cur = admin
-	}
-	return u.fieldSelect(L("Access level", "Уровень доступа"), cur, []string{user, admin}, func(v string) {
-		if v == admin {
-			changed("admin")
-		} else {
-			changed("user")
-		}
-	})
-}

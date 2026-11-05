@@ -211,16 +211,16 @@ func TestSiteRepoTokenKeptForSameURL(t *testing.T) {
 	e.body.Store(tgz(map[string]string{"index.html": "x"}))
 	e.s.SetSiteRepo("https://example.com/o/r", "", "", "secret", false)
 	e.s.SetSiteRepo("https://example.com/o/r", "main", "", "", false)
-	if e.s.cfg.SiteRepo.Token != "secret" || e.s.cfg.SiteRepo.Ref != "main" {
-		t.Fatalf("%+v", e.s.cfg.SiteRepo)
+	if e.repoCfg().Token != "secret" || e.repoCfg().Ref != "main" {
+		t.Fatalf("%+v", e.repoCfg())
 	}
 	e.s.SetSiteRepo("https://example.com/o/r", "main", "", "", true)
-	if e.s.cfg.SiteRepo.Token != "" {
+	if e.repoCfg().Token != "" {
 		t.Fatal("токен не удалён")
 	}
 	e.s.SetSiteRepo("https://example.com/o/r", "main", "", "new", false)
 	e.s.SetSiteRepo("https://example.com/other", "", "", "", false)
-	if e.s.cfg.SiteRepo.Token != "" {
+	if e.repoCfg().Token != "" {
 		t.Fatal("токен перенесён на другой адрес")
 	}
 }
@@ -246,4 +246,14 @@ func TestSiteRepoCachedAcrossRestart(t *testing.T) {
 	if rec.Body.String() != "<h1>CACHED</h1>" {
 		t.Fatalf("кэш не поднят: %q", rec.Body.String())
 	}
+}
+
+// repoCfg возвращает копию настройки репозитория под блокировкой: фоновая загрузка меняет её параллельно.
+func (e *repoEnv) repoCfg() config.SiteRepo {
+	e.s.mu.Lock()
+	defer e.s.mu.Unlock()
+	if e.s.cfg.SiteRepo == nil {
+		return config.SiteRepo{}
+	}
+	return *e.s.cfg.SiteRepo
 }

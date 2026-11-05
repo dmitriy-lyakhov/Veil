@@ -62,6 +62,7 @@ type ui struct {
 	active    string
 	connected bool
 	since     time.Time
+	adminHosts string // клиент записал «admin» в hosts ("ok"), не смог ("failed") или не требовалось ("")
 	stop      chan struct{}
 
 	curtain   *canvas.Rectangle
@@ -318,6 +319,7 @@ func (u *ui) poll(h *helper.Handle, stop chan struct{}) {
 }
 
 func (u *ui) showReport(r *helper.Report) {
+	u.adminHosts = r.AdminHosts
 	netpin.Set(r.PinV4, r.PinV6)
 	switch r.State {
 	case client.StateConnecting:
@@ -343,6 +345,15 @@ func (u *ui) showReport(r *helper.Report) {
 		u.setStatus(L("Connected", "Подключено"), sub, "")
 	case client.StateReconnecting:
 		u.power.SetState(powerBusy)
+		if r.Entry != "" {
+			// каскад из нескольких входов: текущий перестал отвечать, клиент переходит на следующий
+			sub := fmt.Sprintf(L("Entry “%s” is not responding, switching…", "Вход «%s» не отвечает, переключаемся…"), r.Entry)
+			if next := nextEntry(u.activeProfile(), r.Entry, r.Skipped); next != "" {
+				sub = fmt.Sprintf(L("Entry “%s” is not responding, switching to “%s”…", "Вход «%s» не отвечает, переключаемся на «%s»…"), r.Entry, next)
+			}
+			u.setStatus(L("Switching…", "Переключение…"), sub, "")
+			break
+		}
 		u.setStatus(L("Reconnecting…", "Переподключение…"), r.LastError, "")
 	}
 	u.traffic.Text = "↓ " + humanBytes(r.RxBytes) + "     ↑ " + humanBytes(r.TxBytes)
@@ -363,7 +374,7 @@ func (u *ui) finish(errMsg string) {
 		close(u.stop)
 		u.stop = nil
 	}
-	u.handle, u.active, u.connected = nil, "", false
+	u.handle, u.active, u.connected, u.adminHosts = nil, "", false, ""
 	u.traffic.Text = ""
 	u.traffic.Refresh()
 	netpin.Set(0, 0)
@@ -407,4 +418,14 @@ func humanBytes(n uint64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cБ", float64(n)/float64(div), []rune("КМГТ")[exp])
+}
+
+// activeProfile — профиль, к которому сейчас подключены (или идёт подключение).
+func (u *ui) activeProfile() *config.Profile {
+	for _, p := range u.profiles {
+		if p.Name == u.active {
+			return p
+		}
+	}
+	return nil
 }
