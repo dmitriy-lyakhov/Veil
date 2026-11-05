@@ -640,7 +640,7 @@ class Component extends DCLogic {
       splitSites: 'conn', splitApps: 'conn', catalog: 'splitSites', appPage: 'settings', logsPage: 'appPage', logView: 'logsPage', backup: 'settings',
       aboutPage: 'settings', updateAvail: 'aboutPage', langPage: 'settings', deploy: 'add', installing: 'deploy', addDone: 'add', importFile: 'add', multiEntry: 'add',
       entries: 'home', chain: 'manager', relayIssue: 'manager', nodeByKey: 'manager', protoInstall: 'manager', protoManage: 'manager', awgConn: 'protoManage',
-      protoClients: 'protoManage', trustCA: 'protoManage', shareResult: 'share', clientNew: 'share', clientDetail: 'share'
+      protoClients: 'protoManage', trustCA: 'protoManage', shareResult: 'share', clientNew: 'share', clientDetail: 'share', traffic: 'home'
     };
     const navTo = (id, dir) => {
       if (this.state.leaving) return;
@@ -1169,6 +1169,9 @@ class Component extends DCLogic {
         btn(L('Check for updates', 'Проверить обновления'), 'primary', () => navTo('updateAvail'), ic.refresh), section(L('Contacts', 'Контакты')), row('GitHub', L('Source code and bug reports', 'Исходный код и сообщения об ошибках'), () => flash('github.com'), {}), row(`${L('Version', 'Версия')} 0.5.x`, '', null)] },
       updateAvail: { bare: true, center: true, blocks: [hero('check', L('An update is available', 'Доступно обновление'), L('Version 0.6.0 is out (you have 0.5.x). Open the download page?', 'Вышла версия 0.6.0 (у вас 0.5.x). Открыть страницу загрузки?'))],
         cta: L('Open the download page', 'Открыть страницу загрузки'), ctaGo: () => { flash('github.com/…/releases'); goBack(); }, sec: L('Later', 'Позже'), secGo: goBack },
+      traffic: { title: L('Traffic', 'Трафик'), blocks: [heading(L('Right now', 'Сейчас')), barsB(), kv(L('Download', 'Загрузка'), '4,2 ' + L('MB/s', 'МБ/с')), kv(L('Upload', 'Отдача'), '0,6 ' + L('MB/s', 'МБ/с')), kv(L('Latency', 'Задержка'), '41 ' + ms),
+        heading(L('This session', 'За сессию')), kv(L('Received', 'Получено'), '186 ' + mb), kv(L('Sent', 'Отправлено'), '24 ' + mb), kv(L('Duration', 'Длительность'), '00:14:32'),
+        heading(L('Total', 'Всего')), kv(L('Today', 'Сегодня'), '1,2 ' + gb), kv(L('This month', 'За месяц'), '38,4 ' + gb), note(L('Counters are kept on this device only.', 'Счётчики хранятся только на этом устройстве.'))] },
       langPage: { title: L('Language', 'Язык'), blocks: [lead(L('The interface switches immediately.', 'Интерфейс переключается сразу.')),
         radioB('Русский', '', ru, () => this.setState({ lang: 'ru' })), radioB('English', '', !ru, () => this.setState({ lang: 'en' }))] },
       catalog: { title: L('Address catalog', 'Каталог адресов'), blocks: (() => {

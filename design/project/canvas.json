@@ -239,6 +239,14 @@
       "h": 800,
       "title": "Общий компонент Site",
       "is_interactive": true
+    },
+    "TrayMenu.dc.html": {
+      "h": 560,
+      "is_interactive": false,
+      "title": "Меню в трее",
+      "w": 1120,
+      "x": 0,
+      "y": 17700
     }
   },
   "createdOnFiles": {
@@ -463,7 +471,8 @@
     "Admin.dc.html",
     "SiteViewer.dc.html",
     "SiteMatrix.dc.html",
-    "Site.dc.html"
+    "Site.dc.html",
+    "TrayMenu.dc.html"
   ],
   "pages": [],
   "title": "Veil VPN — дизайн приложения"

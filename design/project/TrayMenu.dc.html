@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><title>Veil tray menu</title><script src="./support.js"></script></head>
+<body><x-dc>
+<helmet><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600&display=swap" rel="stylesheet"><style>body{margin:0}</style></helmet>
+<div style="width:1120px;height:560px;background:{{c.ground}};font-family:Montserrat,system-ui,sans-serif;position:relative;border-radius:12px;overflow:hidden;color:{{c.ink}}">
+<sc-for list="{{panels}}" as="p" hint-placeholder-count="4">
+<div style="position:absolute;left:{{p.x}}px;top:24px;width:250px">
+<div style="font-size:12px;font-weight:600;color:{{c.dim}};margin-bottom:10px">{{p.cap}}</div>
+<div style="background:{{c.menu}};border-radius:{{p.r}}px;padding:6px;box-shadow:0 4px 12px rgba(0,0,0,.25);border:1px solid {{c.line}}">
+<div style="display:flex;align-items:center;gap:8px;padding:8px 10px">
+<span style="width:8px;height:8px;border-radius:50%;background:{{p.dot}}"></span>
+<span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:13px;font-weight:600">{{p.status}}</span><span style="font-size:11px;font-weight:500;color:{{c.dim}}">{{p.sub}}</span></span>
+</div>
+<div style="height:1px;background:{{c.line}};margin:4px 6px"></div>
+<div style="padding:8px 10px;font-size:13px;font-weight:500;border-radius:6px">{{p.open}}</div>
+<div style="padding:8px 10px;font-size:13px;font-weight:600;border-radius:6px;background:{{c.hover}}">{{p.toggle}}</div>
+<div style="height:1px;background:{{c.line}};margin:4px 6px"></div>
+<div style="padding:8px 10px;font-size:13px;font-weight:500;border-radius:6px">{{p.quit}}</div>
+</div>
+</div>
+</sc-for>
+<div style="position:absolute;left:24px;right:24px;bottom:24px;display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:500;color:{{c.dim}}">
+<span>{{note1}}</span><span>{{note2}}</span>
+<div style="display:flex;gap:10px;align-items:center;margin-top:6px"><span style="width:22px;height:22px;border-radius:5px;background:{{c.ctl}};display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M3 4h8l9 23h-8z" fill="#FF393D"></path><path d="M29 4h-8l-9 23h8z" fill="#6B6F78"></path><path d="M16 16.8L12 27h8z" fill="#D9DBE0"></path></svg></span><span>{{note3}}</span></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"lang":{"editor":"enum","options":["ru","en"],"default":"ru"},"$preview":{"width":1120,"height":560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const lt = (this.props.theme ?? 'dark') === 'light', ru = (this.props.lang ?? 'ru') === 'ru';
+    const L = (e, r) => ru ? r : e;
+    const c = { ground: lt ? '#E4E6EA' : '#0B0B0C', menu: lt ? '#FFFFFF' : '#1B1C1F', ink: lt ? '#0B0B0C' : '#FFFFFF', dim: lt ? '#5B5F68' : '#9A9EA8', line: lt ? '#E4E6EA' : '#2A2B30', hover: lt ? '#F2F3F5' : '#2A2B30', ctl: lt ? '#FFFFFF' : '#2A2B30' };
+    const mk = (x, cap, r, on) => ({ x, cap, r, dot: on ? '#36C26A' : '#9A9EA8', status: on ? L('Connected', 'Подключено') : L('Disconnected', 'Отключено'), sub: on ? L('Amsterdam · 41 ms', 'Амстердам · 41 мс') : L('Not protected', 'Не защищено'), open: L('Open Veil', 'Открыть Veil'), toggle: on ? L('Disconnect', 'Отключить') : L('Connect', 'Подключить'), quit: L('Quit', 'Выход') });
+    return { c, panels: [mk(24, 'Windows 11 · ' + L('disconnected', 'отключено'), 8, false), mk(298, 'Windows 11 · ' + L('connected', 'подключено'), 8, true), mk(572, 'macOS · ' + L('connected', 'подключено'), 10, true), mk(846, 'Linux · ' + L('connected', 'подключено'), 6, true)],
+      note1: L('Three items only: open the window, connect or disconnect, quit. The toggle shows the action, the first line shows the state.', 'Три пункта: открыть окно, подключить или отключить, выйти. Пункт-переключатель показывает действие, верхняя строка — состояние.'),
+      note2: L('Closing the window with the cross keeps Veil in the tray; only Quit stops the app and the tunnel.', 'Закрытие окна крестиком оставляет Veil в трее; приложение и туннель останавливает только «Выход».'),
+      note3: L('Tray icon: the mark in the gray layers; connected adds a red layer, disconnected is fully gray.', 'Иконка в трее: знак в серых слоях; при подключении красный слой, при отключении полностью серый.') };
+  }
+}
+</script></body></html>
