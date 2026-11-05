@@ -12,3 +12,6 @@ android/app/libs/*.jar
 *.apk
 .gradle/
 local.properties
+android/signing/
+*.jks
+*.keystore

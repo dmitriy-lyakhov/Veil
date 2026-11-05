@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Сборка Android-клиента Veil: Go-ядро (gomobile bind -> AAR) и APK (Gradle).
+# Использование: tools/build-android.sh [aar|apk|release|all]   (по умолчанию all = aar + debug apk)
+#   release — app-release.apk с R8 и подписью (нужны параметры подписи, см. ниже)
 # Переменные окружения (значения по умолчанию — каталог ../android-tools рядом с репозиторием):
 #   TOOLS         каталог с инструментами (jdk, sdk, gradle, gobin)
-#   JAVA_HOME     JDK 17
-#   ANDROID_HOME  Android SDK (platforms;android-34, build-tools;34.0.0, ndk;26.1.10909125)
-#   GRADLE        gradle (или gradlew)
-# Использование: tools/build-android.sh [aar|apk|all]   (по умолчанию all)
+#   JAVA_HOME, ANDROID_HOME, GRADLE
+#   Подпись release: VEIL_KEYSTORE, VEIL_STORE_PASSWORD, VEIL_KEY_ALIAS, VEIL_KEY_PASSWORD — либо файл
+#   $TOOLS/signing-secrets.txt (строки KEY=VALUE, вне репозитория); keystore лежит в android/signing/ (не коммитится)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,7 +24,6 @@ export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$ANDROID_HOME/ndk/26.1.10909125}"
 GRADLE="${GRADLE:-$(ls -d "$TOOLS"/gradle/gradle-8.7/bin/gradle* | grep -v '\.bat$' | head -1)}"
 export PATH="$TOOLS/gobin:$JAVA_HOME/bin:$PATH"
 [ -d "/c/Program Files/Go/bin" ] && export PATH="/c/Program Files/Go/bin:$PATH"
-# gomobile для android/arm64 требует cgo с NDK-компилятором (его выбирает сам gomobile)
 
 what="${1:-all}"
 cd "$ROOT"
@@ -37,7 +37,18 @@ fi
 
 if [ "$what" = apk ] || [ "$what" = all ]; then
   ( cd android && "$GRADLE" --no-daemon assembleDebug )
-  APK=android/app/build/outputs/apk/debug/app-debug.apk
-  mkdir -p dist/android && cp "$APK" dist/android/veil-debug.apk
+  mkdir -p dist/android && cp android/app/build/outputs/apk/debug/app-debug.apk dist/android/veil-debug.apk
   echo "APK: dist/android/veil-debug.apk"
+fi
+
+if [ "$what" = release ]; then
+  S="${VEIL_SECRETS:-$TOOLS/signing-secrets.txt}"
+  if [ -z "${VEIL_KEYSTORE:-}" ] && [ -f "$S" ]; then
+    while IFS='=' read -r k v; do [ -n "$k" ] && export "$k=$v"; done < "$S"
+  fi
+  [ -n "${VEIL_KEYSTORE:-}" ] || { echo "нет параметров подписи (VEIL_KEYSTORE...)"; exit 1; }
+  ( cd android && "$GRADLE" --no-daemon assembleRelease )
+  mkdir -p dist/android && cp android/app/build/outputs/apk/release/app-release.apk dist/android/veil-release.apk
+  "$ANDROID_HOME/build-tools/34.0.0/apksigner.bat" verify --verbose dist/android/veil-release.apk 2>&1 | head -8 || true
+  echo "APK: dist/android/veil-release.apk"
 fi

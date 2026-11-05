@@ -1,4 +1,136 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Veil</string>
+
+    <string name="tab_home">Главная</string>
+    <string name="tab_traffic">Трафик</string>
+    <string name="tab_settings">Настройки</string>
+    <string name="tab_add">Добавить</string>
+
+    <string name="st_off">Отключено</string>
+    <string name="st_on">Защищено</string>
+    <string name="st_connecting">Подключение…</string>
+    <string name="st_reconnecting">Переподключение…</string>
+    <string name="st_disconnecting">Отключение…</string>
+    <string name="st_error">Ошибка</string>
+    <string name="ring_connect">Подключить</string>
+    <string name="ring_connecting">Подключение</string>
+    <string name="ring_disconnecting">Отключение</string>
+    <string name="ring_protected">Защищено</string>
+    <string name="ring_retry">Повторить</string>
+    <string name="hint_idle">Нажмите кнопку, чтобы подключиться</string>
+    <string name="hint_connecting">Устанавливаем защищённое соединение</string>
+    <string name="entries_skipped">Недоступны входы: %1$d</string>
+    <string name="no_server">Нет сервера</string>
+    <string name="add_first">Добавьте сервер на вкладке «Добавить»</string>
+    <string name="choose_server">Выбор сервера</string>
+    <string name="no_profiles">Серверов пока нет.</string>
+    <string name="reselect">Выбрать вход заново</string>
+    <string name="reselect_sub">Переподключиться к лучшему входу каскада</string>
+    <string name="add_server">Добавить сервер</string>
+
+    <string name="traffic_title">Трафик</string>
+    <string name="traffic_last60">последние 60 секунд</string>
+    <string name="traffic_session">За сеанс</string>
+    <string name="traffic_day">Сегодня</string>
+    <string name="traffic_month">За месяц</string>
+    <string name="rx">Загрузка</string>
+    <string name="tx">Отправка</string>
+
+    <string name="sec_servers">Серверы</string>
+    <string name="sec_connection">Подключение</string>
+    <string name="sec_app">Приложение</string>
+    <string name="sec_look">Внешний вид</string>
+    <string name="servers">Серверы</string>
+    <string name="servers_count">Профилей: %1$d</string>
+    <string name="dns">DNS</string>
+    <string name="dns_auto">Из профиля</string>
+    <string name="dns_hint">Свои DNS-серверы через запятую. Пусто — использовать DNS из профиля.</string>
+    <string name="killswitch">KillSwitch</string>
+    <string name="ks_sub">Always-on VPN и блокировка без VPN</string>
+    <string name="auto_app">Автоподключение при запуске приложения</string>
+    <string name="auto_boot">Подключаться при включении устройства</string>
+    <string name="logs">Журналы</string>
+    <string name="logs_empty">Журнал пуст.</string>
+    <string name="share">Поделиться</string>
+    <string name="theme">Тема</string>
+    <string name="theme_system">Как в системе</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="theme_light">Светлая</string>
+    <string name="language">Язык</string>
+    <string name="lang_system">Как в системе</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_en">English</string>
+    <string name="about">О Veil</string>
+    <string name="about_version">Версия %1$s</string>
+    <string name="about_text">Клиент протоколов Veil (WireGuard внутри HTTPS), WireGuard и AmneziaWG. OpenVPN и IPsec на Android не поддерживаются.</string>
+    <string name="save">Сохранить</string>
+    <string name="on">Включено</string>
+    <string name="off">Выключено</string>
+    <string name="on_n">Включено · %1$d</string>
+
+    <string name="make_active">Сделать активным</string>
+    <string name="rename">Переименовать</string>
+    <string name="delete">Удалить</string>
+    <string name="delete_q">Удалить «%1$s»? Ссылка и ключи будут стёрты с устройства.</string>
+    <string name="backup">Резервная копия</string>
+    <string name="backup_hint">Файл содержит ссылки и ключи открытым текстом — храните его в надёжном месте.</string>
+    <string name="backup_export">Экспорт в файл</string>
+    <string name="backup_import">Импорт из файла</string>
+    <string name="backup_saved">Копия сохранена</string>
+    <string name="backup_restored">Добавлено профилей: %1$d</string>
+
+    <string name="add_title">Добавить сервер</string>
+    <string name="add_hint">Вставьте ссылку veil:// или текст конфигурации WireGuard / AmneziaWG (.conf), отсканируйте QR или выберите файл.</string>
+    <string name="name_hint">Название (необязательно)</string>
+    <string name="link_hint">veil://… или [Interface] …</string>
+    <string name="paste">Вставить из буфера</string>
+    <string name="paste_sub">Ссылка или текст конфигурации</string>
+    <string name="scan_qr">Сканировать QR</string>
+    <string name="scan_sub">Камера, разрешение запрашивается при первом запуске</string>
+    <string name="scan_prompt">Наведите камеру на QR-код с конфигурацией</string>
+    <string name="pick_file">Выбрать файл</string>
+    <string name="pick_sub">.conf или .veil</string>
+    <string name="add_btn">Добавить</string>
+    <string name="clip_empty">Буфер обмена пуст</string>
+    <string name="added_profile">Добавлено: %1$s</string>
+    <string name="protocols_note">Поддерживаются Veil, WireGuard и AmneziaWG. OpenVPN и IPsec требуют внешних процессов или модулей ядра, которых нет в приложении Android.</string>
+
+    <string name="split_title">Раздельный доступ</string>
+    <string name="split_n">Раздельный доступ · %1$d</string>
+    <string name="split_hint">Направляйте часть сайтов и приложений через VPN, а остальное — в обход.</string>
+    <string name="split_sites">По сайтам</string>
+    <string name="split_apps">По приложениям</string>
+    <string name="split_sites_title">Раздельный доступ: сайты</string>
+    <string name="split_apps_title">Раздельный доступ: приложения</string>
+    <string name="split_enable">Раздельный доступ</string>
+    <string name="split_note">Режимы можно сочетать. Изменения применяются при следующем подключении.</string>
+    <string name="via_vpn">Через VPN</string>
+    <string name="direct">Напрямую</string>
+    <string name="sites_via_hint">Только перечисленные сайты и адреса будут открываться через VPN.</string>
+    <string name="sites_direct_hint">Перечисленные сайты и адреса будут открываться в обход VPN, остальное — через VPN.</string>
+    <string name="site_hint">сайт, IP или подсеть</string>
+    <string name="sites_note">Домены разрешаются в адреса при подключении; если у сайта сменятся адреса, переподключитесь. Допустимы домены, URL, IPv4/IPv6 и подсети.</string>
+    <string name="apps_via_hint">Только выбранные приложения будут работать через VPN.</string>
+    <string name="apps_direct_hint">Выбранные приложения будут работать в обход VPN.</string>
+    <string name="search_apps">Название приложения</string>
+
+    <string name="ks_text">Android блокирует трафик без VPN только на уровне системы: включите «Постоянный VPN» (Always-on VPN) для Veil и «Блокировать соединения без VPN» в системных настройках VPN.</string>
+    <string name="ks_alwayson">Always-on VPN для Veil</string>
+    <string name="ks_lockdown">Блокировать соединения без VPN</string>
+    <string name="ks_open">Открыть настройки VPN</string>
+
+    <string name="err_openvpn">OpenVPN на Android в Veil не поддерживается: ему нужен внешний процесс openvpn. Используйте Veil, WireGuard или AmneziaWG.</string>
+    <string name="err_ipsec">IPsec на Android в Veil не поддерживается: нужен модуль ядра/служба strongSwan. Используйте Veil, WireGuard или AmneziaWG.</string>
+    <string name="err_relay">Это ключ каскада (veil-relay://), а не профиль клиента.</string>
+    <string name="err_format">Не удалось распознать конфигурацию: ожидается veil://…, текст WireGuard/AmneziaWG (.conf) или файл .veil.</string>
+    <string name="err_empty">Пустое значение или нет данных.</string>
+    <string name="err_vpn">Не удалось создать VPN-интерфейс.</string>
+    <string name="err_vpn_denied">Разрешение VPN не выдано</string>
+    <string name="err_generic">Не получилось. Попробуйте ещё раз.</string>
+
+    <string name="notif_connecting">Подключение…</string>
+    <string name="notif_reconnecting">Переподключение…</string>
+    <string name="notif_connected">Подключено · ↓ %1$s ↑ %2$s</string>
+    <string name="notif_disconnect">Отключить</string>
 </resources>
