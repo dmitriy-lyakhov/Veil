@@ -103,8 +103,9 @@ fun Context.row(
 ): LinearLayout = hbox().apply {
     // размеры из дизайна (App.dc.html): строка 56 dp, с подписью 64, с плиткой иконки 76; поля 16, вертикаль 10 (12 у плитки)
     val tile = icon != null && bg == T.p.raised   // плитка иконки только у карточек страниц; в шторках иконка без плитки
-    setPadding(dp(16), dp(if (tile) 12 else 10), dp(16), dp(if (tile) 12 else 10))
-    minimumHeight = dp(if (tile) 76 else if (sub != null) 64 else 56)
+    val sheetRow = !tile && bg == T.p.high          // строка списка в шторке: высота 60, поля 12/16
+    setPadding(dp(16), dp(if (tile || sheetRow) 12 else 10), dp(16), dp(if (tile || sheetRow) 12 else 10))
+    minimumHeight = dp(if (tile) 76 else if (sheetRow) 60 else if (sub != null) 64 else 56)
     ripple(rounded(bg, 14f))
     if (tile) {
         val t = FrameLayout(this@row).apply { background = rounded(T.p.high, 11f) }
@@ -146,11 +147,30 @@ fun Context.button(label: CharSequence, primary: Boolean = true, onClick: () -> 
         setOnClickListener { onClick() }
     }
 
+/**
+ * Переключатель по дизайну: дорожка 48x28 (радиус 14), бегунок 22 dp с отступом 3 dp; включённый — accent с галочкой в бегунке.
+ * Переход 200 мс: бегунок едет, цвета перетекают, галочка растёт (0,4 → 1) и проявляется; «Уменьшить движение» — без анимации.
+ */
 class Toggle(ctx: Context, var on: Boolean, val onChange: (Boolean) -> Unit) : View(ctx) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var p = if (on) 1f else 0f          // 0 — выключен, 1 — включён
+    private var anim: android.animation.ValueAnimator? = null
+    private val argb = android.animation.ArgbEvaluator()
+    private val ease = android.view.animation.PathInterpolator(0.2f, 0f, 0.2f, 1f)
     init {
         layoutParams = LinearLayout.LayoutParams(dp(48), dp(28))
-        setOnClickListener { on = !on; invalidate(); onChange(on) }
+        setOnClickListener {
+            on = !on
+            anim?.cancel()
+            if (Settings.reduceMotion(context)) { p = if (on) 1f else 0f; invalidate() } else {
+                anim = android.animation.ValueAnimator.ofFloat(p, if (on) 1f else 0f).apply {
+                    duration = 200; interpolator = ease
+                    addUpdateListener { p = it.animatedValue as Float; invalidate() }
+                    start()
+                }
+            }
+            onChange(on)
+        }
         isClickable = true
     }
     private val check = android.graphics.Path()
@@ -158,21 +178,21 @@ class Toggle(ctx: Context, var on: Boolean, val onChange: (Boolean) -> Unit) : V
         style = Paint.Style.STROKE; strokeCap = Paint.Cap.SQUARE; strokeJoin = Paint.Join.MITER
     }
 
-    /** Дизайн: дорожка 48x28 (радиус 14), бегунок 22 dp с отступом 3 dp; во включённом состоянии в бегунке галочка. */
     override fun onDraw(c: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
-        paint.color = if (on) T.p.accent else T.p.high
+        paint.color = argb.evaluate(p, T.p.high, T.p.accent) as Int
         c.drawRoundRect(0f, 0f, w, h, h / 2, h / 2, paint)
-        paint.color = if (on) T.p.onAccent else T.p.ink
+        paint.color = argb.evaluate(p, T.p.ink, T.p.onAccent) as Int
         val r = dp(11).toFloat()
-        val cx = if (on) w - dp(3) - r else dp(3) + r
+        val x0 = dp(3) + r; val x1 = w - dp(3) - r
+        val cx = x0 + (x1 - x0) * p
         c.drawCircle(cx, h / 2, r, paint)
-        if (on) {
-            // галочка 14 dp (viewBox 24, штрих 3,2): M4 12 l5 5 l11-11
-            val s = dp(14) / 24f; val ox = cx - dp(7); val oy = h / 2 - dp(7)
+        if (p > 0.02f) {
+            // галочка 14 dp (viewBox 24, штрих 3,2): M4 12 l5 5 l11-11; масштаб 0,4 → 1 и прозрачность вместе с переключением
+            val s = dp(14) / 24f * (0.4f + 0.6f * p); val ox = cx - 12 * s; val oy = h / 2 - 12 * s
             check.reset()
             check.moveTo(ox + 4 * s, oy + 12 * s); check.lineTo(ox + 9 * s, oy + 17 * s); check.lineTo(ox + 20 * s, oy + 6 * s)
-            checkPaint.color = T.p.accent; checkPaint.strokeWidth = 3.2f * s
+            checkPaint.color = T.p.accent; checkPaint.alpha = (255 * p).toInt(); checkPaint.strokeWidth = 3.2f * s
             c.drawPath(check, checkPaint)
         }
     }

@@ -168,8 +168,7 @@ class MainActivity : Activity() {
     fun selectTab(i: Int) {
         closeSheet()
         tab = i
-        stack.clear()
-        show(rootPage(i))
+        go(2) { stack.clear(); stack.add(rootPage(i)) }
     }
 
     private fun show(p: Page) {
@@ -177,10 +176,32 @@ class MainActivity : Activity() {
         render()
     }
 
-    fun push(p: Page) { closeSheet(); show(p) }
+    fun push(p: Page) { closeSheet(); go(1) { stack.add(p) } }
 
     fun pop() {
-        if (stack.size > 1) { stack.removeAt(stack.size - 1); render() }
+        if (stack.size > 1) go(-1) { stack.removeAt(stack.size - 1) }
+    }
+
+    // ---------- переходы между страницами (дизайн: уход 140 мс, появление 320 мс; вперёд +32 dp, назад −32 dp, вкладка — подъём 10 dp) ----------
+
+    private var enterDir = 0
+    private var navBusy = false
+
+    /** Сменить страницу: старая уходит за 140 мс, затем change() правит стек и новая страница появляется. dir: 1 вперёд, −1 назад, 2 вкладка. */
+    private fun go(dir: Int, change: () -> Unit) {
+        val old = if (content.childCount > 0) content.getChildAt(0) else null
+        if (old == null || navBusy || Settings.reduceMotion(this)) { change(); enterDir = dir; render(); return }
+        navBusy = true
+        old.animate().alpha(0f).translationX(if (dir == 2) 0f else -dp(14).toFloat()).setDuration(140)
+            .withEndAction { navBusy = false; change(); enterDir = dir; render() }.start()
+    }
+
+    private fun enterAnimation(v: View) {
+        val d = enterDir; enterDir = 0
+        if (d == 0 || Settings.reduceMotion(this)) return
+        v.alpha = 0f
+        if (d == 2) v.translationY = dp(10).toFloat() else v.translationX = d * dp(32).toFloat()
+        v.animate().alpha(1f).translationX(0f).translationY(0f).setDuration(320).setInterpolator(sheetEase).start()
     }
 
     private fun render() {
@@ -207,6 +228,7 @@ class MainActivity : Activity() {
             col
         } else if (p.scroll) ScrollView(this).apply { addView(body); isFillViewport = true } else body
         content.addView(v, FrameLayout.LayoutParams(MATCH, MATCH))
+        enterAnimation(v)
         p.refresh()
     }
 
@@ -240,17 +262,19 @@ class MainActivity : Activity() {
         val sheet = vbox().apply {
             background = android.graphics.drawable.GradientDrawable().apply {
                 setColor(T.p.raised)
-                val r = dp(20).toFloat()
+                val r = dp(16).toFloat()
                 cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
             }
-            setPadding(dp(20), dp(12), dp(20), dp(20))
+            setPadding(dp(20), dp(12), dp(20), dp(24))
             isClickable = true
         }
         val handle = View(this).apply { background = rounded(T.p.high, 3f) }
         sheet.addView(handle, LinearLayout.LayoutParams(dp(44), dp(5)).apply { gravity = Gravity.CENTER_HORIZONTAL; bottomMargin = dp(14) })
         val head = hbox()
-        head.addView(text(title, 20f, 600), lp(0, WRAP, 1f))
+        head.addView(text(title, 22f, 600), lp(0, WRAP, 1f))
         val x = icon(R.drawable.ic_close, 22f, T.p.muted)
+        x.setPadding(dp(11), dp(11), dp(11), dp(11))   // цель нажатия 44 dp, значок 22 (дизайн: отступ -8 справа и сверху)
+        x.layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply { rightMargin = -dp(8); topMargin = -dp(8) }
         x.setOnClickListener { closeSheet() }
         head.addView(x)
         sheet.addView(head, lp(MATCH, WRAP))
