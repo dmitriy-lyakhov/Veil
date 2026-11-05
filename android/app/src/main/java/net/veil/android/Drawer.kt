@@ -27,7 +27,8 @@ class ServerDrawer(ctx: Context, val top: View, list: View) : LinearLayout(ctx) 
 
     private val scroll = ScrollView(ctx).apply { isVerticalScrollBarEnabled = false; overScrollMode = OVER_SCROLL_NEVER }
     private val slop = ViewConfiguration.get(ctx).scaledTouchSlop
-    private val ease = PathInterpolator(0.2f, 0f, 0.2f, 1f)
+    private val settleEase = PathInterpolator(0.22f, 0.9f, 0.3f, 1f)   // мягкое торможение без рывка в начале
+    private val toggleEase = PathInterpolator(0.4f, 0f, 0.2f, 1f)      // стандартная кривая для нажатия
     private var anim: ValueAnimator? = null
     private var downY = 0f
     private var startT = 0f
@@ -64,12 +65,12 @@ class ServerDrawer(ctx: Context, val top: View, list: View) : LinearLayout(ctx) 
         anim?.cancel()
         if (Settings.reduceMotion(context) || height == 0) { setProgress(target); end?.invoke(); return }
         val dist = abs(target - t)
-        // доводка после жеста: движение продолжается от пальца с плавным замедлением (200–420 мс, быстрее при быстром броске);
-        // переключение нажатием — по кривой дизайна
-        val ms = if (settle) (200f + 220f * dist).let { base -> (base * dp(900) / maxOf(velocity, dp(900).toFloat())).toLong().coerceAtLeast(160L) }
-                 else (300f * dist).toLong().coerceAtLeast(140L)
+        // доводка после жеста: продолжает движение пальца и мягко тормозит (360–640 мс; быстрый бросок сокращает не более чем на треть);
+        // переключение нажатием — стандартная кривая, 260–420 мс
+        val ms = if (settle) (360f + 280f * dist).let { base -> (base * (dp(900) / maxOf(velocity, dp(900).toFloat())).coerceAtLeast(0.67f)).toLong() }
+                 else (420f * dist).toLong().coerceAtLeast(260L)
         anim = ValueAnimator.ofFloat(t, target).apply {
-            duration = ms; interpolator = if (settle) android.view.animation.DecelerateInterpolator(1.8f) else ease
+            duration = ms; interpolator = if (settle) settleEase else toggleEase
             addUpdateListener { setProgress(it.animatedValue as Float) }
             addListener(object : AnimatorListenerAdapter() {
                 private var cancelled = false
