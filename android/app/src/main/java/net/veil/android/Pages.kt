@@ -64,7 +64,10 @@ class HomePage(a: MainActivity) : Page(a) {
         splitText = a.text("", 13f, 500); split.addView(splitText)
         split.addView(a.icon(R.drawable.ic_right, 18f, T.p.muted).also { (it.layoutParams as LinearLayout.LayoutParams).leftMargin = dp(10) })
         mid.addView(split, lp(WRAP, WRAP).apply { topMargin = dp(16) })
-        col.addView(mid, lp(MATCH, 0, 1f))
+        // в альбомной ориентации содержимое не помещается между шапкой и панелью сервера — прокручивается
+        val midScroll = android.widget.ScrollView(a).apply { isFillViewport = true; isVerticalScrollBarEnabled = false }
+        midScroll.addView(mid, android.view.ViewGroup.LayoutParams(MATCH, WRAP))
+        col.addView(midScroll, lp(MATCH, 0, 1f))
 
         // нижняя панель с выбором сервера
         val panel = a.vbox().apply {

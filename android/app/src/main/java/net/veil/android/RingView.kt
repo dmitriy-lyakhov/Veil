@@ -43,7 +43,8 @@ class RingView(ctx: Context) : View(ctx) {
     }
 
     override fun onMeasure(w: Int, h: Int) {
-        val s = dp(280)
+        val landscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val s = if (landscape) dp(140) else dp(280)
         setMeasuredDimension(s, s)
     }
 
@@ -59,6 +60,9 @@ class RingView(ctx: Context) : View(ctx) {
         val p = T.p
 
         c.save()
+        // рисуем в координатах дизайна (280 dp), на меньшем кольце масштабируем
+        val k = width / dp(280).toFloat()
+        c.scale(k, k, cx, cy)
         // встряска при ошибке: затухающее колебание 0.6 с
         if (!still && state == RingState.ERROR && now - shakeAt < 700) {
             val st = (now - shakeAt) / 1000f
@@ -103,7 +107,7 @@ class RingView(ctx: Context) : View(ctx) {
         c.restore()
 
         tp.typeface = T.semibold
-        tp.textSize = dp(18).toFloat() * resources.configuration.fontScale
+        tp.textSize = dp(18).toFloat() * resources.configuration.fontScale * (if (k < 1f) 0.8f else 1f)
         tp.color = when (state) {
             RingState.IDLE -> p.ink
             RingState.CONNECTED -> p.ink
