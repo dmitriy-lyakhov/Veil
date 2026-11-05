@@ -54,6 +54,8 @@ type Status struct {
 	RxBytes   uint64    `json:"rx_bytes"`
 	TxBytes   uint64    `json:"tx_bytes"`
 	LastError string    `json:"last_error,omitempty"`
+	// LatencyMS — задержка до входа по открытому соединению (HTTP/2 PING); 0 — не измерена.
+	LatencyMS float64 `json:"latency_ms,omitempty"`
 	// Skipped — входы каскада, которые не удалось использовать перед этим подключением.
 	Skipped []string `json:"skipped_entries,omitempty"`
 }
@@ -176,6 +178,7 @@ func (t *Tunnel) serve(c Transport) {
 	defer rotate.Stop()
 	watch := time.NewTicker(watchInterval)
 	defer watch.Stop()
+	ticks := 0
 	for {
 		select {
 		case <-t.ctx.Done():
@@ -198,6 +201,9 @@ func (t *Tunnel) serve(c Transport) {
 			c, errc = nc, t.startReader(nc)
 			rotate.Reset(rotationInterval())
 		case <-watch.C:
+			if ticks++; ticks%2 == 0 {
+				t.sampleRTT(c)
+			}
 			if !t.silent() {
 				continue
 			}
@@ -392,4 +398,33 @@ func (t *Tunnel) silent() bool {
 		return true
 	}
 	return time.Since(hs) > silentStale
+}
+
+// rttProber — транспорт, умеющий измерять задержку по уже открытому соединению.
+type rttProber interface {
+	Ping(ctx context.Context) (time.Duration, error)
+}
+
+// sampleRTT измеряет задержку до входа в фоне и кладёт в статус. Для транспортов без PING остаётся замер входа.
+func (t *Tunnel) sampleRTT(c Transport) {
+	p, ok := c.(rttProber)
+	if !ok {
+		t.mu.Lock()
+		if t.status.LatencyMS == 0 {
+			t.status.LatencyMS = t.status.EntryRTT
+		}
+		t.mu.Unlock()
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(t.ctx, 3*time.Second)
+		defer cancel()
+		d, err := p.Ping(ctx)
+		if err != nil {
+			return
+		}
+		t.mu.Lock()
+		t.status.LatencyMS = float64(d.Microseconds()) / 1000
+		t.mu.Unlock()
+	}()
 }

@@ -80,6 +80,8 @@ type ui struct {
 	statAt             time.Time
 	rxPrev, txPrev     uint64
 	statOK             bool
+	tr                 trafficState
+	trayReady          bool
 	serversView        fyne.CanvasObject
 	st                 *settings.Settings
 	share              *shareState
@@ -113,7 +115,7 @@ func Run() {
 	u.win.SetContent(u.buildShell())
 	u.showPage(0)
 	u.reload()
-	u.win.SetCloseIntercept(u.quit)
+	u.win.SetCloseIntercept(u.closeWindow)
 	u.afterStart()
 	u.win.Resize(fyne.NewSize(winWidth, winHeight))
 	u.win.ShowAndRun()
@@ -330,7 +332,7 @@ func (u *ui) showReport(r *helper.Report) {
 		u.power.SetState(powerOn)
 		elapsed := time.Since(u.since).Truncate(time.Second)
 		u.power.SetTimer(clock(elapsed))
-		u.updateStats(r.RxBytes, r.TxBytes, clock(elapsed))
+		u.updateStats(r.RxBytes, r.TxBytes, clock(elapsed), r.LatencyMS)
 		sub := fmt.Sprintf("%s · %s · %s", transportShort(r.Transport), r.Family, clock(elapsed))
 		if r.Entry != "" {
 			sub = fmt.Sprintf(L("entry %s (%.0f ms) → exit %s\n%s", "вход %s (%.0f мс) → выход %s\n%s"), r.Entry, r.EntryRTT, r.Exit, sub)

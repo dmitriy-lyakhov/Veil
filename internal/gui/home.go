@@ -17,7 +17,10 @@ import (
 // туннелирование и внизу карточка выбранного сервера (по нажатию открывается выбор).
 func (u *ui) homePage() fyne.CanvasObject {
 	u.power = newPowerButton(u.toggle)
-	u.power.OnState = func(powerState) { u.refreshPill() }
+	u.power.OnState = func(powerState) {
+		u.refreshPill()
+		u.updateTray()
+	}
 	u.status = text(L("Disconnected", "Отключено"), 16, colText, true)
 	u.status.Alignment = fyne.TextAlignCenter
 	u.sub = text(L("Pick a server and press the button", "Выберите сервер и нажмите кнопку"), 13, colMuted, false)
@@ -52,10 +55,10 @@ func (u *ui) homePage() fyne.CanvasObject {
 	srvW := newTapCardR(container.NewVBox(nameWithChevron(u.srvNameW, container.NewCenter(iconImg("down", colMuted, 22)), false), u.srvAddrW),
 		colCard, colCardHover, 14, 16, u.openServerSheet)
 	u.stats = [4]*statTile{
-		newStatTile(L("Download", "Загрузка"), L("MB/s", "МБ/с")),
-		newStatTile(L("Upload", "Отдача"), L("MB/s", "МБ/с")),
-		newStatTile(L("Latency", "Задержка"), L("ms", "мс")),
-		newStatTile(L("Session", "Сессия"), ""),
+		newStatTile(L("Download", "Загрузка"), L("MB/s", "МБ/с"), u.openTraffic),
+		newStatTile(L("Upload", "Отдача"), L("MB/s", "МБ/с"), u.openTraffic),
+		newStatTile(L("Latency", "Задержка"), L("ms", "мс"), u.openTraffic),
+		newStatTile(L("Session", "Сессия"), "", u.openTraffic),
 	}
 	grid := container.New(&statsLayout{}, u.stats[0].obj, u.stats[1].obj, u.stats[2].obj, u.stats[3].obj)
 	side := container.NewVBox(srvW, grid)

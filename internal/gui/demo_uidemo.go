@@ -30,6 +30,17 @@ func init() {
 					u.stats[1].set("1.5", "▲ исходящий")
 					u.stats[2].set("38", "▲ стабильно")
 					u.stats[3].set("00:00:12", "")
+				case "traffic":
+					u.connected = true
+					u.power.SetState(powerOn)
+					u.tr.store = loadTrafficStore()
+					u.tr.store.Day, u.tr.store.DayRx, u.tr.store.DayTx = time.Now().Format("2006-01-02"), 1100<<20, 130<<20
+					u.tr.store.Month, u.tr.store.MonthRx, u.tr.store.MonthTx = time.Now().Format("2006-01"), 34<<30, 4<<30
+					for i := 0; i < 60; i++ {
+						u.tr.push(float64(500000 + (i*37%11)*400000))
+					}
+					u.tr.rxRate, u.tr.txRate, u.tr.latency, u.tr.rx, u.tr.tx, u.tr.session = 4.2*(1<<20), 0.6*(1<<20), 41, 186<<20, 24<<20, "00:14:32"
+					u.openTraffic()
 				case "share":
 					u.showPage(1)
 				case "users":

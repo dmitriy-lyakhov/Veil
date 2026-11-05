@@ -338,3 +338,12 @@ func (d *Dialer) h2Handshake(raw net.Conn, t config.Target, authKey []byte) (*h2
 	}
 	return c, nil
 }
+
+// Ping измеряет задержку PING-кадром HTTP/2 по открытому соединению.
+func (c *h2Conn) Ping(ctx context.Context) (time.Duration, error) {
+	start := time.Now()
+	if err := c.cc.Ping(ctx); err != nil {
+		return 0, err
+	}
+	return time.Since(start), nil
+}

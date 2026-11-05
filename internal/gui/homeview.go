@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"fmt"
 	"image/color"
 
 	"fyne.io/fyne/v2"
@@ -15,7 +16,7 @@ type statTile struct {
 	obj                     fyne.CanvasObject
 }
 
-func newStatTile(label, unit string) *statTile {
+func newStatTile(label, unit string, tap func()) *statTile {
 	t := &statTile{
 		label: text(label, 12, colMuted, false),
 		val:   text("—", 22, colText, true),
@@ -27,6 +28,9 @@ func newStatTile(label, unit string) *statTile {
 	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	body := container.NewVBox(t.label, container.NewHBox(t.val, t.unit), t.delta)
 	t.obj = container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(14, 14, 16, 16), body))
+	if tap != nil {
+		t.obj = newRowTap(t.obj, tap)
+	}
 	return t
 }
 
@@ -220,24 +224,44 @@ type pillRef struct {
 }
 
 // updateStats обновляет плитки статистики по отчёту о подключении.
-func (u *ui) updateStats(rx, tx uint64, session string) {
+func (u *ui) updateStats(rx, tx uint64, session string, latency float64) {
 	now := timeNow()
+	t := &u.tr
+	if t.store == nil {
+		t.store = loadTrafficStore()
+	}
 	if !u.statAt.IsZero() && now.After(u.statAt) && u.statOK {
 		dt := now.Sub(u.statAt).Seconds()
-		rate := func(cur, prev uint64) string {
+		delta := func(cur, prev uint64) uint64 {
 			if cur < prev {
-				return "0.0"
+				return 0
 			}
-			return fmtMB(float64(cur-prev) / dt / (1 << 20))
+			return cur - prev
 		}
-		u.stats[0].set(rate(rx, u.rxPrev), L("▼ incoming", "▼ входящий"))
-		u.stats[1].set(rate(tx, u.txPrev), L("▲ outgoing", "▲ исходящий"))
+		dr, dtx := delta(rx, u.rxPrev), delta(tx, u.txPrev)
+		t.rxRate, t.txRate = float64(dr)/dt, float64(dtx)/dt
+		t.push(t.rxRate)
+		t.store.add(dr, dtx, now)
+		u.stats[0].set(fmtMB(t.rxRate/(1<<20)), L("▼ incoming", "▼ входящий"))
+		u.stats[1].set(fmtMB(t.txRate/(1<<20)), L("▲ outgoing", "▲ исходящий"))
 	}
 	u.statAt, u.rxPrev, u.txPrev, u.statOK = now, rx, tx, true
+	t.rx, t.tx, t.session, t.latency = rx, tx, session, latency
+	if latency > 0 {
+		u.stats[2].set(fmt.Sprintf("%.0f", latency), L("▲ stable", "▲ стабильно"))
+		if int(latency) != t.trayLat {
+			t.trayLat = int(latency)
+			u.updateTray()
+		}
+	}
 	u.stats[3].set(session, "")
+	if t.refresh != nil {
+		t.refresh()
+	}
 }
 
 func (u *ui) resetStats() {
+	u.tr.reset()
 	u.statOK = false
 	for _, t := range u.stats {
 		if t != nil {
