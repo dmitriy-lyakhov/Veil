@@ -50,6 +50,8 @@
     <string name="ks_sub">Always-on VPN and blocking without VPN</string>
     <string name="auto_app">Connect when the app starts</string>
     <string name="auto_boot">Connect when the device starts</string>
+    <string name="reduce_motion">Reduce motion</string>
+    <string name="reduce_motion_sub">Connection ring without animation</string>
     <string name="logs">Logs</string>
     <string name="logs_empty">The log is empty.</string>
     <string name="share">Share</string>

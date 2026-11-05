@@ -179,12 +179,16 @@ fun withLocale(ctx: Context): Context {
     return ctx.createConfigurationContext(cfg)
 }
 
+private fun isRu() = Locale.getDefault().language == "ru"
+
 fun fmtBytes(n: Long): String {
-    val u = arrayOf("B", "KB", "MB", "GB", "TB")
+    val u = if (isRu()) arrayOf("Б", "КБ", "МБ", "ГБ", "ТБ") else arrayOf("B", "KB", "MB", "GB", "TB")
     var v = n.toDouble(); var i = 0
     while (v >= 1024 && i < u.size - 1) { v /= 1024; i++ }
     return if (i == 0) "$n ${u[0]}" else String.format(Locale.US, "%.1f %s", v, u[i])
 }
+
+fun fmtRate(n: Long): String = fmtBytes(n) + if (isRu()) "/с" else "/s"
 
 fun frame(ctx: Context) = FrameLayout(ctx)
 val transparent = Color.TRANSPARENT

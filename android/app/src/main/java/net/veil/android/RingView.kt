@@ -29,9 +29,8 @@ class RingView(ctx: Context) : View(ctx) {
     private val rect = RectF()
     private var attached = false
 
-    /** Системная настройка «убрать анимацию» (animator_duration_scale = 0): кольцо рисуется статично. */
-    private fun motionOff() = android.provider.Settings.Global.getFloat(
-        context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+    /** «Уменьшить движение» (настройка приложения или системное «убрать анимацию»): кольцо рисуется статично. */
+    private fun motionOff() = Settings.reduceMotion(context)
 
     fun setState(s: RingState) {
         if (s == state) return

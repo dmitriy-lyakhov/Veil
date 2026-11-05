@@ -210,7 +210,7 @@ class TrafficPage(a: MainActivity) : Page(a) {
 
     override fun refresh() {
         val rx = a.rxHist.lastOrNull() ?: 0f; val tx = a.txHist.lastOrNull() ?: 0f
-        speed.text = "↓ ${fmtBytes(rx.toLong())}/s   ↑ ${fmtBytes(tx.toLong())}/s"
+        speed.text = "↓ ${fmtRate(rx.toLong())}   ↑ ${fmtRate(tx.toLong())}"
         graph.invalidate()
         val st = a.status
         cells["session"]?.text = "↓ ${fmtBytes(st.optLong("rx"))}   ↑ ${fmtBytes(st.optLong("tx"))}"
@@ -239,6 +239,7 @@ class SettingsPage(a: MainActivity) : Page(a) {
         col.addView(sectionHeader(a, a.getString(R.string.sec_app)))
         add(a.row(a.getString(R.string.auto_app), null, null, Toggle(a, Settings.autoApp(a)) { Settings.setBool(a, "auto_app", it) }) {})
         add(a.row(a.getString(R.string.auto_boot), null, null, Toggle(a, Settings.autoBoot(a)) { Settings.setBool(a, "auto_boot", it) }) {})
+        add(a.row(a.getString(R.string.reduce_motion), a.getString(R.string.reduce_motion_sub), null, Toggle(a, Settings.reduceMotion(a)) { Settings.setBool(a, "reduce_motion", it) }) {})
         add(a.row(a.getString(R.string.logs), null, R.drawable.ic_info, chevron = true) { a.push(LogsPage(a)) })
         col.addView(sectionHeader(a, a.getString(R.string.sec_look)))
         add(a.row(a.getString(R.string.theme), themeName(Settings.theme(a)), null, chevron = true) { choose(a.getString(R.string.theme), listOf("system" to R.string.theme_system, "dark" to R.string.theme_dark, "light" to R.string.theme_light), Settings.theme(a), "theme") })

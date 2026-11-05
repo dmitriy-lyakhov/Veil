@@ -50,6 +50,8 @@
     <string name="ks_sub">Always-on VPN и блокировка без VPN</string>
     <string name="auto_app">Автоподключение при запуске приложения</string>
     <string name="auto_boot">Подключаться при включении устройства</string>
+    <string name="reduce_motion">Уменьшить движение</string>
+    <string name="reduce_motion_sub">Кольцо подключения без анимации</string>
     <string name="logs">Журналы</string>
     <string name="logs_empty">Журнал пуст.</string>
     <string name="share">Поделиться</string>

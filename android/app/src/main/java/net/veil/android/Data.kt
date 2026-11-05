@@ -158,6 +158,10 @@ object Settings {
     fun activeId(c: Context): String? = sp(c).getString("active", null)
     fun setActive(c: Context, id: String?) = sp(c).edit().putString("active", id).apply()
 
+    /** «Уменьшить движение»: свой переключатель либо системная настройка «убрать анимацию». */
+    fun reduceMotion(c: Context) = bool(c, "reduce_motion") ||
+        android.provider.Settings.Global.getFloat(c.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+
     // автозапуск
     fun autoApp(c: Context) = bool(c, "auto_app")
     fun autoBoot(c: Context) = bool(c, "auto_boot")
