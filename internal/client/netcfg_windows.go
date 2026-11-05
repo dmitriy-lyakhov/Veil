@@ -153,6 +153,11 @@ func applyNetwork(nc NetConfig, log *slog.Logger) (*undoStack, error) {
 // нём клиента VPN. Собственные сокеты Veil привязываются к физическому
 // интерфейсу через IP_UNICAST_IF, поэтому в туннель не попадают.
 func physicalIf(srv netip.Addr) (uint32, error) {
+	if ifc, err := pinnedInterface(); err != nil {
+		return 0, err
+	} else if ifc != nil {
+		return uint32(ifc.Index), nil
+	}
 	ps := fmt.Sprintf(`$r = Find-NetRoute -RemoteIPAddress '%s' | Where-Object { $_.NextHop } | Select-Object -First 1; "$($r.InterfaceIndex)"`, srv)
 	out, err := run("powershell", "-NoProfile", "-NonInteractive", "-Command", ps)
 	if err != nil {

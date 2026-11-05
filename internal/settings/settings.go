@@ -13,6 +13,7 @@ import (
 type Settings struct {
 	DNS            []string  `json:"dns,omitempty"` // подмена DNS сервера из профиля (основной, запасной)
 	KillSwitch     bool      `json:"kill_switch,omitempty"`
+	Interface      string    `json:"interface,omitempty"` // сетевой интерфейс, на котором работает приложение (пусто — автоматически)
 	AutoStart      bool      `json:"auto_start,omitempty"`
 	AutoConnect    bool      `json:"auto_connect,omitempty"`
 	StartMinimized bool      `json:"start_minimized,omitempty"`

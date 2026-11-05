@@ -27,6 +27,7 @@ const (
 	relayOpExplore  = "explore"
 	relayOpPing     = "ping"
 	relayOpLatency  = "latency"
+	relayOpAdmin    = "admin"
 )
 
 type relayCounter struct {
@@ -46,19 +47,25 @@ type relayRequest struct {
 	Name      string   `json:"name,omitempty"`
 	PublicKey string   `json:"public_key,omitempty"`
 	Route     []string `json:"route,omitempty"`
+	// для relayOpAdmin: запрос админки, который нужно выполнить на узле
+	Method string          `json:"method,omitempty"`
+	Path   string          `json:"path,omitempty"`
+	Body   json.RawMessage `json:"body,omitempty"`
 }
 
 type relayResponse struct {
-	AuthKey         string        `json:"auth_key,omitempty"`
-	Address4        string        `json:"address4,omitempty"`
-	Address6        string        `json:"address6,omitempty"`
-	ServerPublicKey string        `json:"server_public_key,omitempty"`
-	MTU             int           `json:"mtu,omitempty"`
-	Hops            []string      `json:"hops,omitempty"`
-	Upstreams       []string      `json:"upstreams,omitempty"`
-	Self            string        `json:"self,omitempty"`
-	Company         string        `json:"company,omitempty"`
-	Links           []LinkLatency `json:"links,omitempty"`
+	AuthKey         string          `json:"auth_key,omitempty"`
+	Address4        string          `json:"address4,omitempty"`
+	Address6        string          `json:"address6,omitempty"`
+	ServerPublicKey string          `json:"server_public_key,omitempty"`
+	MTU             int             `json:"mtu,omitempty"`
+	Hops            []string        `json:"hops,omitempty"`
+	Upstreams       []string        `json:"upstreams,omitempty"`
+	Self            string          `json:"self,omitempty"`
+	Company         string          `json:"company,omitempty"`
+	Links           []LinkLatency   `json:"links,omitempty"`
+	Status          int             `json:"status,omitempty"`
+	Raw             json.RawMessage `json:"raw,omitempty"`
 }
 
 func (s *Server) counter(peer string) *relayCounter {
@@ -197,6 +204,8 @@ func (s *Server) serveRelayAPI(w http.ResponseWriter, r *http.Request, from stri
 		err = s.removePeer(ctx, from+"/"+req.Name, from)
 	case relayOpExplore:
 		resp.Upstreams, err = s.Explore(ctx, req.Route)
+	case relayOpAdmin:
+		resp, err = s.relayAdminOp(ctx, from, req)
 	case relayOpPing:
 	case relayOpLatency:
 		if len(req.Route) == 0 {

@@ -305,6 +305,12 @@ func (u *ui) showDetails(p *config.Profile) {
 	var w *subPage
 	w = u.newSubPage(p.Name)
 	rows := container.NewVBox(infoRow(L("Address", "Адрес"), addresses(p), nil))
+	switch p.Role {
+	case "admin":
+		rows.Add(infoRow(L("Access level", "Уровень доступа"), L("Administrator", "Администратор"), nil))
+	case "user":
+		rows.Add(infoRow(L("Access level", "Уровень доступа"), L("User", "Пользователь"), nil))
+	}
 	if p.Via != "" {
 		rows.Add(infoRow(L("Cascade", "Каскад"), p.Via, nil))
 	}

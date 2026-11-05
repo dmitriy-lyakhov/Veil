@@ -111,7 +111,11 @@ func defaultGateway(v6 bool) (netip.Addr, uint32) {
 	if v6 {
 		dst, none = "::/0", "::"
 	}
-	ps := fmt.Sprintf(`$r = Get-NetRoute -DestinationPrefix '%s' -ErrorAction SilentlyContinue | Where-Object { $_.NextHop -ne '%s' } | Sort-Object { $_.RouteMetric + $_.InterfaceMetric } | Select-Object -First 1; if ($r) { "$($r.NextHop) $($r.InterfaceIndex)" }`, dst, none)
+	filter := ""
+	if ifc, _ := pinnedInterface(); ifc != nil {
+		filter = fmt.Sprintf("-InterfaceIndex %d ", ifc.Index)
+	}
+	ps := fmt.Sprintf(`$r = Get-NetRoute -DestinationPrefix '%s' %s-ErrorAction SilentlyContinue | Where-Object { $_.NextHop -ne '%s' } | Sort-Object { $_.RouteMetric + $_.InterfaceMetric } | Select-Object -First 1; if ($r) { "$($r.NextHop) $($r.InterfaceIndex)" }`, dst, filter, none)
 	out, err := run("powershell", "-NoProfile", "-NonInteractive", "-Command", ps)
 	if err != nil {
 		return netip.Addr{}, 0

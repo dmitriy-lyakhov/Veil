@@ -13,3 +13,14 @@ func Set(a, b uint32) {
 }
 
 func Get() (uint32, uint32) { return v4.Load(), v6.Load() }
+
+var name atomic.Value // string: имя выбранного интерфейса (Linux, macOS)
+
+// SetName задаёт имя интерфейса, на котором должно работать приложение (пусто — автоматически).
+func SetName(n string) { name.Store(n) }
+
+// Name возвращает имя выбранного интерфейса.
+func Name() string {
+	s, _ := name.Load().(string)
+	return s
+}

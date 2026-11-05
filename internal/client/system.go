@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/netip"
 	"os/exec"
 	"strings"
 	"sync"
 	"time"
+	"veil/internal/netpin"
 
 	"veil/internal/config"
 	"veil/internal/routing"
@@ -53,10 +55,13 @@ type SystemTunnel struct {
 // (nil или пустые — весь трафик в туннель).
 // Options — параметры подключения из настроек приложения.
 type Options struct {
-	KillSwitch bool // блокировать интернет, если VPN оборвался неожиданно
+	KillSwitch bool   // блокировать интернет, если VPN оборвался неожиданно
+	Interface  string // имя сетевого интерфейса, через который идёт трафик до сервера (пусто — выбирается автоматически)
 }
 
 func StartSystem(prof *config.Profile, rc *routing.Config, opt Options, log *slog.Logger) (*SystemTunnel, error) {
+	pinnedIface = opt.Interface
+	netpin.SetName(opt.Interface)
 	if prof.Protocol == "openvpn" {
 		return startOpenVPNSystem(prof, rc, opt, log)
 	}
@@ -67,6 +72,7 @@ func StartSystem(prof *config.Profile, rc *routing.Config, opt Options, log *slo
 	if err != nil {
 		return nil, err
 	}
+	removeStaleAdminAlias()
 	// остатки блокировки после аварийного завершения прошлого сеанса
 	if err := Unblock(); err != nil {
 		log.Warn("unblock", "err", err)
@@ -121,6 +127,7 @@ func StartSystem(prof *config.Profile, rc *routing.Config, opt Options, log *slo
 		tn.Close()
 		return nil, fmt.Errorf("настройка сети: %w", err)
 	}
+	installAdminAlias(prof, u, log)
 	if opt.KillSwitch {
 		if err := armKillSwitch(nc, u, log); err != nil {
 			log.Warn("kill switch", "err", err)
@@ -347,4 +354,23 @@ func stepIsV6(args []string) bool {
 		}
 	}
 	return false
+}
+
+// pinnedIface — имя сетевого интерфейса, выбранного пользователем (пусто — автоматически).
+// Задаётся в StartSystem до подготовки сети.
+var pinnedIface string
+
+// pinnedInterface возвращает выбранный интерфейс или ошибку, если его нет или он не активен.
+func pinnedInterface() (*net.Interface, error) {
+	if pinnedIface == "" {
+		return nil, nil
+	}
+	ifc, err := net.InterfaceByName(pinnedIface)
+	if err != nil {
+		return nil, fmt.Errorf("сетевой интерфейс «%s» не найден: выберите другой в Настройки → Подключение → Сетевой интерфейс", pinnedIface)
+	}
+	if ifc.Flags&net.FlagUp == 0 {
+		return nil, fmt.Errorf("сетевой интерфейс «%s» не активен", pinnedIface)
+	}
+	return ifc, nil
 }

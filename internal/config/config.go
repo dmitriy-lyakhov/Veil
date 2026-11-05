@@ -42,6 +42,7 @@ type Server struct {
 	Admin      Admin      `json:"admin"`
 	Domain     string     `json:"domain,omitempty"`
 	Front      *Front     `json:"front,omitempty"`
+	SiteRepo   *SiteRepo  `json:"site_repo,omitempty"`
 	Relays     []Relay    `json:"relays,omitempty"`
 	Upstreams  []Upstream `json:"upstreams,omitempty"`
 }
@@ -84,6 +85,9 @@ type Peer struct {
 	Note      string     `json:"note,omitempty"`
 	Disabled  bool       `json:"disabled,omitempty"`
 	Auto      *AutoRoute `json:"auto,omitempty"`
+	// Role — роль клиента: "admin" (доступ к админке и настройке сервера/каскада через клиент), "user" (только пользуется VPN);
+	// пусто — старые клиенты: доступ к панели по паролю, как раньше.
+	Role string `json:"role,omitempty"`
 }
 
 type AutoRoute struct {
@@ -100,6 +104,8 @@ type Relay struct {
 	Name    string    `json:"name"`
 	AuthKey string    `json:"auth_key"`
 	Created time.Time `json:"created,omitempty"`
+	// Admin — разрешает узлу, которому выдан ключ, администрировать этот сервер (общая админка каскада).
+	Admin bool `json:"admin,omitempty"`
 }
 
 type Upstream struct {
@@ -149,6 +155,7 @@ type Profile struct {
 	Transports      []string `json:"transports,omitempty"`
 	FrontSNI        string   `json:"front_sni,omitempty"` // SNI, под который маскируется вход
 	FrontKey        string   `json:"front_key,omitempty"` // общий ключ метки (base64)
+	Role            string   `json:"role,omitempty"`      // "admin" или "user": что клиенту можно на сервере
 	AdminUser       string   `json:"admin_user,omitempty"`
 	AdminPassword   string   `json:"admin_password,omitempty"`
 	AdminURL        string   `json:"admin_url,omitempty"`
@@ -356,4 +363,12 @@ func (p *Profile) TLSName() string {
 		return p.FrontSNI
 	}
 	return p.ServerName
+}
+
+// SiteRepo — репозиторий со статическим сайтом-прикрытием: сервер сам забирает его и отдаёт вместо сгенерированного сайта.
+type SiteRepo struct {
+	URL   string `json:"url"`             // https-адрес репозитория
+	Ref   string `json:"ref,omitempty"`   // ветка или тег, по умолчанию основная ветка
+	Dir   string `json:"dir,omitempty"`   // подкаталог со статикой, по умолчанию корень
+	Token string `json:"token,omitempty"` // токен доступа (deploy token) для закрытого репозитория
 }

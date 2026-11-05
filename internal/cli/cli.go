@@ -138,6 +138,7 @@ func cmdConnect(args []string, log *slog.Logger) error {
 	if sp, err := settings.Path(); err == nil {
 		if st, err := settings.Load(sp); err == nil {
 			opt.KillSwitch = st.KillSwitch
+			opt.Interface = st.Interface
 			if d := st.DNS; len(d) > 0 {
 				prof.DNS = d
 			}

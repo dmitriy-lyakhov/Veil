@@ -244,6 +244,7 @@ select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer
 <div style="min-width:0"><h1 data-i="title"></h1><small id="cover"></small></div>
 </div>
 <div class="hbtns">
+<div class="sel" id="node-wrap" style="display:none;min-width:180px"><select id="node-sel" aria-label="Cascade node"></select></div>
 <button type="button" class="btn icon" id="lang-btn"></button>
 <button type="button" class="btn icon" id="theme-btn"></button>
 <button type="button" class="btn acc" id="add">+ <span data-i="client"></span></button>
@@ -310,6 +311,7 @@ select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer
 
 <div class="modal" id="m-client"><div class="dialog" role="dialog"><h3 data-i="newClient"></h3>
 <label data-i="name"></label><input id="c-name" maxlength="40" autocomplete="off">
+<label data-i="roleLabel"></label><div class="sel"><select id="c-role"><option value="user" data-i="roleUser"></option><option value="admin" data-i="roleAdmin"></option></select></div>
 <label data-i="note"></label><input id="c-note" maxlength="200" autocomplete="off">
 <label data-i="route"></label>
 <div class="sel"><select id="c-mode"><option value="manual" data-i="modeManualOpt"></option><option value="auto" data-i="modeAutoOpt"></option></select></div>
@@ -357,7 +359,7 @@ select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer
 
 <script>
 const H={'X-Panel-Request':'1','Content-Type':'application/json'};const $=id=>document.getElementById(id);
-let state=null,editing='',dlName='client.veil',lang=document.documentElement.lang==='en'?'en':'ru',theme=document.documentElement.dataset.theme==='light'?'light':'dark';
+let NODE='',state=null,editing='',dlName='client.veil',lang=document.documentElement.lang==='en'?'en':'ru',theme=document.documentElement.dataset.theme==='light'?'light':'dark';
 const D={ru:{
 title:'Veil · панель управления',cover:'Сайт-прикрытие: {0}',client:'Клиент',clients:'Клиенты',logout:'Выйти',
 stClients:'Клиентов',stOnline:'Онлайн',stRx:'Получено',stTx:'Отправлено',stUp:'Аптайм',
@@ -380,7 +382,7 @@ agoS:'{0} с назад',agoM:'{0} мин назад',agoH:'{0} ч назад',a
 units:['Б','КБ','МБ','ГБ','ТБ'],
 noUps:'Нет — этот сервер является выходом.',noKeys:'Ключи не выдавались.',measuring:'замер…',noLink:'нет связи',clientsN:'клиентов: {0}',online:'на связи',offline:'не на связи',
 confirmDelNode:'Отключить узел «{0}»?',confirmRevoke:'Отозвать ключ «{0}»? Все клиенты, идущие через этот узел, будут удалены.',confirmReissue:'Выпустить новый конфиг для «{0}»? Старый перестанет работать.',confirmDelClient:'Удалить клиента «{0}»?',
-newClient:'Новый клиент',name:'Имя',note:'Заметка',modeManualOpt:'Вручную — выбрать узлы по порядку',modeAutoOpt:'Автоматически по задержкам',exitNode:'Выходной узел',hopsCount:'Промежуточных узлов',allAvail:'все доступные',
+newClient:'Новый клиент',roleLabel:'Уровень доступа',roleUser:'Пользователь — только пользуется VPN',roleAdmin:'Администратор — может настраивать сервер и каскад',nodeThis:'Этот сервер',nodeLabel:'Узел каскада',name:'Имя',note:'Заметка',modeManualOpt:'Вручную — выбрать узлы по порядку',modeAutoOpt:'Автоматически по задержкам',exitNode:'Выходной узел',hopsCount:'Промежуточных узлов',allAvail:'все доступные',
 autoHint:'Вход и выход фиксированы, промежуточные узлы упорядочиваются по минимальной суммарной задержке и перестраиваются автоматически, когда другой путь стабильно быстрее на 20%. Конфиг клиента при этом не меняется.',
 cancel:'Отмена',create:'Создать',clientT:'Клиент',upTitle:'Следующий узел каскада',nodeName:'Название узла',upKey:'Ключ каскада (veil-relay://…), выданный тем узлом',connect:'Подключить',
 relTitle:'Новый ключ каскада',relFor:'Для какого узла (название)',issue:'Выдать',copy:'Скопировать',copied:'Скопировано',download:'Скачать файл',done:'Готово',
@@ -422,7 +424,7 @@ agoS:'{0} s ago',agoM:'{0} min ago',agoH:'{0} h ago',agoD:'{0} d ago',dd:'d',hh:
 units:['B','KB','MB','GB','TB'],
 noUps:'None: this server is the exit.',noKeys:'No keys issued.',measuring:'measuring…',noLink:'no connection',clientsN:'clients: {0}',online:'online',offline:'offline',
 confirmDelNode:'Disconnect node "{0}"?',confirmRevoke:'Revoke key "{0}"? All clients going through this node will be deleted.',confirmReissue:'Issue a new config for "{0}"? The old one will stop working.',confirmDelClient:'Delete client "{0}"?',
-newClient:'New client',name:'Name',note:'Note',modeManualOpt:'Manual: choose the nodes in order',modeAutoOpt:'Automatic by latency',exitNode:'Exit node',hopsCount:'Intermediate nodes',allAvail:'all available',
+newClient:'New client',roleLabel:'Access level',roleUser:'User: can only use the VPN',roleAdmin:'Administrator: can manage the server and the cascade',nodeThis:'This server',nodeLabel:'Cascade node',name:'Name',note:'Note',modeManualOpt:'Manual: choose the nodes in order',modeAutoOpt:'Automatic by latency',exitNode:'Exit node',hopsCount:'Intermediate nodes',allAvail:'all available',
 autoHint:'Entry and exit are fixed, intermediate nodes are ordered by the lowest total latency and rebuilt automatically when another path is consistently 20% faster. The client config does not change.',
 cancel:'Cancel',create:'Create',clientT:'Client',upTitle:'Next cascade node',nodeName:'Node name',upKey:'Cascade key (veil-relay://…) issued by that node',connect:'Connect',
 relTitle:'New cascade key',relFor:'For which node (name)',issue:'Issue',copy:'Copy',copied:'Copied',download:'Download file',done:'Done',
@@ -458,7 +460,7 @@ function ms1(v,d){return num(v.toFixed(d||0))+' '+t('ms')}
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e}
 function btn(text,cls,fn){const b=el('button',cls,text);b.type='button';b.onclick=fn;return b}
 let toastT=0;function toast(msg,len){const e=$('toast');e.textContent=msg;e.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('show'),len||2600)}
-async function api(path,body){const r=await fetch('/admin/api/'+path,body?{method:'POST',headers:H,body:JSON.stringify(body)}:{headers:H});if(r.status===404&&path==='state'){location.reload();throw new Error('session')}let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||t('errN',r.status));return j}
+async function api(path,body){const r=await fetch('/admin/api/'+path+((NODE&&path!=='cascade/nodes')?'?node='+encodeURIComponent(NODE):''),body?{method:'POST',headers:H,body:JSON.stringify(body)}:{headers:H});if(r.status===404&&path==='state'){location.reload();throw new Error('session')}let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||t('errN',r.status));return j}
 function open(id){$(id).classList.add('show')}function close(id){$(id).classList.remove('show')}
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('.modal').classList.remove('show'));
 function showLink(title,r,warn){$('l-title').textContent=title;$('l-warn').textContent=warn;$('l-text').value=r.link;$('l-qr').src=r.qr||'';$('l-qr').style.display=r.qr?'block':'none';$('l-via').textContent=r.via?t('routeVia',r.via):'';$('l-via').style.display=r.via?'block':'none';dlName=r.file||((r.name||'relay')+'.txt');open('m-link')}
@@ -620,7 +622,7 @@ if(pre.mode==='auto'){ex.value=pre.exit;hp.value=String(pre.hops)}
 $('c-mode').value=pre.mode==='auto'?'auto':'manual';$('c-mode').disabled=!state.upstreams.length;syncMode();open('m-client');$('c-name').focus()}
 $('add').onclick=()=>openNewClient();
 $('optimize').onclick=async()=>{$('optimize').disabled=true;try{const r=await api('cascade/optimize',{});const ev=r.events||[];toast(ev.length?ev.map(e=>e.error?(e.client+': '+e.error):(e.client+': '+e.from+' → '+e.to+' ('+(e.old_ms<0?t('unreachable'):ms1(e.old_ms))+' → '+ms1(e.new_ms)+')')).join('\n'):t('optNone'),ev.length?6000:4000);refresh()}catch(e){toast(e.message)}finally{$('optimize').disabled=false}};
-$('c-create').onclick=async()=>{$('c-create').disabled=true;try{const auto=$('c-mode').value==='auto';const body=auto?{name:$('c-name').value,note:$('c-note').value,auto:true,exit:$('c-exit').value,max_hops:parseInt($('c-hops').value,10)}:{name:$('c-name').value,note:$('c-note').value,route};const r=await api('clients',body);close('m-client');showLink(t('createdTitle',r.name),r,t('createdWarn'));refresh()}catch(e){$('c-err').textContent=e.message}finally{$('c-create').disabled=false}};
+$('c-create').onclick=async()=>{$('c-create').disabled=true;try{const auto=$('c-mode').value==='auto';const body=auto?{name:$('c-name').value,note:$('c-note').value,role:$('c-role').value,auto:true,exit:$('c-exit').value,max_hops:parseInt($('c-hops').value,10)}:{name:$('c-name').value,note:$('c-note').value,route,role:$('c-role').value};const r=await api('clients',body);close('m-client');showLink(t('createdTitle',r.name),r,t('createdWarn'));refresh()}catch(e){$('c-err').textContent=e.message}finally{$('c-create').disabled=false}};
 $('e-save').onclick=async()=>{try{await api('clients/update',{name:editing,new_name:$('e-name').value,note:$('e-note').value});close('m-edit');refresh()}catch(e){$('e-err').textContent=e.message}};
 $('up-add').onclick=()=>{$('u-name').value='';$('u-link').value='';$('u-err').textContent='';open('m-up')};
 $('u-save').onclick=async()=>{$('u-save').disabled=true;try{await api('upstreams',{name:$('u-name').value,link:$('u-link').value});close('m-up');refresh()}catch(e){$('u-err').textContent=e.message}finally{$('u-save').disabled=false}};
@@ -650,5 +652,6 @@ $('lang-btn').onclick=()=>{lang=lang==='ru'?'en':'ru';store('veil-lang',lang);ap
 $('theme-btn').onclick=()=>{theme=theme==='dark'?'light':'dark';store('veil-theme',theme);applyStatic()};
 let rz=0;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(state){renderScheme();if($('builder').classList.contains('show'))renderBuilder()}},120)});
 applyStatic();refresh().then(()=>setTimeout(()=>document.body.classList.remove("fresh"),1200));setInterval(()=>{if(!document.querySelector('.modal.show'))refresh()},3000);
+(async()=>{try{const r=await api('cascade/nodes');const ns=r.nodes||[];if(ns.length>1){const sel=$('node-sel');ns.forEach(n=>{const o=document.createElement('option');o.value=n.route.join('>');o.textContent=n.name||t('nodeThis');sel.appendChild(o)});$('node-wrap').style.display='';sel.onchange=()=>{NODE=sel.value;refresh()}}}catch(e){}})();
 </script>
 </body></html>`

@@ -81,6 +81,7 @@ func Serve(profilePath, controlAddr, tokenFile, routesPath, settingsPath string,
 			log.Warn("settings ignored", "err", err)
 		} else {
 			opt.KillSwitch = st.KillSwitch
+			opt.Interface = st.Interface
 			if len(st.DNS) > 0 {
 				prof.DNS = st.DNS
 			}

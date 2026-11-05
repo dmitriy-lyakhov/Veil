@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"veil/internal/site"
@@ -20,11 +21,13 @@ const (
 )
 
 type webSite struct {
-	site    *site.Site
-	index   []byte
-	css     []byte
-	favicon []byte
-	thanks  []byte
+	site     *site.Site
+	index    []byte
+	css      []byte
+	favicon  []byte
+	thanks   []byte
+	cover    atomic.Pointer[site.Tree] // сайт из репозитория; nil — отдаётся сгенерированный
+	reserved func(string) bool         // пути, которые сайт из репозитория занять не может
 }
 
 func newWebSite(s *site.Site) *webSite {
@@ -32,6 +35,10 @@ func newWebSite(s *site.Site) *webSite {
 }
 
 func (ws *webSite) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if t := ws.cover.Load(); t != nil && (ws.reserved == nil || !ws.reserved(r.URL.Path)) {
+		ws.serveCover(t, w, r)
+		return
+	}
 	h := w.Header()
 	get := r.Method == http.MethodGet || r.Method == http.MethodHead
 	switch {
@@ -120,5 +127,36 @@ func HTTPRedirectServer() *http.Server {
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 		ErrorLog:          log.New(io.Discard, "", 0),
+	}
+}
+
+// serveCover отдаёт сайт из репозитория: файл из снимка, иначе — тот же 404, что и у сгенерированного сайта.
+func (ws *webSite) serveCover(t *site.Tree, w http.ResponseWriter, r *http.Request) {
+	get := r.Method == http.MethodGet || r.Method == http.MethodHead
+	if t.Serve(w, r) {
+		return
+	}
+	switch {
+	case get && r.URL.Path == "/robots.txt":
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte(robotsTXT))
+	case get && t.IsDir(r.URL.Path): // как nginx: каталог без «/» — перенаправление на каталог со «/»
+		h := w.Header()
+		h.Set("Content-Type", "text/html")
+		h.Set("Location", "https://"+r.Host+r.URL.EscapedPath()+"/"+func() string {
+			if r.URL.RawQuery != "" {
+				return "?" + r.URL.RawQuery
+			}
+			return ""
+		}())
+		if r.ProtoMajor == 1 {
+			h.Set("Connection", "keep-alive")
+		}
+		w.WriteHeader(http.StatusMovedPermanently)
+		if r.Method != http.MethodHead {
+			_, _ = w.Write([]byte(movedHTML))
+		}
+	default:
+		notFound(w, r)
 	}
 }

@@ -30,6 +30,7 @@ type clientRequest struct {
 	Exit      string   `json:"exit"`
 	MaxHops   *int     `json:"max_hops"`
 	PublicKey string   `json:"public_key"`
+	Role      string   `json:"role"` // user (по умолчанию) или admin
 }
 
 type updateRequest struct {
@@ -130,6 +131,9 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request, path string, 
 			} else {
 				prof, err = s.AddClientWithKey(ctx, req.Name, req.Note, req.Route, req.PublicKey)
 			}
+			if err == nil {
+				err = s.applyRole(prof, req.Name, req.Role)
+			}
 			if req.PublicKey != "" {
 				reply(map[string]any{"profile": prof}, err)
 			} else {
@@ -151,10 +155,18 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request, path string, 
 		if decode(&req) {
 			reply(nil, s.RemoveClient(ctx, req.Name))
 		}
+	case "cascade/nodes":
+		reply(map[string]any{"nodes": s.CascadeNodes(ctx)}, nil)
 	case "relays":
-		var req nameRequest
+		var req struct {
+			Name  string `json:"name"`
+			Admin bool   `json:"admin"` // разрешить узлу администрировать этот сервер (общая админка каскада)
+		}
 		if decode(&req) {
 			link, err := s.IssueRelay(req.Name)
+			if err == nil && req.Admin {
+				err = s.SetRelayAdmin(req.Name, true)
+			}
 			reply(LinkResponse{Name: req.Name, Link: link, QR: QRDataURI(link)}, err)
 		}
 	case "relays/delete":
@@ -201,6 +213,21 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request, path string, 
 			}
 			reply(resp, err)
 		}
+	case "settings/siterepo":
+		var req struct {
+			URL        string `json:"url"`
+			Ref        string `json:"ref"`
+			Dir        string `json:"dir"`
+			Token      string `json:"token"`
+			ClearToken bool   `json:"clear_token"`
+		}
+		if decode(&req) {
+			err := s.SetSiteRepo(req.URL, req.Ref, req.Dir, req.Token, req.ClearToken)
+			reply(s.SiteRepoInfo(), err)
+		}
+	case "settings/siterepo/refresh":
+		err := s.RefreshSiteRepo()
+		reply(s.SiteRepoInfo(), err)
 	case "settings/domain":
 		var req domainRequest
 		if decode(&req) {

@@ -63,6 +63,7 @@ func (u *ui) openCascadeBuilder(shareMode bool) {
 	auto := false
 	hopsChoice := hopsAll()
 	building := false
+	cascadeRole := "user"
 	clientName := widget.NewEntry()
 	clientName.SetText(L("This device", "Это устройство"))
 	if shareMode {
@@ -143,7 +144,7 @@ func (u *ui) openCascadeBuilder(shareMode bool) {
 		if hopsChoice != hopsAll() {
 			maxHops, _ = strconv.Atoi(hopsChoice)
 		}
-		job := multiJob{u: u, w: w, say: say, exit: exit, entries: entries, auto: auto, maxHops: maxHops, name: strings.TrimSpace(clientName.Text)}
+		job := multiJob{u: u, w: w, say: say, exit: exit, entries: entries, auto: auto, maxHops: maxHops, name: strings.TrimSpace(clientName.Text), role: cascadeRole}
 		building = true
 		logLbl.SetText("")
 		job.run(func(p *config.Profile, err error) {
@@ -168,6 +169,9 @@ func (u *ui) openCascadeBuilder(shareMode bool) {
 	content := newVBoxFit()
 	content.Add(note(L("The exit is the server through which traffic goes to the internet; it is set explicitly. Entries are the servers a client may connect to: the one with the lowest latency is chosen on every connection.", "Выход — сервер, через который трафик уходит в интернет, задаётся явно. Входы — серверы, к которым может подключаться клиент: при каждом подключении выбирается ближайший по задержке.")))
 	content.Add(fieldEntry(L("Client name", "Имя клиента"), clientName))
+	if shareMode {
+		content.Add(roleField(u, cascadeRole, func(v string) { cascadeRole = v }))
+	}
 	content.Add(exitField)
 	content.Add(sectionLabel(L("Entries", "Входы")))
 	content.Add(entriesBox)
@@ -200,6 +204,7 @@ type multiJob struct {
 	auto    bool
 	maxHops int
 	name    string
+	role    string // роль выдаваемого клиента: user или admin
 }
 
 func (j multiJob) pool() []*config.Profile {
@@ -294,6 +299,10 @@ func (j multiJob) register(done func(*config.Profile, error)) {
 						return
 					}
 					result.ServerPublicKey, result.Address4, result.Address6, result.MTU = prof.ServerPublicKey, prof.Address4, prof.Address6, prof.MTU
+					result.Role = prof.Role
+					if result.AdminURL == "" {
+						result.AdminURL = prof.AdminURL
+					}
 					result.Entries = append(result.Entries, config.Entry{
 						Name: entry.Name, IPv4: prof.IPv4, IPv6: prof.IPv6, Port: prof.Port, ServerName: prof.ServerName,
 						Path: prof.Path, CertPin: prof.CertPin, AuthKey: prof.AuthKey, Via: prof.Via,
@@ -311,7 +320,7 @@ func (j multiJob) register(done func(*config.Profile, error)) {
 }
 
 func registerOn(s *deploy.Session, j multiJob, entry *config.Profile, pub string) (*config.Profile, error) {
-	body := map[string]any{"name": j.name, "public_key": pub}
+	body := map[string]any{"name": j.name, "public_key": pub, "role": normRole(j.role)}
 	switch {
 	case entry == j.exit:
 	case j.auto:

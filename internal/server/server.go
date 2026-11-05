@@ -70,6 +70,7 @@ type Server struct {
 	candidates    map[string]string
 	autoCost      map[string]float64
 	stopLoops     context.CancelFunc
+	siteRepo      *siteRepoManager
 }
 
 type session struct {
@@ -161,6 +162,8 @@ func New(cfg *config.Server, cfgPath string, tunDev tun.Device, log *slog.Logger
 	loopCtx, stop := context.WithCancel(context.Background())
 	s.stopLoops = stop
 	s.backgroundLoops(loopCtx)
+	s.siteRepo = newSiteRepoManager(s, cfgPath, log)
+	s.siteRepo.start(loopCtx)
 	return s, nil
 }
 
@@ -332,6 +335,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.Header().Set("Server", serverHeader)
+	// внутри туннеля админка открывается по короткому имени https://admin (имя клиент прописывает сам)
+	if isAdminHost(r.Host) && (r.URL.Path == "/" || r.URL.Path == "") && s.fromTunnel(r) {
+		http.Redirect(w, r, adminPrefix, http.StatusFound)
+		return
+	}
 	if (r.URL.Path == adminPrefix || strings.HasPrefix(r.URL.Path, adminPrefix+"/")) && s.fromTunnel(r) {
 		s.serveAdmin(w, r)
 		return

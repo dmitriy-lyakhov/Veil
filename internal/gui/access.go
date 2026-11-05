@@ -23,6 +23,7 @@ type shareState struct {
 	body   *fyne.Container
 	mgrs   map[string]*manager
 	name   string // введённое имя нового клиента (сохраняется между перерисовками)
+	role   string // "user" или "admin": что можно клиенту на сервере
 	list   *fyne.Container
 }
 
@@ -128,7 +129,7 @@ func (s *shareState) renderConnection(m *manager) {
 		}
 		m.ensureSession(func() {
 			var r server.LinkResponse
-			m.call("POST", "/clients", map[string]any{"name": n, "note": "", "route": []string{}}, &r, func(err error) {
+			m.call("POST", "/clients", map[string]any{"name": n, "note": "", "route": []string{}, "role": s.roleValue()}, &r, func(err error) {
 				if err != nil {
 					showError(err, s.u.win)
 					return
@@ -149,6 +150,7 @@ func (s *shareState) renderConnection(m *manager) {
 		s.render()
 	}))
 	s.body.Add(s.u.fieldSelect(L("Connection format", "Формат подключения"), fmtApp, []string{fmtApp}, func(string) {}))
+	s.body.Add(roleField(s.u, s.role, func(v string) { s.role = v }))
 	cascade := bigButton(L("Share a cascade…", "Поделиться каскадом…"), "", false, func() { s.u.openCascadeBuilder(true) })
 	s.body.Add(spacerH(8))
 	s.body.Add(share)
@@ -216,4 +218,30 @@ func (s *shareState) renderList(m *manager) {
 		s.list.Add(note(L(fmt.Sprintf("Transit clients from other cascade nodes: %d", transit), fmt.Sprintf("Транзитных клиентов от других узлов каскада: %d", transit))))
 	}
 	s.list.Refresh()
+}
+
+func normRole(r string) string {
+	if r == "admin" {
+		return "admin"
+	}
+	return "user"
+}
+
+func (s *shareState) roleValue() string { return normRole(s.role) }
+
+// roleField — выбор роли выдаваемого доступа: пользователь (только пользуется VPN) или администратор
+// (может открыть админку и настраивать сервер и каскад).
+func roleField(u *ui, current string, changed func(string)) fyne.CanvasObject {
+	user, admin := L("User — can only use the VPN", "Пользователь — только пользуется VPN"), L("Administrator — can manage the server and the cascade", "Администратор — может настраивать сервер и каскад")
+	cur := user
+	if current == "admin" {
+		cur = admin
+	}
+	return u.fieldSelect(L("Access level", "Уровень доступа"), cur, []string{user, admin}, func(v string) {
+		if v == admin {
+			changed("admin")
+		} else {
+			changed("user")
+		}
+	})
 }

@@ -98,6 +98,7 @@ type State struct {
 	Relays    []RelayInfo    `json:"relays"`
 	Upstreams []UpstreamInfo `json:"upstreams"`
 	Latency   []LinkLatency  `json:"latency"`
+	SiteRepo  SiteRepoInfo   `json:"site_repo"`
 }
 
 type peerStats struct {
@@ -172,7 +173,7 @@ func (s *Server) State() State {
 		AdminURL:   provision.AdminURL(s.cfg),
 		Front:      s.frontInfoLocked(),
 		Started:    s.started,
-	}, Clients: []ClientInfo{}, Relays: []RelayInfo{}, Upstreams: []UpstreamInfo{}, Latency: latency}
+	}, Clients: []ClientInfo{}, Relays: []RelayInfo{}, Upstreams: []UpstreamInfo{}, Latency: latency, SiteRepo: s.siteRepo.get()}
 	relayClients := map[string]int{}
 	upClients := map[string]int{}
 	for _, p := range s.cfg.Peers {

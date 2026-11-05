@@ -137,11 +137,21 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) {
 	h.Set("X-Frame-Options", "DENY")
 	h.Set("Referrer-Policy", "same-origin")
 	path := strings.TrimSuffix(r.URL.Path, "/")
+	// роли клиентов: «пользователь» панель не видит, «администратор» входит без пароля (его личность — ключ туннеля);
+	// клиенты старше ролей (роль не задана) и не клиенты (например, порт через SSH) — по паролю, как раньше
+	role, isPeer := s.peerRole(r)
+	if isPeer && role == RoleUser {
+		notFound(w, r)
+		return
+	}
 	if path == adminPrefix+"/login" && r.Method == http.MethodPost {
 		s.adminLogin(w, r)
 		return
 	}
 	sessKey, authed := s.admin.valid(r)
+	if isPeer && role == RoleAdmin {
+		authed = true
+	}
 	if !authed {
 		if path == adminPrefix && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
 			s.renderLogin(w, "")
@@ -162,7 +172,13 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) {
 	case strings.HasPrefix(path, adminPrefix+"/fonts/") && (r.Method == http.MethodGet || r.Method == http.MethodHead):
 		serveAdminFont(w, strings.TrimPrefix(path, adminPrefix+"/fonts/"))
 	case strings.HasPrefix(path, adminPrefix+"/api/"):
-		s.handleAPI(w, r, strings.TrimPrefix(path, adminPrefix+"/api/"), false)
+		api := strings.TrimPrefix(path, adminPrefix+"/api/")
+		if node := r.URL.Query().Get("node"); node != "" {
+			// общая админка каскада: запрос выполняется на выбранном узле (имена узлов через «>»)
+			s.proxyAdmin(w, r, api, strings.Split(node, ">"))
+			return
+		}
+		s.handleAPI(w, r, api, false)
 	case path == adminPrefix+"/logout" && r.Method == http.MethodPost:
 		s.admin.drop(sessKey)
 		http.SetCookie(w, &http.Cookie{Name: adminCookie, Value: "", Path: adminPrefix, MaxAge: -1, HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
