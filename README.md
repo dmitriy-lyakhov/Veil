@@ -206,3 +206,9 @@ veil unblock              # снять остатки блокировки KillS
 ## Что не проверено
 
 Версия 0.5.x собрана и покрыта тестами, но на момент выпуска **не проверялись на живых серверах и в Windows с правами администратора**: установка WireGuard, AmneziaWG, OpenVPN и IPsec, подключение по ним, системный туннель, маршруты списков, KillSwitch, автозапуск и трей. Консольные клиенты для Linux и macOS собраны, но не запускались; графическое приложение для них из Windows собрать нельзя. Сообщения об ошибках — в [Issues](https://github.com/dmitriy-lyakhov/Veil/issues).
+
+## Репозитории
+
+Основной репозиторий — GitLab: https://gitlab.admortgage.com/monitoring/veil. Работайте с ним.
+В GitHub (https://github.com/dmitriy-lyakhov/Veil) изменения попадают только из GitLab: пайплайн `.gitlab-ci.yml`
+отправляет ветку `main` и теги при каждом пуше (нужна переменная `GITHUB_TOKEN` в настройках CI/CD).
