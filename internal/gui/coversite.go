@@ -81,23 +81,23 @@ func (m *manager) openCoverSite() {
 			return
 		}
 		polling = true
+		sess := m.sess
 		go func() {
 			defer func() { polling = false }()
-			for i := 0; i < 60; i++ {
-				time.Sleep(2 * time.Second)
-				var st stateRoles
-				if err := m.sess.Call("GET", "/state", nil, &st); err != nil {
-					return
-				}
-				done := !st.SiteRepo.Syncing
-				fyne.Do(func() {
-					m.state = st.State
-					render(st.SiteRepo)
-				})
-				if done {
-					return
-				}
-			}
+			siteRepoPoller{
+				fetch: func() (server.SiteRepoInfo, error) {
+					var st stateRoles
+					err := sess.Call("GET", "/state", nil, &st)
+					if err == nil {
+						fyne.Do(func() { m.state = st.State })
+					}
+					return st.SiteRepo, err
+				},
+				sleep:    time.Sleep,
+				interval: 2 * time.Second,
+				limit:    2 * time.Minute,
+				onState:  func(s server.SiteRepoInfo) { fyne.Do(func() { render(s) }) },
+			}.run()
 		}()
 	}
 	apply := func(req map[string]any, refresh bool) {

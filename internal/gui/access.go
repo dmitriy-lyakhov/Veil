@@ -6,6 +6,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 
@@ -34,10 +35,10 @@ func (u *ui) sharePage() fyne.CanvasObject {
 		s.tab = i
 		s.render()
 	})
-	s.body = newVBoxFit()
+	s.body = container.New(vboxFit{gap: 12}) // на вкладке «Доступ» шаг 12 px (дизайн)
 	top := container.NewVBox(seg)
 	s.refreshServers()
-	return u.tabPage(L("Share VPN access", "Доступ к VPN"), container.NewBorder(top, nil, nil, nil, container.NewVScroll(s.body)))
+	return u.tabPageAt(L("Share VPN access", "Доступ к VPN"), container.NewBorder(top, nil, nil, nil, container.NewVScroll(s.body)), 90)
 }
 
 // managedNames — серверы, которыми можно управлять из приложения.
@@ -116,7 +117,7 @@ func (s *shareState) render() {
 }
 
 func (s *shareState) renderConnection(m *manager) {
-	s.body.Add(prose(L("Share VPN access without the ability to manage the server", "Доступ к VPN без права управлять сервером")))
+	s.body.Add(container.New(layout.NewCustomPaddedLayout(6, 5, 0, 0), newFlowText(L("Share VPN access without the ability to manage the server", "Доступ к VPN без права управлять сервером"), 14, colMuted, false, 19.15)))
 	name := widget.NewEntry()
 	name.SetText(s.name)
 	name.OnChanged = func(v string) { s.name = v }
@@ -204,7 +205,7 @@ func (s *shareState) renderList(m *manager) {
 		if q != "" && !strings.Contains(strings.ToLower(c.Name), q) && !strings.Contains(strings.ToLower(c.Note), q) {
 			continue
 		}
-		s.list.Add(m.clientCard(c))
+		s.list.Add(m.clientRow(c))
 		shown++
 	}
 	if shown == 0 {

@@ -246,7 +246,7 @@ func (u *ui) openTraffic() {
 	td, tdV := kvRow(L("Today", "Сегодня"))
 	mo, moV := kvRow(L("This month", "За месяц"))
 	hd := func(s string) fyne.CanvasObject { return text(s, 18, colText, true) }
-	body := container.NewVBox(
+	body := pageBox(
 		hd(L("Right now", "Сейчас")), chart.obj, dl, ul, lt,
 		hd(L("This session", "За сессию")), rc, sn, du,
 		hd(L("Total", "Всего")), td, mo,

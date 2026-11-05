@@ -3,6 +3,7 @@ package gui
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -23,7 +24,7 @@ func langName() string {
 // navRowVal — строка-переход со значением справа (как «Тема · Тёмная» в дизайне).
 func navRowVal(title, value string, onTap func()) fyne.CanvasObject {
 	val := text(value, 13, colMuted, false)
-	return listRow(title, "", container.NewHBox(container.NewCenter(val), container.NewCenter(iconImg("right", colMuted, 22))), onTap)
+	return listRowH(rowText(title, "", theme.ColorNameForeground), container.New(hrow{gap: 4}, container.NewCenter(val), container.NewCenter(iconImg("right", colMuted, 20))), onTap, 56)
 }
 
 // openAppearance — страница выбора темы (theme=true) или языка.
@@ -64,7 +65,7 @@ func (u *ui) openAppearance(themePage bool) {
 		pg.Close()
 		u.rebuildUI()
 	}
-	pg = u.openPage(title, scrolled(container.NewVBox(rg)))
+	pg = u.openPage(title, scrolled(pageBox(rg)))
 }
 
 // rebuildUI пересоздаёт интерфейс после смены темы или языка.

@@ -108,17 +108,17 @@ func (f *subFrame) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 		f.pill.Show()
 		ps := f.pill.MinSize()
 		f.pill.Resize(ps)
-		f.pill.Move(fyne.NewPos(s.Width-24-ps.Width, (hdr-ps.Height)/2))
+		f.pill.Move(fyne.NewPos(s.Width-24-ps.Width, 18))
 		f.back.Resize(bs)
 		f.back.Move(fyne.NewPos(16, (hdr-bs.Height)/2))
 		ts := f.titleW.MinSize()
 		avail := s.Width - 24 - ps.Width - 8 - rs.Width - 8 - 68
 		f.titleW.Resize(fyne.NewSize(max(0, min(f.titleW.naturalWidth(), avail)), ts.Height))
-		f.titleW.Move(fyne.NewPos(68, (hdr-ts.Height)/2))
+		f.titleW.Move(fyne.NewPos(68, 28))
 		f.right.Resize(rs)
 		f.right.Move(fyne.NewPos(s.Width-24-ps.Width-8-rs.Width, (hdr-rs.Height)/2))
 		w := min(560, s.Width-48)
-		f.body.Resize(fyne.NewSize(w+16, s.Height-14-92))
+		f.body.Resize(fyne.NewSize(w+16, s.Height-92))
 		f.body.Move(fyne.NewPos(16, 92))
 		return
 	}

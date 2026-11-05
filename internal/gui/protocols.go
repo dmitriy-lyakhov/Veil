@@ -174,7 +174,7 @@ func (u *ui) openWGInstall(m *manager) {
 			}()
 		}, fail)
 	}
-	body := container.NewVBox(
+	body := pageBox(
 		note(L("WireGuard is a popular VPN protocol with high performance, speed and low power consumption. It is installed on the server over SSH; afterwards you can connect to it from this app or with any WireGuard client.", "WireGuard — популярный VPN-протокол с высокой производительностью, скоростью и низким энергопотреблением. Устанавливается на сервер по SSH; затем к нему можно подключиться из этого приложения или любым клиентом WireGuard.")),
 		lead(text(L("Port (UDP)", "Порт (UDP)"), 12, colMuted, false)), port,
 		status, barBox,
@@ -228,7 +228,7 @@ func (u *ui) openWGManage(p *config.Profile) {
 			})
 		}
 	}
-	rows := container.NewVBox(
+	rows := pageBox(
 		listRow(L("This device's configuration", "Конфигурация этого устройства"), L("QR code and .conf file for the WireGuard app", "QR-код и файл .conf для приложения WireGuard"), arrow(), func() { u.showWGShare(p.Name, p.WG) }),
 		listRow(L("Add client", "Добавить клиента"), L("Issue a new key and configuration for another device", "Выдать новый ключ и конфигурацию для другого устройства"), arrow(), needServer(func(s *deploy.Session, srv *config.Profile) {
 			name := widget.NewEntry()
@@ -309,7 +309,7 @@ func (u *ui) showWGShare(title string, cfg *wgconf.Config) {
 		fd.SetFileName("veil-wireguard.conf")
 		fd.Show()
 	})
-	body := container.NewVBox(
+	body := pageBox(
 		qrImage(text, ""),
 		note(L("Scan the QR code in the WireGuard app or save the file. The configuration contains a private key: do not show it to others.", "Отсканируйте QR-код в приложении WireGuard или сохраните файл. В конфигурации приватный ключ: не показывайте её посторонним.")),
 		entry,

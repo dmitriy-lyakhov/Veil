@@ -185,10 +185,12 @@ func rowText(title, sub string, titleColor fyne.ThemeColorName) fyne.CanvasObjec
 	t := widget.NewRichText(&widget.TextSegment{Text: title, Style: widget.RichTextStyle{
 		ColorName: titleColor, SizeName: theme.SizeNameSubHeadingText, TextStyle: fyne.TextStyle{Bold: true}}})
 	t.Wrapping = fyne.TextWrapWord
+	p := theme.InnerPadding()
+	flushT := container.New(layout.NewCustomPaddedLayout(-p, -p, -p, -p), t)
 	if sub == "" {
-		return t
+		return flushT
 	}
-	return container.New(tightVBox{gap: -18}, t, prose(sub))
+	return container.New(tightVBox{gap: 5}, flushT, proseFlush(sub))
 }
 
 // listRow — строка списка в стиле референса: заголовок, описание, элемент справа, разделитель снизу.
@@ -201,6 +203,11 @@ func listRowColored(title, sub string, titleColor fyne.ThemeColorName, trailing 
 }
 
 func listRowOf(content, trailing fyne.CanvasObject, onTap func()) fyne.CanvasObject {
+	return listRowH(content, trailing, onTap, 64)
+}
+
+// listRowH — строка списка заданной минимальной высоты (дизайн: строки страниц 64 px, пункты «Настроек» 56 px).
+func listRowH(content, trailing fyne.CanvasObject, onTap func(), h float32) fyne.CanvasObject {
 	var right fyne.CanvasObject
 	if trailing != nil {
 		right = vcenter(trailing)
@@ -209,14 +216,18 @@ func listRowOf(content, trailing fyne.CanvasObject, onTap func()) fyne.CanvasObj
 	bg := canvas.NewRectangle(colCard)
 	bg.CornerRadius = 14
 	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
-	bg.SetMinSize(fyne.NewSize(1, 56))
-	cardRow := container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(0, 0, 16, 16), body))
+	bg.SetMinSize(fyne.NewSize(1, h))
+	cardRow := container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(10.4, 10.4, 16, 16), body))
 	return newRowTap(cardRow, onTap)
 }
 
 // navRow — строка-переход с шевроном.
 func navRow(title, sub string, onTap func()) fyne.CanvasObject {
-	return listRow(title, sub, container.NewCenter(iconImg("right", colMuted, 22)), onTap)
+	h := float32(64)
+	if sub == "" {
+		h = 56
+	}
+	return listRowH(rowText(title, sub, theme.ColorNameForeground), container.NewCenter(iconImg("right", colMuted, 22)), onTap, h)
 }
 
 // switchRow — строка с переключателем; нажатие по строке тоже переключает.
@@ -233,25 +244,53 @@ func switchRowFit(title, sub string, on bool, changed func(bool)) (fyne.CanvasOb
 
 // ---------- сегментный переключатель ----------
 
+// evenCols — колонки равной ширины без промежутков (переключатель дизайна: кнопки по 276 px в рамке 560).
+type evenCols struct{}
+
+func (evenCols) Layout(objs []fyne.CanvasObject, s fyne.Size) {
+	if len(objs) == 0 {
+		return
+	}
+	w := s.Width / float32(len(objs))
+	for i, o := range objs {
+		o.Resize(fyne.NewSize(w, s.Height))
+		o.Move(fyne.NewPos(w*float32(i), 0))
+	}
+}
+
+func (evenCols) MinSize(objs []fyne.CanvasObject) fyne.Size {
+	var w, h float32
+	for _, o := range objs {
+		m := o.MinSize()
+		w = max(w, m.Width)
+		h = max(h, m.Height)
+	}
+	return fyne.NewSize(w*float32(len(objs)), h)
+}
+
 func newSegmented(options []string, selected int, changed func(int)) fyne.CanvasObject {
-	btns := make([]*widget.Button, len(options))
-	grid := container.NewGridWithColumns(len(options))
+	btns := make([]*tapCard, len(options))
+	grid := container.New(evenCols{})
 	apply := func(sel int) {
 		for i, b := range btns {
 			if i == sel {
-				b.Importance = widget.MediumImportance
+				b.base, b.hover = colCard2, colCard2Hover
 			} else {
-				b.Importance = widget.LowImportance
+				b.base, b.hover = color.Transparent, colCardHover
 			}
-			b.Refresh()
+			b.bg.FillColor = b.base
+			b.bg.Refresh()
 		}
 	}
 	for i, o := range options {
 		i := i
-		btns[i] = widget.NewButton(o, func() {
+		t := newFitText(o, 14, colText, true)
+		t.Alignment = fyne.TextAlignCenter
+		btns[i] = newTapCardR(vcenter(t), color.Transparent, colCardHover, 12, 1, func() {
 			apply(i)
 			changed(i)
 		})
+		btns[i].bg.StrokeWidth = 0
 		grid.Add(btns[i])
 	}
 	apply(selected)
@@ -262,8 +301,9 @@ func newSegmented(options []string, selected int, changed func(int)) fyne.Canvas
 	return container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(4, 4, 4, 4), grid))
 }
 
+// sectionLabel — подпись раздела на странице: 12 px/600, приглушённая, отступ 4 px слева и 10 px сверху (дизайн: section).
 func sectionLabel(s string) fyne.CanvasObject {
-	return lead(text(s, 13, colMuted, false))
+	return container.New(layout.NewCustomPaddedLayout(10, 0, 4, 0), text(s, 12, colMuted, true))
 }
 
 // ---------- нижняя панель ----------
@@ -423,4 +463,71 @@ func (s *statusLine) SetText(t string) {
 // layoutPadLeft — отступ слева на внутренний отступ виджета (для полосы под подписями).
 func layoutPadLeft() fyne.Layout {
 	return layout.NewCustomPaddedLayout(0, 0, theme.InnerPadding(), 0)
+}
+
+// hrow — горизонтальный ряд с заданным промежутком (HBox из Fyne берёт зазор из темы).
+type hrow struct{ gap float32 }
+
+func (l hrow) Layout(objs []fyne.CanvasObject, s fyne.Size) {
+	var x float32
+	for _, o := range objs {
+		if !o.Visible() {
+			continue
+		}
+		m := o.MinSize()
+		o.Resize(fyne.NewSize(m.Width, s.Height))
+		o.Move(fyne.NewPos(x, 0))
+		x += m.Width + l.gap
+	}
+}
+
+func (l hrow) MinSize(objs []fyne.CanvasObject) fyne.Size {
+	var w, h float32
+	n := 0
+	for _, o := range objs {
+		if !o.Visible() {
+			continue
+		}
+		m := o.MinSize()
+		w += m.Width
+		h = max(h, m.Height)
+		n++
+	}
+	if n > 1 {
+		w += l.gap * float32(n-1)
+	}
+	return fyne.NewSize(w, h)
+}
+
+// pageButton — кнопка 52 px внутри страницы: подпись 15 px/600 (дизайн: btn), главная — акцентная.
+func pageButton(label, icon string, primary bool, onTap func()) fyne.CanvasObject {
+	var bg, hv color.Color = colCard, colCardHover
+	var fg color.Color = colText
+	if primary {
+		bg, hv, fg = colAccent, mix(colAccent, colText, 0.12), colAccentDark
+	}
+	return container.New(&fillMin{h: 52}, newTapCardR(iconLabelRow(icon, label, 15, fg), bg, hv, 14, 1, onTap))
+}
+
+// pageButtonDanger — кнопка страницы с красной подписью.
+func pageButtonDanger(label, icon string, onTap func()) fyne.CanvasObject {
+	return container.New(&fillMin{h: 52}, newTapCardR(iconLabelRow(icon, label, 15, colAccentInk), colCard, colCardHover, 14, 1, onTap))
+}
+
+// ghostButton — вторичное действие под главной кнопкой («Отмена»): без фона, 44 px, подпись 14 px/600 приглушённая.
+func ghostButton(label string, onTap func()) fyne.CanvasObject {
+	t := newFitText(label, 14, colMuted, true)
+	t.Alignment = fyne.TextAlignCenter
+	c := newTapCardR(vcenter(t), color.Transparent, colCardHover, 14, 1, onTap)
+	c.bg.StrokeWidth = 0
+	return container.New(&fillMin{h: 44}, c)
+}
+
+// navRowIcon — строка-переход со значком в плитке 44 px слева (дизайн: «Другие способы подключения»).
+func navRowIcon(icon, title, sub string, onTap func()) fyne.CanvasObject {
+	tileBG := canvas.NewRectangle(colCard2)
+	tileBG.CornerRadius = 11
+	tile := container.NewGridWrap(fyne.NewSize(44, 44), container.NewStack(tileBG, container.NewCenter(iconImg(icon, colText, 22))))
+	text := container.NewBorder(nil, nil, container.New(layout.NewCustomPaddedLayout(0, 0, 0, 6), container.NewCenter(tile)), nil, vcenter(rowText(title, sub, theme.ColorNameForeground)))
+	return listRowOf(text, container.NewCenter(iconImg("right", colMuted, 22)), onTap)
 }

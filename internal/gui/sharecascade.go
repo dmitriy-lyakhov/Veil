@@ -11,64 +11,55 @@ import (
 	"veil/internal/server"
 )
 
-// showSharedCascade — окно результата «Поделиться каскадом»: получатель увидит одно подключение;
-// отозвать его можно сразу на всех входах.
+// showSharedCascade — страница «Общий каскад» (дизайн «cascadeShared»): получатель увидит одно подключение;
+// отозвать его можно сразу на всех входах. Кнопка «Отозвать» закреплена внизу страницы.
 func (u *ui) showSharedCascade(parent fyne.Window, r server.LinkResponse, job multiJob) {
 	var names []string
 	for _, e := range job.entries {
 		names = append(names, e.Name)
 	}
-	before := []fyne.CanvasObject{
+	extra := []fyne.CanvasObject{
 		infoRow(L("Entries", "Входы"), strings.Join(names, ", "), nil),
 		infoRow(L("Exit", "Выход"), job.exit.Name, nil),
 	}
-	revoke := dangerButton(L("Revoke on all entries", "Отозвать у всех входов"), func() {
+	var page *subPage
+	revoke := pageButtonDanger(L("Revoke on all entries", "Отозвать у всех входов"), "trash", func() {
 		showConfirm(L("Revoke the cascade", "Отозвать каскад"), fmt.Sprintf(L("The client “%s” will be deleted on every entry: the connection stops for everyone who got this link. Continue?", "Клиент «%s» будет удалён на каждом входе: подключение прекратится у всех, кто получил эту ссылку. Продолжить?"), r.Name), func(ok bool) {
 			if ok {
-				u.revokeEverywhere(parent, r.Name, job.entries)
+				u.revokeEverywhere(page, r.Name, job.entries)
 			}
-		}, parent)
+		}, page)
 	})
-	after := []fyne.CanvasObject{
-		revoke,
-		noteIcon("lock", L("Revoking stops the connection for everyone who got this link, on every entry at once.", "Отзыв прекращает подключение у всех, кто получил эту ссылку, сразу на всех входах."), colMuted),
+	page = u.showShareX(parent, L("Shared cascade", "Общий каскад"), r, L("The recipient will see one connection. Scan the QR or send the link.", "Получатель увидит одно подключение. Отсканируйте QR или отправьте ссылку."), true, extra, []fyne.CanvasObject{revoke})
+}
+
+// revokeText — итог отзыва для окна сообщения.
+func revokeText(done, failed []string) string {
+	if len(failed) == 0 {
+		return fmt.Sprintf(L("Revoked on all entries (%d).", "Каскад отозван у всех входов (%d)."), len(done))
 	}
-	u.showShareX(parent, L("Shared cascade", "Общий каскад"), r, L("The recipient will see one connection. Scan the QR or send the link. Shown once: the config contains a private key.", "Получатель увидит одно подключение. Отсканируйте QR или отправьте ссылку. Показывается один раз: в конфиге приватный ключ."), true, before, after)
+	return fmt.Sprintf(L("Revoked: %s.\nFailed:\n%s", "Отозван: %s.\nНе удалось:\n%s"), strings.Join(done, ", "), strings.Join(failed, "\n"))
 }
 
 // revokeEverywhere удаляет клиента с этим именем (clients/delete) на каждом из серверов-входов по очереди
 // и сообщает итог: на каких серверах отозвано, на каких не удалось.
-func (u *ui) revokeEverywhere(parent fyne.Window, name string, entries []*config.Profile) {
-	var done, failed []string
-	var step func(i int)
-	step = func(i int) {
-		if i == len(entries) {
-			msg := fmt.Sprintf(L("Revoked on all entries (%d).", "Каскад отозван у всех входов (%d)."), len(done))
-			if len(failed) > 0 {
-				msg = fmt.Sprintf(L("Revoked: %s.\nFailed:\n%s", "Отозван: %s.\nНе удалось:\n%s"), strings.Join(done, ", "), strings.Join(failed, "\n"))
-			}
-			showInfo(L("Revoke the cascade", "Отозвать каскад"), msg, parent)
-			return
-		}
-		e := entries[i]
+func (u *ui) revokeEverywhere(parent *subPage, name string, entries []*config.Profile) {
+	call := func(e *config.Profile, name string, cb func(error)) {
 		u.withSession(parent, e, func(s *deploy.Session, err error) {
 			if err != nil {
-				failed = append(failed, e.Name+": "+shortErr(err))
-				step(i + 1)
+				cb(err)
 				return
 			}
 			go func() {
 				err := s.Call("POST", "/clients/delete", map[string]string{"name": name}, nil)
-				fyne.Do(func() {
-					if err != nil {
-						failed = append(failed, e.Name+": "+shortErr(err))
-					} else {
-						done = append(done, e.Name)
-					}
-					step(i + 1)
-				})
+				fyne.Do(func() { cb(err) })
 			}()
 		})
 	}
-	step(0)
+	revokeAcross(entries, name, call, shortErr, func(done, failed []string) {
+		showInfo(L("Revoke the cascade", "Отозвать каскад"), revokeText(done, failed), parent)
+		if len(failed) == 0 {
+			parent.Close()
+		}
+	})
 }

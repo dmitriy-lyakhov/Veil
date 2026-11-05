@@ -93,10 +93,8 @@ func (u *ui) showMenuAt(anchor fyne.CanvasObject, options []string, pick func(st
 	pop.Resize(fyne.NewSize(anchor.Size().Width, pop.MinSize().Height))
 }
 
-// withGap добавляет 4 px под полем: вместе с зазором контейнера получается шаг 12 px, как в дизайне.
-func withGap(o fyne.CanvasObject) fyne.CanvasObject {
-	return container.New(&vstackLayout{}, o, spacerH(4))
-}
+// withGap оставлена для совместимости: шаг между полями даёт контейнер страницы (pageGap).
+func withGap(o fyne.CanvasObject) fyne.CanvasObject { return o }
 
 // bigButton — кнопка 52 px: главная (акцент) или обычная на карточке.
 func bigButton(label string, icon string, primary bool, onTap func()) fyne.CanvasObject {
@@ -139,10 +137,8 @@ func infoBG() fyne.CanvasObject {
 	return r
 }
 
-// infoNote — пояснение в карточке (13 px, как на страницах DNS и «Новый сервер»).
-func infoNote(s string) fyne.CanvasObject {
-	return container.NewStack(infoBG(), container.New(layout.NewCustomPaddedLayout(10, 10, 16, 16), prose(s)))
-}
+// infoNote — пояснение в карточке со значком «info» (13 px, как на страницах DNS и «Резервная копия»).
+func infoNote(s string) fyne.CanvasObject { return noteBox(iconImg("info", colMuted, 22), s) }
 
 // dangerButton — кнопка 52 px на карточке с красным текстом (удаление, очистка).
 func dangerButton(label string, onTap func()) fyne.CanvasObject {
@@ -155,7 +151,7 @@ func infoRow(label, value string, onTap func()) fyne.CanvasObject {
 	bg.CornerRadius = 14
 	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	bg.SetMinSize(fyne.NewSize(1, 52))
-	val := newFitText(value, 14, colText, false)
+	val := newFitText(value, 14, colText, true)
 	val.Alignment = fyne.TextAlignTrailing
 	row := container.NewBorder(nil, nil, container.NewCenter(text(label, 14, colMuted, false)), nil, vcenter(val))
 	card := container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(0, 0, 16, 16), row))
@@ -189,4 +185,25 @@ func (u *ui) optionRow(label, current string, options []string, changed func(str
 		pos := fyne.CurrentApp().Driver().AbsolutePositionForObject(card)
 		pop.ShowAtPosition(fyne.NewPos(pos.X, pos.Y+card.Size().Height+6))
 	})
+}
+
+// bigButtonDanger — кнопка 52 px на карточке с красным текстом и значком (дизайн: btn 'danger').
+func bigButtonDanger(label, icon string, onTap func()) fyne.CanvasObject {
+	return container.New(&fillMin{h: 52}, newTapCardR(iconLabelRow(icon, label, 16, colAccentInk), colCard, colCardHover, 14, 1, onTap))
+}
+
+// menuRow — строка страницы (64 px): заголовок, значение под ним, шеврон «вниз»; по нажатию раскрывается меню выбора.
+func (u *ui) menuRow(title, current string, options []string, changed func(string)) fyne.CanvasObject {
+	var row fyne.CanvasObject
+	row = listRow(title, current, container.NewCenter(iconImg("down", colMuted, 22)), func() {
+		items := make([]*fyne.MenuItem, len(options))
+		for i, o := range options {
+			o := o
+			items[i] = fyne.NewMenuItem(o, func() { changed(o) })
+		}
+		pop := widget.NewPopUpMenu(fyne.NewMenu("", items...), u.win.Canvas())
+		pos := fyne.CurrentApp().Driver().AbsolutePositionForObject(row)
+		pop.ShowAtPosition(fyne.NewPos(pos.X, pos.Y+row.Size().Height+6))
+	})
+	return row
 }

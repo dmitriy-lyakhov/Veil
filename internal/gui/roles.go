@@ -59,8 +59,44 @@ func roleNote(role string) fyne.CanvasObject {
 
 // noteIcon — пояснение со значком слева (в дизайне — note с иконкой info/warn/lock).
 func noteIcon(icon, s string, c color.Color) fyne.CanvasObject {
-	row := container.NewBorder(nil, nil, container.New(layout.NewCustomPaddedLayout(0, 0, 0, 4), container.NewCenter(container.NewGridWrap(fyne.NewSize(22, 22), iconImg(icon, c, 22)))), nil, vcenter(prose(s)))
-	return container.NewStack(infoBG(), container.New(layout.NewCustomPaddedLayout(14, 14, 16, 16), row))
+	return noteBox(iconImg(icon, c, 22), s)
+}
+
+// noteBox — карточка-пояснение: значок 22 px слева (может быть nil), текст 13 px справа, поля 14 px сверху и снизу.
+// Высота как в дизайне: строка текста 18,85 px (у Fyne 15,8), но не ниже значка.
+func noteBox(icon fyne.CanvasObject, s string) fyne.CanvasObject {
+	objs := []fyne.CanvasObject{newFlowText(s, 13, colText, false, 18.85)}
+	if icon != nil {
+		objs = append([]fyne.CanvasObject{container.NewGridWrap(fyne.NewSize(22, 22), icon)}, objs...)
+	}
+	return container.NewStack(infoBG(), container.New(layout.NewCustomPaddedLayout(0, 0, 16, 16), container.New(noteLayout{icon: icon != nil}, objs...)))
+}
+
+type noteLayout struct{ icon bool }
+
+const noteTextX = 34 // значок 22 + 12
+
+func (l noteLayout) textObj(objs []fyne.CanvasObject) fyne.CanvasObject { return objs[len(objs)-1] }
+
+func (l noteLayout) Layout(objs []fyne.CanvasObject, s fyne.Size) {
+	x := float32(0)
+	if l.icon {
+		x = noteTextX
+		objs[0].Resize(fyne.NewSize(22, 22))
+		objs[0].Move(fyne.NewPos(0, (s.Height-22)/2))
+	}
+	t := l.textObj(objs)
+	h := heightAtWidth(t, s.Width-x)
+	t.Resize(fyne.NewSize(s.Width-x, h))
+	t.Move(fyne.NewPos(x, (s.Height-h)/2))
+}
+
+func (l noteLayout) MinSize(objs []fyne.CanvasObject) fyne.Size {
+	h := l.textObj(objs).MinSize().Height
+	if l.icon {
+		h = max(h, 22)
+	}
+	return fyne.NewSize(0, h+28)
 }
 
 // roleBadge — значок «Админ» рядом с именем клиента в списке.
@@ -89,7 +125,7 @@ func roleBlock(current string, changed func(string)) fyne.CanvasObject {
 		hint.Add(roleNote(v))
 		hint.Refresh()
 	})
-	return container.NewVBox(sectionLabel(L("Role", "Роль")), seg, hint)
+	return pageBox(sectionLabel(L("Role", "Роль")), seg, hint)
 }
 
 // adminAliasURL — короткий адрес админки: клиент прописывает «admin» в hosts при подключении.

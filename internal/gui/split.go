@@ -156,7 +156,7 @@ func (u *ui) openSplit() {
 	})
 	menuBtn.Importance = widget.LowImportance
 
-	top := container.NewVBox(enableRow, seg, hint)
+	top := pageBox(enableRow, seg, hint)
 	bottom := container.NewBorder(nil, nil, nil, container.NewHBox(menuBtn), container.NewBorder(nil, nil, nil, addBtn, entry))
 	w.SetContent(container.NewPadded(container.NewBorder(top, bottom, nil, nil, container.NewVScroll(items))))
 	w.Show()

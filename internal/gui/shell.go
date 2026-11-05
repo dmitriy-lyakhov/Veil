@@ -252,9 +252,9 @@ func (l *pageFrame) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 		ps := l.pill.MinSize()
 		l.pill.Show()
 		l.pill.Resize(ps)
-		l.pill.Move(fyne.NewPos(s.Width-24-ps.Width, (hdr-ps.Height)/2))
+		l.pill.Move(fyne.NewPos(s.Width-24-ps.Width, 18)) // плашка: 18 px сверху, высота 36
 		l.title.Resize(ts)
-		l.title.Move(fyne.NewPos(24, (hdr-ts.Height)/2))
+		l.title.Move(fyne.NewPos(24, 28)) // заголовок 24 px: верх на 28 px
 		w := min(560, s.Width-48)
 		l.body.Resize(fyne.NewSize(w, s.Height-l.top-24))
 		l.body.Move(fyne.NewPos(24, l.top))
@@ -269,7 +269,7 @@ func (l *pageFrame) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 
 // tabPage собирает страницу вкладки по рамке выше.
 func (u *ui) tabPage(title string, body fyne.CanvasObject) fyne.CanvasObject {
-	return u.tabPageAt(title, body, 80)
+	return u.tabPageAt(title, body, 100)
 }
 
 func (u *ui) tabPageAt(title string, body fyne.CanvasObject, top float32) fyne.CanvasObject {

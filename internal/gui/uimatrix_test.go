@@ -136,6 +136,7 @@ func matrixPages() []uiPage {
 	for i := 0; i < 4; i++ {
 		pages = append(pages, managerPage(i))
 	}
+	pages = append(pages, measureExtra()...)
 	return pages
 }
 

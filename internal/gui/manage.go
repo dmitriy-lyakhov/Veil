@@ -168,6 +168,8 @@ type manager struct {
 	loaded      bool   // состояние сервера загружено (был вход по SSH)
 	clientsOnly bool   // менеджер встроен в раздел «Поделиться»: рисует только клиентов
 	onLoaded    func() // вызывается после обновления данных (для встроенного режима)
+
+	callHook func(method, path string, in, out any, done func(error)) // подмена запросов к серверу (тесты, демо)
 }
 
 func (u *ui) openManager(p *config.Profile) {
@@ -236,6 +238,10 @@ func (m *manager) show(i int) {
 }
 
 func (m *manager) call(method, path string, in, out any, done func(error)) {
+	if m.callHook != nil {
+		m.callHook(method, path, in, out, done)
+		return
+	}
 	if m.sess == nil {
 		m.ensureSession(func() { m.call(method, path, in, out, done) }, done)
 		return
@@ -257,7 +263,10 @@ func (m *manager) call(method, path string, in, out any, done func(error)) {
 	}()
 }
 
-func (m *manager) refresh() {
+func (m *manager) refresh() { m.refreshThen(nil) }
+
+// refreshThen обновляет состояние сервера и после отрисовки вызывает then.
+func (m *manager) refreshThen(then func()) {
 	var st stateRoles
 	m.call("GET", "/state", nil, &st, func(err error) {
 		if err != nil {
@@ -272,6 +281,9 @@ func (m *manager) refresh() {
 		m.loaded = true
 		m.status.SetText(fmt.Sprintf(L("Cover site: %s · clients %d, online %d", "Сайт-прикрытие: %s · клиентов %d, онлайн %d"), st.Server.Company, st.Server.Clients, st.Server.Online))
 		m.render()
+		if then != nil {
+			then()
+		}
 	})
 }
 
@@ -331,214 +343,6 @@ func (m *manager) confirm(title, msg string, yes func()) {
 			yes()
 		}
 	}, m.w)
-}
-
-func (m *manager) renderClients() {
-	m.body.Add(bigButton(L("New client", "Новый клиент"), "plus", true, m.addClient))
-	m.body.Add(bigButton(L("Refresh", "Обновить"), "refresh", false, m.refresh))
-	transit := 0
-	for _, c := range m.state.Clients {
-		if c.RelayOf != "" {
-			transit++
-			continue
-		}
-		m.body.Add(m.clientCard(c))
-	}
-	if len(m.state.Clients)-transit == 0 {
-		m.body.Add(card(widget.NewLabel(L("No clients yet.", "Клиентов пока нет."))))
-	}
-	if transit > 0 {
-		m.body.Add(text(fmt.Sprintf(L("Transit clients from other cascade nodes: %d", "Транзитных клиентов от других узлов каскада: %d"), transit), 12, colMuted, false))
-	}
-}
-
-func (m *manager) clientCard(c server.ClientInfo) fyne.CanvasObject {
-	dot := canvas.NewCircle(colIdle)
-	switch {
-	case c.Disabled:
-		dot.FillColor = colBad
-	case c.Online:
-		dot.FillColor = colOK
-	}
-	var title fyne.CanvasObject = richText(c.Name, false, true)
-	if m.roles[c.Name] == "admin" {
-		title = container.NewHBox(title, container.NewCenter(roleBadge()))
-	}
-	lines := container.New(tightVBox{gap: -7, afterFirst: -12}, title)
-	if c.Note != "" {
-		lines.Add(richText(c.Note, true, false))
-	}
-	route := L("exit on this server", "выход на этом сервере")
-	if len(c.Route) > 0 {
-		route = "→ " + strings.Join(c.Route, " → ")
-	}
-	if c.Auto != nil {
-		route = L("auto ", "авто ") + route
-		if c.Auto.CostMs > 0 {
-			route += fmt.Sprintf(L(" · %.0f ms", " · %.0f мс"), c.Auto.CostMs)
-		}
-	}
-	if c.Disabled {
-		route = L("blocked · ", "заблокирован · ") + route
-	}
-	lines.Add(richText(route, true, false))
-	lines.Add(richText(fmt.Sprintf("↓ %s  ↑ %s", humanBytes(c.TxBytes), humanBytes(c.RxBytes)), true, false))
-
-	edit := iconButton(theme.DocumentCreateIcon(), func() { m.editClient(c) })
-	lockIcon := theme.VisibilityOffIcon()
-	if c.Disabled {
-		lockIcon = theme.VisibilityIcon()
-	}
-	lock := iconButton(lockIcon, func() {
-		next := !c.Disabled
-		m.call("POST", "/clients/update", map[string]any{"name": c.Name, "disabled": next}, nil, func(err error) {
-			if err == nil {
-				m.refresh()
-			}
-		})
-	})
-	reissue := iconButton(theme.ViewRefreshIcon(), func() {
-		m.confirm(L("New config", "Новый конфиг"), fmt.Sprintf(L("Issue a new config for “%s”? The old one will stop working.", "Выпустить новый конфиг для «%s»? Старый перестанет работать."), c.Name), func() {
-			var r server.LinkResponse
-			m.call("POST", "/clients/reissue", map[string]string{"name": c.Name}, &r, func(err error) {
-				if err == nil {
-					m.u.showShare(m.w, fmt.Sprintf(L("New config “%s”", "Новый конфиг «%s»"), c.Name), r, L("The old config no longer works. The link is shown once.", "Старый конфиг больше не работает. Ссылка показывается один раз."), true)
-					m.refresh()
-				}
-			})
-		})
-	})
-	del := iconButton(theme.DeleteIcon(), func() {
-		m.confirm(L("Delete client", "Удалить клиента"), fmt.Sprintf(L("Delete “%s”? Its connections will be dropped.", "Удалить «%s»? Его подключения будут разорваны."), c.Name), func() {
-			m.call("POST", "/clients/delete", map[string]string{"name": c.Name}, nil, func(err error) {
-				if err == nil {
-					m.refresh()
-				}
-			})
-		})
-	})
-	sq := func(b fyne.CanvasObject) fyne.CanvasObject { return container.NewGridWrap(fyne.NewSize(34, 34), b) }
-	actions := container.NewHBox(sq(edit), sq(lock), sq(reissue), sq(del))
-	return cardTight(container.NewBorder(nil, nil, container.NewCenter(container.NewGridWrap(fyne.NewSize(10, 10), dot)), container.NewCenter(actions), lines))
-}
-
-func (m *manager) editClient(c server.ClientInfo) {
-	name := widget.NewEntry()
-	name.SetText(c.Name)
-	note := widget.NewEntry()
-	note.SetText(c.Note)
-	cur := normRole(m.roles[c.Name])
-	next := "admin"
-	toggleTitle, toggleSub := L("Make an administrator", "Сделать администратором"), L("Full access to the admin panel of this server", "Полный доступ к админ-панели этого сервера")
-	if cur == "admin" {
-		next = "user"
-		toggleTitle, toggleSub = L("Make a user", "Сделать пользователем"), L("Admin panel access will be removed", "Доступ к админ-панели будет закрыт")
-	}
-	// смена роли — отдельное действие со своим подтверждением, не часть «Сохранить»
-	toggle := listRow(toggleTitle, toggleSub, widget.NewIcon(theme.NavigateNextIcon()), func() {
-		m.confirm(toggleTitle, fmt.Sprintf(L("“%s”: %s. Continue?", "«%s»: %s. Продолжить?"), c.Name, toggleSub), func() {
-			m.setRole(c.Name, next)
-		})
-	})
-	form := widget.NewForm(widget.NewFormItem(L("Name", "Имя"), name), widget.NewFormItem(L("Note", "Заметка"), note))
-	content := container.NewVBox(infoRow(L("Role", "Роль"), roleName(cur), nil), form, toggle)
-	d := newCustomConfirm(L("Client", "Клиент"), L("Save", "Сохранить"), L("Cancel", "Отмена"), container.NewGridWrap(fyne.NewSize(380, 330), container.NewVScroll(content)), func(ok bool) {
-		if !ok {
-			return
-		}
-		m.call("POST", "/clients/update", map[string]any{"name": c.Name, "new_name": name.Text, "note": note.Text}, nil, func(err error) {
-			if err == nil {
-				m.refresh()
-			}
-		})
-	}, m.w)
-	d.Show()
-}
-
-// setRole меняет роль клиента на сервере (clients/update с полем role).
-func (m *manager) setRole(name, role string) {
-	m.call("POST", "/clients/update", map[string]any{"name": name, "role": role}, nil, func(err error) {
-		if err != nil {
-			showError(err, m.w)
-			return
-		}
-		m.refresh()
-	})
-}
-
-func (m *manager) addClient() {
-	role := "user"
-	name := widget.NewEntry()
-	name.SetPlaceHolder(L("For example: Anna's phone", "Например: телефон Ани"))
-	note := widget.NewEntry()
-	routeBox := container.NewVBox()
-	var route []string
-	var rebuild func()
-	rebuild = func() {
-		routeBox.RemoveAll()
-		for i, h := range route {
-			routeBox.Add(text(fmt.Sprintf("%d. %s", i+1, h), 13, colText, false))
-		}
-		if len(route) > 0 {
-			routeBox.Add(widget.NewButton(L("Remove last node", "Убрать последний узел"), func() {
-				route = route[:len(route)-1]
-				rebuild()
-			}))
-		}
-		loading := text(L("Loading options…", "Загрузка вариантов…"), 12, colMuted, false)
-		routeBox.Add(loading)
-		var resp struct {
-			Upstreams []string `json:"upstreams"`
-		}
-		m.call("POST", "/explore", map[string]any{"route": route}, &resp, func(err error) {
-			routeBox.Remove(loading)
-			if err != nil {
-				routeBox.Add(text(err.Error(), 12, colBad, false))
-				return
-			}
-			hopPrefix := L("then via ", "дальше через ")
-			first := exitHere()
-			if len(route) > 0 {
-				first = exitLast()
-			}
-			options := []string{first}
-			for _, o := range resp.Upstreams {
-				if !containsString(route, o) {
-					options = append(options, hopPrefix+o)
-				}
-			}
-			sel := widget.NewSelect(options, nil)
-			sel.SetSelected(first)
-			sel.OnChanged = func(v string) {
-				if hop, ok := strings.CutPrefix(v, hopPrefix); ok {
-					route = append(route, hop)
-					rebuild()
-				}
-			}
-			routeBox.Add(sel)
-		})
-	}
-	rebuild()
-	content := container.NewVBox(
-		widget.NewForm(widget.NewFormItem(L("Name", "Имя"), name), widget.NewFormItem(L("Note", "Заметка"), note)),
-		roleBlock(role, func(v string) { role = v }),
-		text(L("Route", "Маршрут"), 14, colText, true), routeBox,
-	)
-	d := newCustomConfirm(L("New client", "Новый клиент"), L("Create", "Создать"), L("Cancel", "Отмена"), container.NewGridWrap(fyne.NewSize(380, 460), container.NewVScroll(content)), func(ok bool) {
-		if !ok {
-			return
-		}
-		var r server.LinkResponse
-		m.call("POST", "/clients", map[string]any{"name": name.Text, "note": note.Text, "route": route, "role": role}, &r, func(err error) {
-			if err != nil {
-				showError(err, m.w)
-				return
-			}
-			m.u.showShare(m.w, fmt.Sprintf(L("Client “%s”", "Клиент «%s»"), r.Name), r, L("Scan the QR in the Veil app on the client's device, or send the file or link. Shown once: the config contains a private key.", "Отсканируйте QR в приложении Veil на устройстве клиента, отправьте файл или ссылку. Показывается один раз: в конфиге приватный ключ."), true, infoRow(L("Role", "Роль"), roleName(role), nil))
-			m.refresh()
-		})
-	}, m.w)
-	d.Show()
 }
 
 func containsString(v []string, s string) bool {

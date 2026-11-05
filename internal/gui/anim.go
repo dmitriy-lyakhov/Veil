@@ -321,11 +321,24 @@ func heightAtWidth(o fyne.CanvasObject, w float32) float32 {
 
 // vboxFit — как VBox, но не требует ширины по содержимому: всё укладывается
 // в доступную ширину, а не раздвигает прокручиваемую область за край окна.
-type vboxFit struct{}
+// pageGap — шаг между строками и полями на вложенных страницах (дизайн: 10 px).
+const pageGap float32 = 10
 
-func (vboxFit) Layout(objs []fyne.CanvasObject, size fyne.Size) {
+type vboxFit struct{ gap float32 }
+
+func (v vboxFit) step() float32 {
+	if v.gap > 0 {
+		return v.gap
+	}
+	return pageGap
+}
+
+// pageBox — вертикальный ряд страницы с шагом pageGap.
+func pageBox(objs ...fyne.CanvasObject) *fyne.Container { return container.New(vboxFit{}, objs...) }
+
+func (v vboxFit) Layout(objs []fyne.CanvasObject, size fyne.Size) {
 	var y float32
-	pad := theme.Padding()
+	pad := v.step()
 	for _, o := range objs {
 		if !o.Visible() {
 			continue
@@ -337,7 +350,7 @@ func (vboxFit) Layout(objs []fyne.CanvasObject, size fyne.Size) {
 	}
 }
 
-func (vboxFit) MinSize(objs []fyne.CanvasObject) fyne.Size {
+func (v vboxFit) MinSize(objs []fyne.CanvasObject) fyne.Size {
 	var h float32
 	n := 0
 	for _, o := range objs {
@@ -348,7 +361,7 @@ func (vboxFit) MinSize(objs []fyne.CanvasObject) fyne.Size {
 		n++
 	}
 	if n > 1 {
-		h += float32(n-1) * theme.Padding()
+		h += float32(n-1) * v.step()
 	}
 	return fyne.NewSize(0, h)
 }

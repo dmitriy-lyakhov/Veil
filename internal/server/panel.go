@@ -89,7 +89,7 @@ section.card h2{margin:0 0 6px;font-size:16px;font-weight:600;display:flex;justi
 section.card h2.m14{margin-bottom:14px}
 .hint{margin:0 0 12px;font-size:13px;color:var(--ink2);line-height:1.5}
 .btns{display:flex;gap:8px}
-.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
 .grid2 section.card{margin-bottom:20px}
 
 .tag{display:inline-block;background:var(--card2);border-radius:6px;padding:2px 7px;font-size:12px;margin:0 4px 4px 0}
@@ -133,6 +133,7 @@ body.fresh .gnode{animation:aRise .4s both}
 .ctable{display:block}.ccards{display:none}
 .crow{display:grid;grid-template-columns:1.3fr 1.3fr 1.3fr .9fr .9fr 460px;gap:0 12px;padding:12px 8px;border-bottom:1px solid var(--card2);align-items:start}
 .crow.head{font-size:12px;font-weight:500;color:var(--ink2);padding:0 8px 8px}
+.crow.head .chs{font-size:12px}
 .crow>div,.crow>span{min-width:0}
 .cname{display:flex;align-items:center;gap:8px}.cname strong{font-size:14px;word-break:break-word}
 .cnote{font-size:12px;color:var(--ink2);margin-top:2px}
@@ -157,6 +158,7 @@ body.fresh .gnode{animation:aRise .4s both}
 .kv span{display:block;font-size:12px;color:var(--ink2)}
 .kv code{font-size:13px;font-weight:700;word-break:break-all}
 label{font-size:12px;color:var(--ink2)}
+.lrow{display:flex;justify-content:space-between;align-items:center;gap:8px}.lrow .lnk{min-height:0;padding:0 6px;font-size:12px;line-height:21px}
 input,textarea,select{display:block;width:100%;font:inherit;font-size:14px;background:var(--card2);color:var(--ink);border:1px solid transparent;border-radius:12px;padding:10px 14px;margin:6px 0 14px;min-height:44px}
 textarea{height:96px;resize:none;font-family:Arimo,Arial,sans-serif;font-size:12px}
 select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer}
@@ -318,13 +320,13 @@ select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer
 <section class="card">
 <h2 data-i="cover2"></h2>
 <p class="hint" data-i="coverHint"></p>
-<div style="margin-bottom:12px"><span class="tag" id="sr-status" style="margin:0"></span><span class="srmeta" id="sr-meta" style="display:none"></span></div>
+<div style="margin-bottom:12px"><span class="tag" id="sr-status"></span><span class="srmeta" id="sr-meta" style="display:none"></span></div>
 <div class="bar" id="sr-bar" style="display:none"><i></i></div>
 <div class="warn" id="sr-err" style="display:none"></div>
 <label data-i="srUrl"></label><input id="sr-url" placeholder="https://" autocomplete="off" spellcheck="false">
 <label data-i="srRef"></label><input id="sr-ref" placeholder="main" autocomplete="off" spellcheck="false">
 <label data-i="srDir"></label><input id="sr-dir" placeholder="public" autocomplete="off" spellcheck="false">
-<label data-i="srToken"></label><input id="sr-token" type="password" autocomplete="new-password">
+<div class="lrow"><label data-i="srToken"></label><button type="button" class="lnk bad" id="sr-clrtok" data-i="srClrTok" style="display:none"></button></div><input id="sr-token" type="password" autocomplete="new-password">
 <div class="end"><button type="button" class="btn" id="sr-reset" data-i="srReset"></button><button type="button" class="btn acc" id="sr-update" data-i="srUpd"></button></div>
 </section>
 <section class="card pwd">
@@ -453,7 +455,9 @@ relAdminL:'Разрешить администрирование',yes:'Да',no:
 cover2:'Сайт-прикрытие',coverHint:'Сайт, который видят посторонние, можно брать из Git-репозитория вместо сгенерированного.',
 srUrl:'Адрес репозитория',srRef:'Ветка',srDir:'Подкаталог',srToken:'Токен доступа',srUpd:'Обновить',srReset:'Сбросить на сгенерированный',
 srOk:'Обновлён {0}',srBusy:'Идёт загрузка…',srErr:'Ошибка',srErrText:'Не удалось загрузить репозиторий: {0}',srNone:'Используется сгенерированный сайт',srWait:'Ещё не загружен',
-srNeedUrl:'Укажите адрес репозитория',srResetDone:'Восстановлен сгенерированный сайт',srQueued:'Обновление запущено',srMeta:'коммит {0} · файлов: {1}'
+srNeedUrl:'Укажите адрес репозитория',srResetDone:'Восстановлен сгенерированный сайт',srQueued:'Обновление запущено',srMeta:'коммит {0} · файлов: {1}',
+srClrTok:'Сбросить токен',srClrConfirm:'Сбросить сохранённый токен доступа? Закрытый репозиторий перестанет загружаться, пока вы не укажете токен снова.',srClrDone:'Токен сброшен',
+downSince:'Нет связи с {0}. Данные этого узла недоступны, пока связь не восстановится.'
 },en:{
 title:'Veil · control panel',cover:'Cover site: {0}',client:'Client',clients:'Clients',logout:'Sign out',
 stClients:'Clients',stOnline:'Online',stRx:'Received',stTx:'Sent',stUp:'Uptime',
@@ -505,7 +509,9 @@ relAdminL:'Allow administration',yes:'Yes',no:'No',relAdminWarn:'Warning: the no
 cover2:'Cover site',coverHint:'Take the site that outsiders see from a Git repository instead of the generated one.',
 srUrl:'Repository address',srRef:'Branch',srDir:'Subdirectory',srToken:'Access token',srUpd:'Update',srReset:'Reset to the generated site',
 srOk:'Updated {0}',srBusy:'Loading…',srErr:'Error',srErrText:'Could not load the repository: {0}',srNone:'The generated site is in use',srWait:'Not loaded yet',
-srNeedUrl:'Enter the repository address',srResetDone:'The generated site is restored',srQueued:'Update started',srMeta:'commit {0} · files: {1}'
+srNeedUrl:'Enter the repository address',srResetDone:'The generated site is restored',srQueued:'Update started',srMeta:'commit {0} · files: {1}',
+srClrTok:'Reset token',srClrConfirm:'Reset the saved access token? A private repository will stop loading until you enter the token again.',srClrDone:'Token reset',
+downSince:'No link since {0}. The data of this node is unavailable until the link is restored.'
 }};
 function t(k){let s=D[lang][k];if(s===undefined)s=D.ru[k];if(s===undefined)return k;if(typeof s!=='string')return s;for(let i=1;i<arguments.length;i++)s=s.split('{'+(i-1)+'}').join(arguments[i]);return s}
 function store(k,v){try{localStorage.setItem(k,v)}catch(e){}}
@@ -529,17 +535,17 @@ function showLink(title,r,warn){$('l-title').textContent=title;$('l-warn').textC
 const hist={};
 function latMap(){const m={};for(const x of (state&&state.latency||[]))m[x.name]=x;return m}
 function pushHist(){const lat=latMap();for(const u of state.upstreams){const a=hist[u.name]||(hist[u.name]=[]);const x=lat[u.name];if(x)a.push(x.ok?x.rtt_ms:-1);while(a.length>16)a.shift()}}
-let nodes=[],nodeDown={},nodeErr='';
+let nodes=[],nodeDown={},nodeSince={},nodeErr='';
 function nodeKey(n){return n.route.join('>')}
 function nodeName(){const n=nodes.find(x=>nodeKey(x)===NODE);return n&&n.name||t('thisServer')}
-async function refresh(){const k=NODE;let st;try{st=await api('state')}catch(e){if(k!==NODE)return;if(NODE){nodeDown[NODE]=true;nodeErr=e.message}renderTargets();return}
-if(k!==NODE)return;delete nodeDown[k];nodeErr='';state=st;pushHist();render()}
+async function refresh(){const k=NODE;let st;try{st=await api('state')}catch(e){if(k!==NODE)return;if(NODE){nodeDown[NODE]=true;if(!nodeSince[NODE])nodeSince[NODE]=new Date();nodeErr=e.message}renderTargets();return}
+if(k!==NODE)return;delete nodeDown[k];delete nodeSince[k];nodeErr='';state=st;pushHist();render()}
 function nodeBad(n){const k=nodeKey(n);if(nodeDown[k])return true;if(n.route.length===1&&state){const x=latMap()[n.route[0]];if(x&&!x.ok)return true}return false}
 function renderTargets(){const box=$('tgt-btns');box.replaceChildren();$('tgt').style.display=nodes.length>1?'flex':'none';
 nodes.forEach(n=>{const k=nodeKey(n);const b=el('button','tbtn'+(k===NODE?' on':''));b.type='button';const d=el('span','dot');d.style.background=nodeBad(n)?'var(--accInk)':'var(--ok)';b.append(d,document.createTextNode(n.name||t('nodeThis')));b.onclick=()=>{if(k===NODE)return;NODE=k;srDirty=false;renderTargets();refresh()};box.append(b)});
 const down=!!(NODE&&nodeDown[NODE]);const note=$('tnote'),dn=$('tdown');
 note.style.display=NODE&&!down?'block':'none';if(NODE&&!down)note.textContent=t('nodeNote',nodeName());
-dn.style.display=down?'flex':'none';if(down){$('td-t').textContent=t('downTitle',nodeName());$('td-x').textContent=t('downText')+(nodeErr?' ('+nodeErr+')':'')}
+dn.style.display=down?'flex':'none';if(down){$('td-t').textContent=t('downTitle',nodeName());$('td-x').textContent=(nodeSince[NODE]?t('downSince',nodeSince[NODE].toLocaleTimeString(lang==='ru'?'ru-RU':'en-GB',{hour:'2-digit',minute:'2-digit'})):t('downText'))+(nodeErr?' ('+nodeErr+')':'')}
 $('tgt').classList.toggle('tight',!!NODE);$('pbody').classList.toggle('dim',down)}
 $('td-retry').onclick=async()=>{await refresh();if(NODE&&nodeDown[NODE])toast(t('stillDown'))};
 
@@ -730,15 +736,16 @@ else if(r.error){txt=t('srErr');cls='tag bad'}
 else if(!r.enabled){txt=t('srNone')}
 else if(r.active&&r.updated){txt=t('srOk',ago(r.updated))}
 else txt=t('srWait');
-st.className=cls;st.style.margin=cls==='tag bad'?'6px 0 0':'0';st.textContent=txt;
+st.className=cls;st.textContent=txt;
 bar.style.display=r.syncing?'block':'none';
 const e=r.error&&!r.syncing;er.style.display=e?'block':'none';if(e)er.textContent=t('srErrText',r.error);
 const mt=$('sr-meta');const m=r.enabled&&r.active&&r.commit;mt.style.display=m?'inline':'none';if(m)mt.textContent=t('srMeta',String(r.commit).slice(0,8),r.files||0);
 if(!srDirty&&!['sr-url','sr-ref','sr-dir','sr-token'].some(id=>document.activeElement===$(id))){$('sr-url').value=r.url||'';$('sr-ref').value=r.ref||'';$('sr-dir').value=r.dir||'';$('sr-token').value='';$('sr-token').placeholder=r.has_token?'••••••••••••':''}
-$('sr-update').disabled=!!r.syncing;$('sr-reset').disabled=!r.enabled}
+$('sr-update').disabled=!!r.syncing;$('sr-reset').disabled=!r.enabled;$('sr-clrtok').style.display=r.enabled&&r.has_token?'inline-block':'none'}
 $('sr-update').onclick=async()=>{const r=state.site_repo||{};const url=$('sr-url').value.trim();if(!url){toast(t('srNeedUrl'));return}
 const same=r.enabled&&url===r.url&&$('sr-ref').value.trim()===(r.ref||'')&&$('sr-dir').value.trim()===(r.dir||'')&&!$('sr-token').value;
 $('sr-update').disabled=true;try{if(same)await api('settings/siterepo/refresh',{});else await api('settings/siterepo',{url,ref:$('sr-ref').value.trim(),dir:$('sr-dir').value.trim(),token:$('sr-token').value});srDirty=false;$('sr-token').value='';toast(t('srQueued'));await refresh()}catch(e){toast(e.message,4000)}finally{$('sr-update').disabled=false}};
+$('sr-clrtok').onclick=async()=>{const r=state.site_repo||{};if(!r.has_token||!confirm(t('srClrConfirm')))return;try{await api('settings/siterepo',{url:r.url,ref:r.ref||'',dir:r.dir||'',clear_token:true});srDirty=false;toast(t('srClrDone'));await refresh()}catch(e){toast(e.message,4000)}};
 $('sr-reset').onclick=async()=>{try{await api('settings/siterepo',{url:''});srDirty=false;toast(t('srResetDone'));await refresh()}catch(e){toast(e.message)}};
 $('domain-save').onclick=async()=>{try{await api('settings/domain',{domain:$('domain').value});refresh()}catch(e){toast(e.message)}};
 $('pw-save').onclick=async()=>{$('pw-err').textContent='';if($('pw-new').value!==$('pw-rep').value){$('pw-err').textContent=t('pwMismatch');return}

@@ -14,6 +14,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
@@ -61,15 +62,13 @@ func (u *ui) serverCard(p *config.Profile) fyne.CanvasObject {
 		dot.FillColor = colAccent
 	}
 	dotBox := container.NewGridWrap(fyne.NewSize(12, 12), dot)
-	name := newFitText(p.Name, 16, colText, true)
-	sub := newFitText(addresses(p), 12, colMuted, false)
-	lines := container.NewVBox(name, sub)
+	sub := addresses(p)
 	if p.Name == u.active {
 		state := L("connecting…", "подключение…")
 		if u.connected {
 			state = L("connected", "подключено")
 		}
-		lines.Add(text("● "+state, 12, colOK, false))
+		sub = state + " · " + sub
 	}
 	info := widget.NewButtonWithIcon("", theme.MoreHorizontalIcon(), func() { u.showDetails(p) })
 	info.Importance = widget.LowImportance
@@ -79,8 +78,8 @@ func (u *ui) serverCard(p *config.Profile) fyne.CanvasObject {
 		gear.Importance = widget.LowImportance
 		actions = container.NewHBox(gear, info)
 	}
-	body := container.NewBorder(nil, nil, container.NewCenter(dotBox), container.NewCenter(actions), lines)
-	return newTapCard(body, colCard, colCardHover, func() { u.selectProfile(p.Name) })
+	body := container.NewBorder(nil, nil, container.New(layout.NewCustomPaddedLayout(0, 0, 0, 4), container.NewCenter(dotBox)), nil, vcenter(rowText(p.Name, sub, theme.ColorNameForeground)))
+	return listRowOf(body, container.NewCenter(actions), func() { u.selectProfile(p.Name) })
 }
 
 func (u *ui) showAddChooser() {
@@ -94,7 +93,7 @@ func (u *ui) showAddChooser() {
 			action()
 		})
 	}
-	content := container.NewVBox(
+	content := pageBox(
 		option(theme.ComputerIcon(), L("Your own server over SSH", "Свой сервер по SSH"), L("IP address, login and password or SSH key. The app will install Veil and the cover site itself.", "IP-адрес, логин и пароль или SSH-ключ. Приложение само установит Veil и сайт-прикрытие."), u.showDeployForm),
 		option(theme.FileIcon(), L("File or link", "Файл или ссылка"), L("Import a .veil configuration or a veil:// link issued by the admin panel.", "Импорт конфигурации .veil или ссылки veil://, выданной в админ-панели."), u.showImport),
 		option(theme.MailForwardIcon(), L("Via the nearest entry", "Через ближайший вход"), L("Connect through your own servers: the exit is set explicitly, the nearest entry is chosen on every connection.", "Подключение через свои серверы: выход задаётся явно, вход выбирается ближайший при каждом подключении."), u.openMultiEntryBuilder),
@@ -297,7 +296,7 @@ func (u *ui) showImport() {
 	add.Importance = widget.HighImportance
 	hint := widget.NewLabel(L("Paste a veil://… link or open a .veil file issued by your server's admin panel.", "Вставьте ссылку veil://… или откройте файл .veil, который выдала админ-панель вашего сервера."))
 	hint.Wrapping = fyne.TextWrapWord
-	w.SetContent(container.NewPadded(container.NewVBox(hint, container.NewGridWithColumns(2, fileBtn, pasteBtn), link, status, name, add)))
+	w.SetContent(container.NewPadded(pageBox(hint, container.NewGridWithColumns(2, fileBtn, pasteBtn), link, status, name, add)))
 	w.Resize(fyne.NewSize(winWidth+40, 460))
 	w.Show()
 }
@@ -305,7 +304,7 @@ func (u *ui) showImport() {
 func (u *ui) showDetails(p *config.Profile) {
 	var w *subPage
 	w = u.newSubPage(p.Name)
-	rows := container.NewVBox(infoRow(L("Address", "Адрес"), addresses(p), nil))
+	rows := pageBox(infoRow(L("Address", "Адрес"), addresses(p), nil))
 	if p.Role == "admin" || p.Role == "user" {
 		rows.Add(infoRow(L("Role on the server", "Роль на сервере"), roleName(p.Role), nil))
 	}

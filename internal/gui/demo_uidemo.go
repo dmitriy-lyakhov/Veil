@@ -132,8 +132,13 @@ func init() {
 					u.showPage(1)
 					u.share.refreshServers()
 				case "clientnew":
-					m := &manager{u: u, p: demoServer(), w: u.win, status: newStatusLine(), body: newVBoxFit(), sess: nil}
+					m := demoManagerUI(u, demoServer())
 					m.addClient()
+				case "clientdetail":
+					m := demoManagerUI(u, demoServer())
+					m.openClient(m.state.Clients[0].Name)
+				case "shareresult":
+					u.showShare(u.win, "Клиент «Телефон Ани»", server.LinkResponse{Name: "Телефон Ани", Link: "veil://eyJob3N0IjoiMjAzLjAuMTEzLjEwIn0"}, L("Scan the QR in the Veil app on the client device, or send the link or file.", "Отсканируйте QR в приложении Veil на устройстве клиента, отправьте ссылку или файл."), true, infoRow(L("Role", "Роль"), roleName("user"), nil))
 				case "admindetails":
 					p := demoServer()
 					p.Role = "admin"
@@ -187,4 +192,26 @@ func demoAppearance(u *ui) {
 
 func demoServer() *config.Profile {
 	return &config.Profile{Name: "Амстердам", IPv4: "203.0.113.10", SSH: &config.SSHInfo{Port: 22, User: "root"}}
+}
+
+// demoManager — менеджер сервера с демо-состоянием и подменой запросов (без SSH).
+func demoManagerUI(u *ui, p *config.Profile) *manager {
+	m := &manager{u: u, p: p, w: u.win, status: newStatusLine(), body: newVBoxFit(), loaded: true}
+	m.callHook = func(method, path string, in, out any, done func(error)) {
+		if path == "/explore" {
+			if r, ok := out.(*struct {
+				Upstreams []string `json:"upstreams"`
+			}); ok {
+				r.Upstreams = []string{"Токио", "Франкфурт"}
+			}
+		}
+		done(nil)
+	}
+	m.state = server.State{Clients: []server.ClientInfo{
+		{Name: "Телефон Ани", Note: "Android", TxBytes: 1200 << 20, RxBytes: 340 << 20, Route: []string{"Амстердам", "Токио", "Франкфурт"}, Auto: &server.AutoInfo{CostMs: 142}},
+		{Name: "Ноутбук", TxBytes: 4800 << 20, RxBytes: 900 << 20},
+		{Name: "Роутер", Disabled: true},
+	}}
+	m.roles = map[string]string{"Ноутбук": "admin"}
+	return m
 }

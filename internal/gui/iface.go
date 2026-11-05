@@ -130,7 +130,7 @@ func (u *ui) openInterface() {
 		hint.Refresh()
 	}
 	render()
-	body := container.NewVBox(
+	body := pageBox(
 		prose(L("The interface through which the VPN reaches the server. Automatic uses the system default route.", "Интерфейс, через который VPN выходит к серверу. «Автоматически» использует маршрут системы по умолчанию.")),
 		rows, hint,
 	)

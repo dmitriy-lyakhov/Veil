@@ -192,12 +192,13 @@ func (u *ui) statusPill() fyne.CanvasObject {
 	txtC := text("", 13, colText, true)
 	u.pills = append(u.pills, pillRef{dotC, txtC})
 	bg := canvas.NewRectangle(colCard)
-	bg.CornerRadius = 20
+	bg.CornerRadius = 14
+	bg.SetMinSize(fyne.NewSize(1, 36))
 	bg.StrokeColor, bg.StrokeWidth = colBorder, 1
 	dot := container.NewGridWrap(fyne.NewSize(10, 10), dotC)
 	row := container.NewHBox(container.NewCenter(dot), txtC)
 	u.refreshPill()
-	return container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(8, 8, 14, 14), row))
+	return container.NewStack(bg, container.New(layout.NewCustomPaddedLayout(10, 10, 14, 14), row))
 }
 
 func (u *ui) refreshPill() {

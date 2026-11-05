@@ -127,7 +127,10 @@ func scrolled(content fyne.CanvasObject) fyne.CanvasObject {
 	return container.NewVScroll(content)
 }
 
-func note(s string) fyne.CanvasObject { return lead(prose(s)) }
+// note — вводный абзац страницы: 14 px/500, строка 19,15 px, без отступа слева (дизайн: lead).
+func note(s string) fyne.CanvasObject {
+	return container.New(layout.NewCustomPaddedLayout(0, 2, 0, 0), newFlowText(s, 14, colMuted, false, 19.15))
+}
 
 // ---------- вкладка «Настройки» ----------
 
@@ -142,7 +145,7 @@ func (u *ui) settingsPage() fyne.CanvasObject {
 		navRow(L("About Veil", "О Veil"), "", u.openAbout),
 		navRow(L("Quit application", "Закрыть приложение"), "", u.quit),
 	)
-	return u.tabPageAt(L("Settings", "Настройки"), scrolled(rows), 96)
+	return u.tabPageAt(L("Settings", "Настройки"), scrolled(rows), 116)
 }
 
 func (u *ui) openServersPage() {
@@ -164,7 +167,7 @@ func (u *ui) quit() {
 // ---------- подключение ----------
 
 func (u *ui) openConnection() {
-	rows := container.NewVBox(
+	rows := pageBox(
 		navRow(L("DNS servers", "DNS-серверы"), L("Replace the DNS servers from the server profile", "Заменяют DNS-серверы из профиля сервера"), u.openDNS),
 		navRow(L("Network interface", "Сетевой интерфейс"), u.interfaceLabel(), u.openInterface),
 		navRow(L("Split tunneling by site", "Раздельное туннелирование по сайтам"), L("Choose which sites go through the VPN and which connect directly", "Позволяет выбрать, какие сайты открывать через VPN, а какие напрямую"), u.openSplit),
@@ -222,7 +225,7 @@ func (u *ui) openDNS() {
 		u.st.DNS = nil
 		u.saveSettings()
 	})
-	body := container.NewVBox(
+	body := pageBox(
 		infoNote(L("Used when the server does not provide its own DNS. Empty fields use the profile values. Applies on the next connection.", "Используются, когда сервер не предоставляет свои DNS. Пустые поля — значения из профиля. Применяется при следующем подключении.")),
 		fieldEntry(L("Primary DNS", "Основной DNS"), primary),
 		fieldEntry(L("Secondary DNS", "Запасной DNS"), secondary),
@@ -265,7 +268,7 @@ func (u *ui) openKillSwitch() {
 		u.logf("KillSwitch: %v", on)
 	})
 	mode := listRow(L("Soft KillSwitch", "Мягкий KillSwitch"), L("The internet is blocked if the VPN disconnects unexpectedly. A normal disconnect does not block. Takes effect on the next connection.", "Интернет блокируется, если VPN отключился неожиданно. При обычном отключении блокировки нет. Действует со следующего подключения."), widget.NewIcon(theme.RadioButtonCheckedIcon()), nil)
-	body := container.NewVBox(row, mode, status, unblock)
+	body := pageBox(row, mode, status, unblock)
 	refresh()
 	w.SetContent(container.NewPadded(scrolled(body)))
 	w.Show()
@@ -306,7 +309,7 @@ func (u *ui) openApplication() {
 	if u.st.LogEnabled {
 		logState = L("On", "Включено")
 	}
-	rows := container.NewVBox(
+	rows := pageBox(
 		autoRow, minRow, connRow, updRow,
 		navRow(L("Logs", "Журналы"), logState, u.openLogging),
 		listRowColored(L("Reset settings and delete all app data", "Сбросить настройки и удалить все данные приложения"), "", theme.ColorNameError, widget.NewIcon(theme.NavigateNextIcon()), u.confirmReset),
@@ -343,7 +346,7 @@ func (u *ui) confirmReset() {
 func (u *ui) openLogging() {
 	w := u.newSubPage(L("Logs", "Журналы"))
 	tunnelPath, appPath := u.logFiles()
-	body := container.NewVBox()
+	body := pageBox()
 	var rebuild func()
 	rebuild = func() {
 		body.RemoveAll()
@@ -427,7 +430,7 @@ func (u *ui) openBackup() {
 		prose(L("The backup contains passwords and private keys of all added servers. Keep it in a safe place.", "Копия содержит пароли и приватные ключи всех добавленных серверов. Храните её в надёжном месте.")))
 	make := bigButton(L("Create backup", "Сделать резервную копию"), "", true, func() { u.makeBackup(w) })
 	restore := bigButton(L("Restore from backup", "Восстановить из копии"), "", false, func() { u.restoreBackup(w) })
-	body := container.NewVBox(
+	body := pageBox(
 		infoNote(L("Save your settings to a file to restore them on the next install of the app.", "Сохраните настройки в файл, чтобы восстановить их при следующей установке приложения.")),
 		warn, make, restore)
 	w.SetContent(container.NewPadded(body))
@@ -583,7 +586,7 @@ func (u *ui) openAbout() {
 	check := bigButton(L("Check for updates", "Проверить обновления"), "", true, func() { u.checkUpdates(w, true) })
 	ver := text(L("Version ", "Версия ")+appVersion, 14, colMuted, false)
 	ver.Alignment = fyne.TextAlignCenter
-	body := container.NewVBox(
+	body := pageBox(
 		container.NewCenter(container.NewGridWrap(fyne.NewSize(96, 96), logo)),
 		name, ver, desc, check,
 		sectionLabel(L("Contacts", "Контакты")),
@@ -643,7 +646,7 @@ func (u *ui) checkUpdates(parent fyne.Window, verbose bool) {
 func (u *ui) addPage() fyne.CanvasObject {
 	key := widget.NewEntry()
 	key.SetPlaceHolder("veil://…")
-	insert := bigButton(L("Paste", "Вставить"), "", true, func() {
+	insert := pageButton(L("Paste", "Вставить"), "", true, func() {
 		if strings.TrimSpace(key.Text) == "" {
 			key.SetText(strings.TrimSpace(u.app.Clipboard().Content()))
 		}
@@ -666,15 +669,15 @@ func (u *ui) addPage() fyne.CanvasObject {
 		u.selectProfile(p.Name)
 		u.showPage(0)
 	})
-	info := container.NewStack(infoBG(), container.New(layout.NewCustomPaddedLayout(10, 10, 16, 16), prose(L("Paste a key, add a configuration file, or scan the QR code from the administrator app.", "Вставьте ключ, добавьте файл конфигурации или отсканируйте QR-код из приложения администратора."))))
-	rows := container.NewVBox(
+	info := noteIcon("info", L("Paste a key, add a configuration file, or scan the QR code from the administrator app.", "Вставьте ключ, добавьте файл конфигурации или отсканируйте QR-код из приложения администратора."), colMuted)
+	rows := pageBox(
 		fieldEntry(L("Connection key", "Ключ подключения"), key), insert, info,
-		text(L("Other ways to connect", "Другие способы подключения"), 16, colText, true),
-		navRow(L("Your own server via SSH", "Свой сервер по SSH"), L("Veil is installed on your server together with a cover website", "Veil установится на ваш сервер вместе с сайтом-прикрытием"), u.showDeployForm),
-		navRow(L("Connection settings file", "Файл с настройками подключения"), L(".veil file issued by the admin panel", "Файл .veil, выданный админ-панелью"), u.showImport),
-		navRow(L("Via the nearest entry", "Через ближайший вход"), L("The exit is set explicitly, the nearest entry is chosen", "Выход задаётся явно, вход выбирается ближайший"), u.openMultiEntryBuilder),
+		sectionLabel(L("Other ways to connect", "Другие способы подключения")),
+		navRowIcon("server", L("Your own server via SSH", "Свой сервер по SSH"), L("Veil is installed on your server together with a cover website", "Veil установится на ваш сервер вместе с сайтом-прикрытием"), u.showDeployForm),
+		navRowIcon("file", L("Connection settings file", "Файл с настройками подключения"), L(".veil file issued by the admin panel", "Файл .veil, выданный админ-панелью"), u.showImport),
+		navRowIcon("share", L("Via the nearest entry", "Через ближайший вход"), L("The exit is set explicitly, the nearest entry is chosen", "Выход задаётся явно, вход выбирается ближайший"), u.openMultiEntryBuilder),
 	)
-	return u.tabPage(L("Add server", "Новый сервер"), scrolled(rows))
+	return u.tabPage(L("Add", "Добавить"), scrolled(rows))
 }
 
 var _ = layout.NewSpacer

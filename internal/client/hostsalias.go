@@ -14,6 +14,9 @@ import (
 
 const hostsMarker = "# veil-admin"
 
+// hostsFile — путь к hosts; переменная, чтобы тесты подставляли временный файл.
+var hostsFile = hostsPath()
+
 func hostsPath() string {
 	if runtime.GOOS == "windows" {
 		return filepath.Join(os.Getenv("SystemRoot"), "System32", "drivers", "etc", "hosts")
@@ -23,7 +26,7 @@ func hostsPath() string {
 
 // rewriteHosts убирает из hosts прежнюю запись Veil и, если ip задан, дописывает «ip admin».
 func rewriteHosts(ip string) error {
-	path := hostsPath()
+	path := hostsFile
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return err
