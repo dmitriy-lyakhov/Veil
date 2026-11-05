@@ -388,3 +388,12 @@ func groupFindings(all map[string][]finding) []string {
 	sort.Strings(lines)
 	return lines
 }
+
+// waitFrames ждёт, пока отработают отложенные первые кадры анимаций (см. afterFrame).
+func waitFrames() {
+	for i := 0; i < 300 && framePending.Load() > 0; i++ {
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+func init() { afterFrameHook = func(f func()) { f() } }

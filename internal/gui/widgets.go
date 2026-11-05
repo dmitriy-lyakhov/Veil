@@ -332,7 +332,7 @@ func showSheet(win fyne.Window, content fyne.CanvasObject) *sheet {
 	s.root.Resize(c.Size())
 	c.Overlays().Add(s.root)
 	s.shown = true
-	time.AfterFunc(firstFrameDelay, func() {
+	afterFrame(func() {
 		fyne.Do(func() {
 			if s.shown {
 				s.run(true)

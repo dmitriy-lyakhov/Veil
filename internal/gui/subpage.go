@@ -181,7 +181,7 @@ func (p *subPage) Show() {
 	p.lay.off = 1
 	p.root.Resize(c.Size())
 	c.Overlays().Add(p.root)
-	time.AfterFunc(firstFrameDelay, func() {
+	afterFrame(func() {
 		fyne.Do(func() {
 			if p.shown {
 				p.run(true)

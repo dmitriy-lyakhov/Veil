@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"math"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
@@ -136,7 +137,7 @@ func (m *modalCard) Show() {
 	c.Overlays().Add(m.root)
 	// первый показ создаёт отрисовку всего содержимого и занимает кадр-другой: анимацию запускаем
 	// чуть позже, пока окно ещё невидимо, иначе начало движения «проскакивает»
-	time.AfterFunc(firstFrameDelay, func() {
+	afterFrame(func() {
 		fyne.Do(func() {
 			if m.shown {
 				m.run(true)
@@ -406,4 +407,26 @@ func (m *modalCard) relayout() {
 	m.lay.Layout(m.root.Objects, m.root.Size())
 	m.dim.Refresh()
 	m.curtain.Refresh()
+}
+
+// framePending — число отложенных «первых кадров» анимаций, которые ещё не отработали.
+// Тесты дожидаются нуля перед сменой тестового приложения: иначе отложенный вызов
+// попадает в момент сброса кэшей темы и падает с nil pointer.
+var framePending atomic.Int32
+
+// afterFrame запускает f через firstFrameDelay и учитывает её в framePending.
+// afterFrameHook, если задан (в тестах), заменяет отложенный запуск: Fyne не рассчитан на параллельную
+// работу с интерфейсом из таймеров и теста, а тестовый драйвер выполняет fyne.Do сразу, в горутине таймера.
+var afterFrameHook func(func())
+
+func afterFrame(f func()) {
+	if afterFrameHook != nil {
+		afterFrameHook(f)
+		return
+	}
+	framePending.Add(1)
+	time.AfterFunc(firstFrameDelay, func() {
+		defer framePending.Add(-1)
+		f()
+	})
 }
