@@ -8,7 +8,7 @@
     <string name="tab_add">Добавить</string>
 
     <string name="st_off">Отключено</string>
-    <string name="st_on">Защищено</string>
+    <string name="st_on">Подключено</string>
     <string name="st_connecting">Подключение…</string>
     <string name="st_reconnecting">Переподключение…</string>
     <string name="st_disconnecting">Отключение…</string>
@@ -16,10 +16,12 @@
     <string name="ring_connect">Подключить</string>
     <string name="ring_connecting">Подключение</string>
     <string name="ring_disconnecting">Отключение</string>
-    <string name="ring_protected">Защищено</string>
+    <string name="ring_protected">Подключено</string>
     <string name="ring_retry">Повторить</string>
     <string name="hint_idle">Нажмите кнопку, чтобы подключиться</string>
-    <string name="hint_connecting">Устанавливаем защищённое соединение</string>
+    <string name="hint_connecting">Ищем лучший маршрут: IPv6 → IPv4, HTTP/3 → HTTP/2</string>
+    <string name="hint_closing">Закрытие туннеля</string>
+    <string name="split_off">Раздельный доступ выключен</string>
     <string name="entries_skipped">Недоступны входы: %1$d</string>
     <string name="no_server">Нет сервера</string>
     <string name="add_first">Добавьте сервер на вкладке «Добавить»</string>

@@ -101,12 +101,21 @@ fun Context.row(
     title: CharSequence, sub: CharSequence? = null, icon: Int? = null, trailing: View? = null,
     chevron: Boolean = false, bg: Int = T.p.raised, onClick: (() -> Unit)? = null,
 ): LinearLayout = hbox().apply {
-    setPadding(dp(16), dp(14), dp(16), dp(14))
+    // размеры из дизайна (App.dc.html): строка 56 dp, с подписью 64, с плиткой иконки 76; поля 16, вертикаль 10 (12 у плитки)
+    val tile = icon != null && bg == T.p.raised   // плитка иконки только у карточек страниц; в шторках иконка без плитки
+    setPadding(dp(16), dp(if (tile) 12 else 10), dp(16), dp(if (tile) 12 else 10))
+    minimumHeight = dp(if (tile) 76 else if (sub != null) 64 else 56)
     ripple(rounded(bg, 14f))
-    if (icon != null) addView(icon(icon, 22f).also { (it.layoutParams as LinearLayout.LayoutParams).rightMargin = dp(14) })
+    if (tile) {
+        val t = FrameLayout(this@row).apply { background = rounded(T.p.high, 11f) }
+        t.addView(icon(icon!!, 22f, T.p.accentInk).also { it.layoutParams = FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER) })
+        addView(t, LinearLayout.LayoutParams(dp(44), dp(44)).apply { rightMargin = dp(16) })
+    } else if (icon != null) {
+        addView(icon(icon, 22f).also { (it.layoutParams as LinearLayout.LayoutParams).rightMargin = dp(14) })
+    }
     val col = vbox()
     col.addView(text(title, 16f, 600, lines = 2))
-    if (sub != null) col.addView(text(sub, 13f, 500, T.p.muted, lines = 2).also { it.setPadding(0, dp(3), 0, 0) })
+    if (sub != null) col.addView(text(sub, 13f, 500, T.p.muted, lines = 2).also { it.setPadding(0, dp(4), 0, 0) })
     addView(col, lp(0, WRAP, 1f))
     if (trailing != null) addView(trailing)
     if (chevron) addView(icon(R.drawable.ic_right, 20f, T.p.muted))
@@ -131,7 +140,8 @@ fun Context.input(hint: String, value: String = "", multiline: Boolean = false):
 fun Context.button(label: CharSequence, primary: Boolean = true, onClick: () -> Unit): TextView =
     text(label, 16f, 600, if (primary) T.p.onAccent else T.p.ink).apply {
         gravity = Gravity.CENTER
-        setPadding(dp(16), dp(14), dp(16), dp(14))
+        minHeight = dp(52)   // токен control: 52 dp
+        setPadding(dp(16), dp(8), dp(16), dp(8))
         ripple(rounded(if (primary) T.p.accent else T.p.high, 14f))
         setOnClickListener { onClick() }
     }
@@ -143,14 +153,46 @@ class Toggle(ctx: Context, var on: Boolean, val onChange: (Boolean) -> Unit) : V
         setOnClickListener { on = !on; invalidate(); onChange(on) }
         isClickable = true
     }
+    private val check = android.graphics.Path()
+    private val checkPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE; strokeCap = Paint.Cap.SQUARE; strokeJoin = Paint.Join.MITER
+    }
+
+    /** Дизайн: дорожка 48x28 (радиус 14), бегунок 22 dp с отступом 3 dp; во включённом состоянии в бегунке галочка. */
     override fun onDraw(c: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
         paint.color = if (on) T.p.accent else T.p.high
         c.drawRoundRect(0f, 0f, w, h, h / 2, h / 2, paint)
         paint.color = if (on) T.p.onAccent else T.p.ink
-        val r = h / 2 - dp(4)
-        c.drawCircle(if (on) w - h / 2 else h / 2, h / 2, r, paint)
+        val r = dp(11).toFloat()
+        val cx = if (on) w - dp(3) - r else dp(3) + r
+        c.drawCircle(cx, h / 2, r, paint)
+        if (on) {
+            // галочка 14 dp (viewBox 24, штрих 3,2): M4 12 l5 5 l11-11
+            val s = dp(14) / 24f; val ox = cx - dp(7); val oy = h / 2 - dp(7)
+            check.reset()
+            check.moveTo(ox + 4 * s, oy + 12 * s); check.lineTo(ox + 9 * s, oy + 17 * s); check.lineTo(ox + 20 * s, oy + 6 * s)
+            checkPaint.color = T.p.accent; checkPaint.strokeWidth = 3.2f * s
+            c.drawPath(check, checkPaint)
+        }
     }
+}
+
+/** Радио-кнопка из дизайна: круг 22 dp с рамкой 2 dp (accent-ink у выбранной), внутри точка 10 dp. */
+fun Context.radio(selected: Boolean): View {
+    val box = FrameLayout(this).apply { layoutParams = LinearLayout.LayoutParams(dp(24), dp(24)) }
+    val ring = View(this).apply {
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL; setColor(Color.TRANSPARENT)
+            setStroke(dp(2), if (selected) T.p.accentInk else T.p.muted)
+        }
+    }
+    box.addView(ring, FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER))
+    if (selected) {
+        val dot = View(this).apply { background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(T.p.accent) } }
+        box.addView(dot, FrameLayout.LayoutParams(dp(10), dp(10), Gravity.CENTER))
+    }
+    return box
 }
 
 /** Сегментный переключатель (2–3 варианта). */

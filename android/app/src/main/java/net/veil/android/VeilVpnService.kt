@@ -113,6 +113,7 @@ class VeilVpnService : VpnService() {
                     override fun protect(fd: Int): Boolean = this@VeilVpnService.protect(fd)
                 })
                 running = true
+                Store.since = android.os.SystemClock.elapsedRealtime()
                 lastRx = 0; lastTx = 0
                 Store.lastError = null
                 main.post(ticker)
@@ -184,6 +185,7 @@ class VeilVpnService : VpnService() {
     } catch (_: Exception) { "" }
 
     private fun closeAll() {
+        Store.since = 0L
         running = false
         try { Veilcore.stop() } catch (_: Exception) { }
         try { tun?.close() } catch (_: Exception) { }

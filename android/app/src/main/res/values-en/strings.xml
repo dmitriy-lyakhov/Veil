@@ -8,7 +8,7 @@
     <string name="tab_add">Add</string>
 
     <string name="st_off">Disconnected</string>
-    <string name="st_on">Protected</string>
+    <string name="st_on">Connected</string>
     <string name="st_connecting">Connecting…</string>
     <string name="st_reconnecting">Reconnecting…</string>
     <string name="st_disconnecting">Disconnecting…</string>
@@ -16,10 +16,12 @@
     <string name="ring_connect">Connect</string>
     <string name="ring_connecting">Connecting</string>
     <string name="ring_disconnecting">Disconnecting</string>
-    <string name="ring_protected">Protected</string>
+    <string name="ring_protected">Connected</string>
     <string name="ring_retry">Retry</string>
     <string name="hint_idle">Tap the button to connect</string>
-    <string name="hint_connecting">Setting up a secure connection</string>
+    <string name="hint_connecting">Looking for the best route: IPv6 → IPv4, HTTP/3 → HTTP/2</string>
+    <string name="hint_closing">Closing the tunnel</string>
+    <string name="split_off">Split tunneling disabled</string>
     <string name="entries_skipped">Entries unavailable: %1$d</string>
     <string name="no_server">No server</string>
     <string name="add_first">Add a server on the Add tab</string>

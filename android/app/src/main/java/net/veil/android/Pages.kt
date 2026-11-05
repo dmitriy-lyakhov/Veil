@@ -2,6 +2,7 @@ package net.veil.android
 
 import android.content.Intent
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.provider.Settings as AndroidSettings
@@ -29,60 +30,79 @@ class HomePage(a: MainActivity) : Page(a) {
     private lateinit var titleView: TextView
     private lateinit var hint: TextView
     private lateinit var skipped: TextView
+    private lateinit var traffic: TextView
     private lateinit var splitText: TextView
     private lateinit var serverName: TextView
     private lateinit var serverSub: TextView
 
+    /** Малая высота экрана (дизайн: высота без системных панелей < 640): кольцо 150, зазор 14, имя сервера 22. */
+    private val tight get() = a.resources.displayMetrics.heightPixels / T.density < 710
+    private var hostCache = "" to ""   // id профиля -> адрес сервера
+
+    private fun host(p: Profile): String {
+        if (hostCache.first != p.id) {
+            val h = try { org.json.JSONObject(Veilcore.parse(p.link)).optString("host") } catch (_: Exception) { "" }
+            hostCache = p.id to h
+        }
+        return hostCache.second
+    }
+
     override fun build(): View {
         val col = a.vbox()
-        // верхняя строка: логотип, название, плашка статуса
-        val top = a.hbox().apply { setPadding(dp(20), dp(10), dp(20), dp(10)) }
+        // шапка по дизайну: высота 56, поля 20; логотип 28 + «Veil» 20/600; плашка статуса 36 dp, радиус 14
+        val top = a.hbox().apply { setPadding(dp(20), 0, dp(20), 0) }
         top.addView(a.icon(R.drawable.ic_mark, 28f, T.p.ink).also { it.clearColorFilter() })
         top.addView(a.text("Veil", 20f, 600).also { it.setPadding(dp(10), 0, 0, 0) }, lp(0, WRAP, 1f))
-        val pill = a.hbox().apply { setPadding(dp(14), dp(10), dp(14), dp(10)); background = rounded(T.p.raised, 14f) }
+        val pill = a.hbox().apply { setPadding(dp(14), 0, dp(14), 0); background = rounded(T.p.raised, 14f) }
         pillDot = View(a); pill.addView(pillDot, lp(dp(10), dp(10)).apply { rightMargin = dp(8) })
         pillText = a.text("", 13f, 600); pill.addView(pillText)
-        top.addView(pill)
-        col.addView(top, lp(MATCH, WRAP))
+        top.addView(pill, LinearLayout.LayoutParams(WRAP, dp(36)))
+        col.addView(top, lp(MATCH, dp(56)))
 
-        val mid = a.vbox().apply { gravity = Gravity.CENTER_HORIZONTAL }
-        mid.addView(a.space(8f))
-        ring = RingView(a)
+        // герой по центру высоты; зазор между блоками 24 dp (14 при малой высоте)
+        val gap = dp(if (tight) 14 else 24)
+        val mid = a.vbox().apply { gravity = Gravity.CENTER; clipChildren = false; clipToPadding = false }
+        ring = RingView(a).apply { sizeDp = if (tight) 150 else 196 }
         ring.setOnClickListener { a.toggleConnect() }
         mid.addView(ring, lp(WRAP, WRAP))
+        val status = a.vbox().apply { gravity = Gravity.CENTER_HORIZONTAL; setPadding(dp(16), 0, dp(16), 0) }
         titleView = a.text("", 16f, 600); titleView.gravity = Gravity.CENTER
         hint = a.text("", 13f, 500, T.p.muted); hint.gravity = Gravity.CENTER
         skipped = a.text("", 13f, 500, T.p.accentInk); skipped.gravity = Gravity.CENTER
-        mid.addView(titleView, lp(MATCH, WRAP).apply { leftMargin = dp(48); rightMargin = dp(48) })
-        mid.addView(hint, lp(MATCH, WRAP).apply { topMargin = dp(4); leftMargin = dp(48); rightMargin = dp(48) })
-        mid.addView(skipped, lp(MATCH, WRAP).apply { topMargin = dp(4); leftMargin = dp(48); rightMargin = dp(48) })
+        traffic = a.text("", 13f, 400, T.p.muted).also { it.typeface = android.graphics.Typeface.SANS_SERIF; it.minHeight = dp(16) }
+        traffic.gravity = Gravity.CENTER
+        status.addView(titleView, lp(MATCH, WRAP))
+        status.addView(hint, lp(MATCH, WRAP).apply { topMargin = dp(4) })
+        status.addView(skipped, lp(MATCH, WRAP).apply { topMargin = dp(4) })
+        status.addView(traffic, lp(MATCH, WRAP).apply { topMargin = dp(6) })
+        mid.addView(status, lp(MATCH, WRAP).apply { topMargin = gap })
+        // кнопка раздельного доступа: высота ≥ 44, поля 16, значок 18, шеврон вниз
         val split = a.hbox().apply {
-            setPadding(dp(16), dp(12), dp(16), dp(12)); ripple(rounded(T.p.raised, 14f))
+            minimumHeight = dp(44); setPadding(dp(16), 0, dp(16), 0); ripple(rounded(T.p.raised, 14f))
             setOnClickListener { a.push(SplitPage(a)) }
         }
         split.addView(a.icon(R.drawable.ic_split, 18f).also { (it.layoutParams as LinearLayout.LayoutParams).rightMargin = dp(10) })
         splitText = a.text("", 13f, 500); split.addView(splitText)
-        split.addView(a.icon(R.drawable.ic_right, 18f, T.p.muted).also { (it.layoutParams as LinearLayout.LayoutParams).leftMargin = dp(10) })
-        mid.addView(split, lp(WRAP, WRAP).apply { topMargin = dp(16) })
-        // в альбомной ориентации содержимое не помещается между шапкой и панелью сервера — прокручивается
-        val midScroll = android.widget.ScrollView(a).apply { isFillViewport = true; isVerticalScrollBarEnabled = false }
+        split.addView(a.icon(R.drawable.ic_down, 18f, T.p.muted).also { (it.layoutParams as LinearLayout.LayoutParams).leftMargin = dp(10) })
+        mid.addView(split, lp(WRAP, WRAP).apply { topMargin = gap })
+        // в альбомной ориентации герой не помещается между шапкой и панелью — прокручивается
+        val midScroll = android.widget.ScrollView(a).apply { isFillViewport = true; isVerticalScrollBarEnabled = false; clipChildren = false; clipToPadding = false }
         midScroll.addView(mid, android.view.ViewGroup.LayoutParams(MATCH, WRAP))
         col.addView(midScroll, lp(MATCH, 0, 1f))
 
-        // нижняя панель с выбором сервера
+        // нижняя панель: радиус 16 сверху, поля 12/20/20; ручка 44x5; имя сервера 28/600 (22 при малой высоте) + шеврон 22; подпись «протокол | адрес»
         val panel = a.vbox().apply {
             background = android.graphics.drawable.GradientDrawable().apply {
                 setColor(T.p.raised); val r = dp(16).toFloat(); cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
             }
-            setPadding(dp(20), dp(12), dp(20), dp(14))
+            setPadding(dp(20), dp(12), dp(20), dp(20))
             gravity = Gravity.CENTER_HORIZONTAL
             setOnClickListener { openServers() }
         }
-        panel.addView(View(a).apply { background = rounded(T.p.high, 3f) }, lp(dp(44), dp(5)))
-        val srv = a.hbox().apply { gravity = Gravity.CENTER; setPadding(0, dp(12), 0, 0) }
-        val sc = a.vbox().apply { gravity = Gravity.CENTER_HORIZONTAL }
+        panel.addView(View(a).apply { background = rounded(T.p.high, 3f) }, lp(dp(44), dp(5)).apply { bottomMargin = dp(6) })
+        val sc = a.vbox().apply { gravity = Gravity.CENTER_HORIZONTAL; minimumHeight = dp(44); setPadding(0, dp(8), 0, dp(8)) }
         val line = a.hbox().apply { gravity = Gravity.CENTER }
-        serverName = a.text("", 22f, 600, lines = 1)
+        serverName = a.text("", if (tight) 22f else 28f, 600, lines = 1)
         serverName.gravity = Gravity.CENTER
         line.addView(serverName, LinearLayout.LayoutParams(0, WRAP, 1f))
         line.addView(a.icon(R.drawable.ic_down, 22f, T.p.muted).also { (it.layoutParams as LinearLayout.LayoutParams).leftMargin = dp(8) })
@@ -90,8 +110,7 @@ class HomePage(a: MainActivity) : Page(a) {
         serverSub = a.text("", 13f, 500, T.p.muted, lines = 1); serverSub.setPadding(0, dp(6), 0, 0)
         serverSub.gravity = Gravity.CENTER
         sc.addView(serverSub, lp(MATCH, WRAP))
-        srv.addView(sc, lp(MATCH, WRAP))
-        panel.addView(srv, lp(MATCH, WRAP))
+        panel.addView(sc, lp(MATCH, WRAP))
         col.addView(panel, lp(MATCH, WRAP))
         return col
     }
@@ -105,9 +124,7 @@ class HomePage(a: MainActivity) : Page(a) {
             body.addView(a.space(12f))
         }
         for (p in list) {
-            val dot = View(a).apply { background = if (p.id == act) rounded(T.p.accent, 12f) else rounded(T.p.high, 12f, T.p.muted, 1f) }
-            val trailing = FrameLayout(a).apply { addView(dot, FrameLayout.LayoutParams(dp(14), dp(14), Gravity.CENTER)); layoutParams = LinearLayout.LayoutParams(dp(24), dp(24)) }
-            body.addView(a.row(p.name, protoName(a, p.protocol), null, trailing, bg = T.p.high) { a.switchProfile(p.id) }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
+            body.addView(a.row(p.name, protoName(a, p.protocol), null, a.radio(p.id == act), bg = T.p.high) { a.switchProfile(p.id) }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
         }
         if (a.running() && Profiles.active(a)?.protocol == "veil") {
             body.addView(a.row(a.getString(R.string.reselect), a.getString(R.string.reselect_sub), R.drawable.ic_server, bg = T.p.high) { Veilcore.reselect(); a.closeSheet() }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
@@ -121,35 +138,39 @@ class HomePage(a: MainActivity) : Page(a) {
         val state = st.optString("state", "stopped")
         val up = st.optBoolean("up")
         val err = Store.lastError
-        val rs: RingState; val ring0: String; val hint0: String; val pill: String
+        val rs: RingState; val ring0: String; var hint0: String; val pill: String
+        // тексты статусов — как в дизайне: плашка и заголовок «Подключено / Отключено», подсказка под кольцом
         when {
-            a.disconnecting -> { rs = RingState.DISCONNECTING; ring0 = a.getString(R.string.ring_disconnecting); hint0 = ""; pill = a.getString(R.string.st_disconnecting) }
-            state == "stopped" && a.pending -> { rs = RingState.CONNECTING; ring0 = a.getString(R.string.ring_connecting); hint0 = a.getString(R.string.hint_connecting); pill = a.getString(R.string.st_connecting) }
-            state == "stopped" && err != null -> { rs = RingState.ERROR; ring0 = a.getString(R.string.ring_retry); hint0 = a.errorText(err); pill = a.getString(R.string.st_error) }
+            a.disconnecting -> { rs = RingState.DISCONNECTING; ring0 = a.getString(R.string.ring_disconnecting); hint0 = a.getString(R.string.hint_closing); pill = a.getString(R.string.st_off) }
+            state == "stopped" && a.pending -> { rs = RingState.CONNECTING; ring0 = a.getString(R.string.ring_connecting); hint0 = a.getString(R.string.hint_connecting); pill = a.getString(R.string.st_off) }
+            state == "stopped" && err != null -> { rs = RingState.ERROR; ring0 = a.getString(R.string.ring_retry); hint0 = a.errorText(err); pill = a.getString(R.string.st_off) }
             state == "stopped" -> { rs = RingState.IDLE; ring0 = a.getString(R.string.ring_connect); hint0 = a.getString(R.string.hint_idle); pill = a.getString(R.string.st_off) }
             up && state == "connected" -> { rs = RingState.CONNECTED; ring0 = a.getString(R.string.ring_protected); hint0 = listOf(st.optString("transport"), st.optString("entry")).filter { it.isNotBlank() }.joinToString(" · "); pill = a.getString(R.string.st_on) }
-            state == "reconnecting" -> { rs = RingState.CONNECTING; ring0 = a.getString(R.string.ring_connecting); hint0 = st.optString("last_error"); pill = a.getString(R.string.st_reconnecting) }
-            else -> { rs = RingState.CONNECTING; ring0 = a.getString(R.string.ring_connecting); hint0 = a.getString(R.string.hint_connecting); pill = a.getString(R.string.st_connecting) }
+            state == "reconnecting" -> { rs = RingState.CONNECTING; ring0 = a.getString(R.string.ring_connecting); hint0 = st.optString("last_error").ifBlank { a.getString(R.string.hint_connecting) }; pill = a.getString(R.string.st_off) }
+            else -> { rs = RingState.CONNECTING; ring0 = a.getString(R.string.ring_connecting); hint0 = a.getString(R.string.hint_connecting); pill = a.getString(R.string.st_off) }
         }
+        val secs = if (Store.since > 0) (android.os.SystemClock.elapsedRealtime() - Store.since) / 1000 else 0L
+        val timerText = String.format(java.util.Locale.US, "%02d:%02d:%02d", secs / 3600, secs / 60 % 60, secs % 60)
         ring.setState(rs); ring.label = ring0
+        ring.timer = if (rs == RingState.CONNECTED) timerText else ""
         titleView.text = when (rs) {
-            RingState.IDLE -> a.getString(R.string.st_off)
             RingState.CONNECTED -> a.getString(R.string.st_on)
-            RingState.ERROR -> a.getString(R.string.st_error)
             RingState.DISCONNECTING -> a.getString(R.string.st_disconnecting)
-            else -> a.getString(R.string.st_connecting)
+            RingState.CONNECTING -> a.getString(R.string.st_connecting)
+            else -> a.getString(R.string.st_off)
         }
         hint.text = hint0
         pillText.text = pill
-        pillDot.background = rounded(
-            when (rs) { RingState.CONNECTED -> T.p.success; RingState.ERROR -> T.p.accentInk; else -> T.p.muted }, 10f)
+        // точка плашки: подключено — зелёная заливка, иначе рамка 2 dp ink-muted
+        pillDot.background = if (rs == RingState.CONNECTED) rounded(T.p.success, 10f) else rounded(Color.TRANSPARENT, 10f, T.p.muted, 2f)
         val sk = st.optInt("skipped_entries")
         skipped.text = if (sk > 0 && rs == RingState.CONNECTED) a.getString(R.string.entries_skipped, sk) else ""
+        traffic.text = if (rs == RingState.CONNECTED) "↓ ${fmtBytes(st.optLong("rx"))}     ↑ ${fmtBytes(st.optLong("tx"))}" else ""
         val n = Settings.splitCount(a)
-        splitText.text = if (Settings.splitActive(a)) a.getString(R.string.split_n, n) else a.getString(R.string.split_title)
+        splitText.text = if (Settings.splitActive(a)) a.getString(R.string.split_n, n) else a.getString(R.string.split_off)
         val prof = Profiles.active(a)
         serverName.text = prof?.name ?: a.getString(R.string.no_server)
-        serverSub.text = if (prof == null) a.getString(R.string.add_first) else protoName(a, prof.protocol)
+        serverSub.text = if (prof == null) a.getString(R.string.add_first) else listOf(protoName(a, prof.protocol), host(prof)).filter { it.isNotBlank() }.joinToString(" | ")
     }
 }
 
@@ -186,7 +207,7 @@ class TrafficPage(a: MainActivity) : Page(a) {
     private val cells = HashMap<String, TextView>()
 
     override fun build(): View {
-        val col = a.vbox().apply { setPadding(dp(20), dp(8), dp(20), dp(20)) }
+        val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(20)) }
         val card = a.vbox().apply { background = rounded(T.p.raised, 16f); setPadding(dp(16), dp(16), dp(16), dp(16)) }
         speed = a.text("", 24f, 700)
         card.addView(speed)
@@ -230,24 +251,24 @@ private fun sectionHeader(a: MainActivity, s: String) = a.text(s.uppercase(), 12
 class SettingsPage(a: MainActivity) : Page(a) {
     override val title get() = a.getString(R.string.tab_settings)
     override fun build(): View {
-        val col = a.vbox().apply { setPadding(dp(20), dp(0), dp(20), dp(20)) }
+        val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(20)) }
         fun add(v: View) { col.addView(v, lp(MATCH, WRAP).apply { bottomMargin = dp(8) }) }
         col.addView(sectionHeader(a, a.getString(R.string.sec_servers)))
-        add(a.row(a.getString(R.string.servers), a.getString(R.string.servers_count, Profiles.all(a).size), R.drawable.ic_server, chevron = true) { a.push(ProfilesPage(a)) })
+        add(a.row(a.getString(R.string.servers), a.getString(R.string.servers_count, Profiles.all(a).size), null, chevron = true) { a.push(ProfilesPage(a)) })
         col.addView(sectionHeader(a, a.getString(R.string.sec_connection)))
         val dns = Settings.dns(a)
-        add(a.row(a.getString(R.string.dns), if (dns.isBlank()) a.getString(R.string.dns_auto) else dns, R.drawable.ic_shield, chevron = true) { dnsSheet() })
-        add(a.row(a.getString(R.string.split_title), if (Settings.splitActive(a)) a.getString(R.string.split_n, Settings.splitCount(a)) else a.getString(R.string.off), R.drawable.ic_split, chevron = true) { a.push(SplitPage(a)) })
-        add(a.row(a.getString(R.string.killswitch), a.getString(R.string.ks_sub), R.drawable.ic_shield, chevron = true) { a.push(KillSwitchPage(a)) })
+        add(a.row(a.getString(R.string.dns), if (dns.isBlank()) a.getString(R.string.dns_auto) else dns, null, chevron = true) { dnsSheet() })
+        add(a.row(a.getString(R.string.split_title), if (Settings.splitActive(a)) a.getString(R.string.split_n, Settings.splitCount(a)) else a.getString(R.string.off), null, chevron = true) { a.push(SplitPage(a)) })
+        add(a.row(a.getString(R.string.killswitch), a.getString(R.string.ks_sub), null, chevron = true) { a.push(KillSwitchPage(a)) })
         col.addView(sectionHeader(a, a.getString(R.string.sec_app)))
         add(a.row(a.getString(R.string.auto_app), null, null, Toggle(a, Settings.autoApp(a)) { Settings.setBool(a, "auto_app", it) }) {})
         add(a.row(a.getString(R.string.auto_boot), null, null, Toggle(a, Settings.autoBoot(a)) { Settings.setBool(a, "auto_boot", it) }) {})
         add(a.row(a.getString(R.string.reduce_motion), a.getString(R.string.reduce_motion_sub), null, Toggle(a, Settings.reduceMotion(a)) { Settings.setBool(a, "reduce_motion", it) }) {})
-        add(a.row(a.getString(R.string.logs), null, R.drawable.ic_info, chevron = true) { a.push(LogsPage(a)) })
+        add(a.row(a.getString(R.string.logs), null, null, chevron = true) { a.push(LogsPage(a)) })
         col.addView(sectionHeader(a, a.getString(R.string.sec_look)))
         add(a.row(a.getString(R.string.theme), themeName(Settings.theme(a)), null, chevron = true) { choose(a.getString(R.string.theme), listOf("system" to R.string.theme_system, "dark" to R.string.theme_dark, "light" to R.string.theme_light), Settings.theme(a), "theme") })
         add(a.row(a.getString(R.string.language), langName(Settings.lang(a)), null, chevron = true) { choose(a.getString(R.string.language), listOf("system" to R.string.lang_system, "ru" to R.string.lang_ru, "en" to R.string.lang_en), Settings.lang(a), "lang") })
-        add(a.row(a.getString(R.string.about), null, R.drawable.ic_info, chevron = true) { a.push(AboutPage(a)) })
+        add(a.row(a.getString(R.string.about), null, null, chevron = true) { a.push(AboutPage(a)) })
         return col
     }
 
@@ -257,9 +278,7 @@ class SettingsPage(a: MainActivity) : Page(a) {
     private fun choose(title: String, opts: List<Pair<String, Int>>, cur: String, key: String) {
         val body = a.vbox()
         for ((v, label) in opts) {
-            val dot = View(a).apply { background = if (v == cur) rounded(T.p.accent, 12f) else rounded(T.p.high, 12f, T.p.muted, 1f) }
-            val tr = FrameLayout(a).apply { addView(dot, FrameLayout.LayoutParams(dp(14), dp(14), Gravity.CENTER)); layoutParams = LinearLayout.LayoutParams(dp(24), dp(24)) }
-            body.addView(a.row(a.getString(label), null, null, tr, bg = T.p.high) { Settings.set(a, key, v); a.closeSheet(); a.applyAppearance() }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
+            body.addView(a.row(a.getString(label), null, null, a.radio(v == cur), bg = T.p.high) { Settings.set(a, key, v); a.closeSheet(); a.applyAppearance() }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
         }
         a.openSheet(title, body)
     }
@@ -282,13 +301,11 @@ class SettingsPage(a: MainActivity) : Page(a) {
 class ProfilesPage(a: MainActivity) : Page(a) {
     override val title get() = a.getString(R.string.servers)
     override fun build(): View {
-        val col = a.vbox().apply { setPadding(dp(20), dp(0), dp(20), dp(20)) }
+        val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(20)) }
         val list = Profiles.all(a); val act = Profiles.active(a)?.id
         if (list.isEmpty()) col.addView(a.text(a.getString(R.string.no_profiles), 14f, 500, T.p.muted).also { it.setPadding(0, dp(8), 0, dp(12)) })
         for (p in list) {
-            val dot = View(a).apply { background = if (p.id == act) rounded(T.p.accent, 12f) else rounded(T.p.high, 12f, T.p.muted, 1f) }
-            val tr = FrameLayout(a).apply { addView(dot, FrameLayout.LayoutParams(dp(14), dp(14), Gravity.CENTER)); layoutParams = LinearLayout.LayoutParams(dp(24), dp(24)) }
-            col.addView(a.row(p.name, protoName(a, p.protocol), null, tr) { actions(p) }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
+            col.addView(a.row(p.name, protoName(a, p.protocol), null, a.radio(p.id == act)) { actions(p) }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
         }
         col.addView(a.space(8f))
         col.addView(a.button(a.getString(R.string.add_server)) { a.selectTab(3) }, lp(MATCH, WRAP))
@@ -336,7 +353,7 @@ class ProfilesPage(a: MainActivity) : Page(a) {
 class AddPage(a: MainActivity) : Page(a) {
     override val title get() = a.getString(R.string.add_title)
     override fun build(): View {
-        val col = a.vbox().apply { setPadding(dp(20), dp(4), dp(20), dp(20)) }
+        val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(20)) }
         col.addView(a.text(a.getString(R.string.add_hint), 13f, 500, T.p.muted).also { it.setPadding(0, 0, 0, dp(12)) })
         val name = a.input(a.getString(R.string.name_hint))
         val link = a.input(a.getString(R.string.link_hint), "", true)
@@ -362,7 +379,7 @@ class AddPage(a: MainActivity) : Page(a) {
 class SplitPage(a: MainActivity) : Page(a) {
     override val title get() = a.getString(R.string.split_title)
     override fun build(): View {
-        val col = a.vbox().apply { setPadding(dp(20), dp(0), dp(20), dp(20)) }
+        val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(20)) }
         col.addView(a.text(a.getString(R.string.split_hint), 13f, 500, T.p.muted).also { it.setPadding(dp(4), 0, 0, dp(14)) })
         col.addView(a.row(a.getString(R.string.split_sites), if (Settings.sitesOn(a)) a.getString(R.string.on_n, Settings.sites(a).size) else a.getString(R.string.off), null, chevron = true) { a.push(SitesPage(a)) }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
         col.addView(a.row(a.getString(R.string.split_apps), if (Settings.appsOn(a)) a.getString(R.string.on_n, Settings.apps(a).size) else a.getString(R.string.off), null, chevron = true) { a.push(AppsPage(a)) }, lp(MATCH, WRAP))
@@ -374,7 +391,7 @@ class SplitPage(a: MainActivity) : Page(a) {
 class SitesPage(a: MainActivity) : Page(a) {
     override val title get() = a.getString(R.string.split_sites_title)
     override fun build(): View {
-        val col = a.vbox().apply { setPadding(dp(20), dp(0), dp(20), dp(20)) }
+        val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(20)) }
         col.addView(a.row(a.getString(R.string.split_enable), null, null, Toggle(a, Settings.sitesOn(a)) { Settings.setBool(a, "split_sites_on", it) }) {}, lp(MATCH, WRAP).apply { bottomMargin = dp(10) })
         val mode = if (Settings.sitesMode(a) == "via") 0 else 1
         col.addView(a.segmented(listOf(a.getString(R.string.via_vpn), a.getString(R.string.direct)), mode) { Settings.set(a, "split_sites_mode", if (it == 0) "via" else "direct"); a.rebuild() }, lp(MATCH, WRAP))
@@ -418,7 +435,7 @@ class AppsPage(a: MainActivity) : Page(a) {
         all = pm.queryIntentActivities(q, 0).map { AppItem(it.activityInfo.packageName, it.loadLabel(pm).toString()) }
             .filter { it.pkg != a.packageName }.distinctBy { it.pkg }.sortedBy { it.label.lowercase() }
         shown = all
-        val col = a.vbox().apply { setPadding(dp(20), dp(0), dp(20), dp(8)) }
+        val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(8)) }
         col.addView(a.row(a.getString(R.string.split_enable), null, null, Toggle(a, Settings.appsOn(a)) { Settings.setBool(a, "split_apps_on", it) }) {}, lp(MATCH, WRAP).apply { bottomMargin = dp(10) })
         val mode = if (Settings.appsMode(a) == "via") 0 else 1
         col.addView(a.segmented(listOf(a.getString(R.string.via_vpn), a.getString(R.string.direct)), mode) { Settings.set(a, "split_apps_mode", if (it == 0) "via" else "direct"); persist(); a.rebuild() }, lp(MATCH, WRAP))
@@ -472,7 +489,7 @@ class AppsPage(a: MainActivity) : Page(a) {
 class KillSwitchPage(a: MainActivity) : Page(a) {
     override val title get() = a.getString(R.string.killswitch)
     override fun build(): View {
-        val col = a.vbox().apply { setPadding(dp(20), dp(0), dp(20), dp(20)) }
+        val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(20)) }
         col.addView(a.text(a.getString(R.string.ks_text), 14f, 500, T.p.muted).also { it.setPadding(dp(4), 0, 0, dp(16)) })
         val always = try { AndroidSettings.Secure.getString(a.contentResolver, "always_on_vpn_app") } catch (_: Exception) { null }
         val lock = try { AndroidSettings.Secure.getInt(a.contentResolver, "always_on_vpn_lockdown", 0) == 1 } catch (_: Exception) { false }
@@ -492,7 +509,7 @@ class LogsPage(a: MainActivity) : Page(a) {
     override val title get() = a.getString(R.string.logs)
     private var text = ""
     override fun build(): View {
-        val col = a.vbox().apply { setPadding(dp(20), dp(0), dp(20), dp(20)) }
+        val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(20)) }
         text = try {
             val p = Runtime.getRuntime().exec(arrayOf("logcat", "-d", "-v", "time", "-s", "VeilVpn:*", "GoLog:*"))
             p.inputStream.bufferedReader().readLines().filter { !it.startsWith("---") }.takeLast(300).joinToString("\n")

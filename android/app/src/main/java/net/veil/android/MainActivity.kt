@@ -157,7 +157,7 @@ class MainActivity : Activity() {
 
     private fun updateNav() {
         navIcons.forEachIndexed { i, (ic, bar) ->
-            ic.setColorFilter(if (i == tab) T.p.ink else T.p.muted)
+            ic.setColorFilter(if (i == tab) T.p.accentInk else T.p.muted)
             bar.visibility = if (i == tab) View.VISIBLE else View.INVISIBLE
         }
     }
@@ -187,16 +187,18 @@ class MainActivity : Activity() {
         val body = p.build()
         val v: View = if (stack.size > 1 || p.title != null) {
             val col = vbox()
-            val head = hbox().apply { setPadding(dp(12), dp(10), dp(20), dp(10)) }
+            // шапка по дизайну: высота 56 dp, заголовок 17 sp по центру, «назад» 44 dp слева с отступом 8 dp
+            val head = FrameLayout(this)
+            val maxTitle = (resources.displayMetrics.widthPixels / T.density).toInt() - 130
+            head.addView(text(p.title ?: "", 17f, 600, lines = 1).also { it.maxWidth = dp(maxTitle); it.gravity = Gravity.CENTER },
+                FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER))
             if (stack.size > 1) {
                 val back = icon(R.drawable.ic_back, 24f)
-                back.setPadding(dp(8), dp(8), dp(8), dp(8))
-                back.layoutParams = LinearLayout.LayoutParams(dp(40), dp(40))
+                back.setPadding(dp(10), dp(10), dp(10), dp(10))
                 back.setOnClickListener { pop() }
-                head.addView(back)
-            } else head.setPadding(dp(20), dp(10), dp(20), dp(10))
-            head.addView(text(p.title ?: "", 20f, 600), lp(0, WRAP, 1f))
-            col.addView(head, lp(MATCH, WRAP))
+                head.addView(back, FrameLayout.LayoutParams(dp(44), dp(44), Gravity.START or Gravity.CENTER_VERTICAL).apply { leftMargin = dp(8) })
+            }
+            col.addView(head, lp(MATCH, dp(56)))
             val b = if (p.scroll) ScrollView(this).apply { addView(body); isFillViewport = true } else body
             col.addView(b, lp(MATCH, 0, 1f))
             col
