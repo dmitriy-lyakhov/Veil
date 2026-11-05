@@ -1,7 +1,6 @@
 package client
 
 import (
-	"veil/internal/netpin"
 	"context"
 	"errors"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"slices"
 	"sync"
 	"time"
+	"veil/internal/netpin"
 
 	"veil/internal/config"
 )
@@ -114,8 +114,9 @@ func rank(v []EntryRTT, preferred string) {
 }
 
 func (d *Dialer) connectEntries(ctx context.Context) (Transport, error) {
-	ranked := ProbeEntries(ctx, d.Profile, d.Dial)
+	ranked := d.deprioritizeFailed(ProbeEntries(ctx, d.Profile, d.Dial))
 	var errs []error
+	var skipped []string
 	for _, r := range ranked {
 		idx := slices.IndexFunc(d.Profile.Entries, func(e config.Entry) bool { return e.Name == r.Name })
 		if idx < 0 {
@@ -124,9 +125,11 @@ func (d *Dialer) connectEntries(ctx context.Context) (Transport, error) {
 		sub := &Dialer{Profile: d.Profile.ForEntry(d.Profile.Entries[idx]), Dial: d.Dial, Prefer: d.Prefer}
 		t, err := sub.Connect(ctx)
 		if err == nil {
-			d.LastEntry, d.LastEntryRTT = r.Name, r.RTT
+			d.LastEntry, d.LastEntryRTT, d.LastSkipped = r.Name, r.RTT, skipped
 			return t, nil
 		}
+		d.MarkFailed(r.Name)
+		skipped = append(skipped, r.Name)
 		errs = append(errs, fmt.Errorf("вход %s: %w", r.Name, err))
 		if ctx.Err() != nil {
 			break
@@ -136,4 +139,43 @@ func (d *Dialer) connectEntries(ctx context.Context) (Transport, error) {
 		return nil, errors.New("в профиле нет входов")
 	}
 	return nil, errors.Join(errs...)
+}
+
+// failedCooldown — сколько вход считается неработающим после неудачи: в это время он пробуется последним,
+// даже если по замеру задержки выглядит ближайшим.
+const failedCooldown = 90 * time.Second
+
+// MarkFailed помечает вход как неработающий.
+func (d *Dialer) MarkFailed(name string) {
+	if name == "" {
+		return
+	}
+	d.failMu.Lock()
+	defer d.failMu.Unlock()
+	if d.failed == nil {
+		d.failed = map[string]time.Time{}
+	}
+	d.failed[name] = time.Now()
+}
+
+func (d *Dialer) recentlyFailed(name string) bool {
+	d.failMu.Lock()
+	defer d.failMu.Unlock()
+	t, ok := d.failed[name]
+	return ok && time.Since(t) < failedCooldown
+}
+
+// deprioritizeFailed переносит недавно неработавшие входы в конец, сохраняя порядок остальных.
+func (d *Dialer) deprioritizeFailed(v []EntryRTT) []EntryRTT {
+	slices.SortStableFunc(v, func(a, b EntryRTT) int {
+		fa, fb := d.recentlyFailed(a.Name), d.recentlyFailed(b.Name)
+		switch {
+		case fa == fb:
+			return 0
+		case fa:
+			return 1
+		}
+		return -1
+	})
+	return v
 }

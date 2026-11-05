@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math/rand/v2"
 	"net"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -53,20 +54,23 @@ type Status struct {
 	RxBytes   uint64    `json:"rx_bytes"`
 	TxBytes   uint64    `json:"tx_bytes"`
 	LastError string    `json:"last_error,omitempty"`
+	// Skipped — входы каскада, которые не удалось использовать перед этим подключением.
+	Skipped []string `json:"skipped_entries,omitempty"`
 }
 
 type Tunnel struct {
-	dialer   *Dialer
-	bind     *streambind.Bind
-	dev      *device.Device
-	log      *slog.Logger
-	ctx      context.Context
-	cancel   context.CancelFunc
-	done     chan struct{}
-	upOnce   sync.Once
-	reselect chan struct{}
-	peer     string
-	rx, tx   atomic.Uint64
+	dialer     *Dialer
+	bind       *streambind.Bind
+	dev        *device.Device
+	log        *slog.Logger
+	ctx        context.Context
+	cancel     context.CancelFunc
+	done       chan struct{}
+	upOnce     sync.Once
+	reselect   chan struct{}
+	attachedAt time.Time // когда подключён текущий транспорт (под mu)
+	peer       string
+	rx, tx     atomic.Uint64
 
 	mu     sync.Mutex
 	status Status
@@ -170,6 +174,8 @@ func (t *Tunnel) serve(c Transport) {
 	errc := t.startReader(c)
 	rotate := time.NewTimer(rotationInterval())
 	defer rotate.Stop()
+	watch := time.NewTicker(watchInterval)
+	defer watch.Stop()
 	for {
 		select {
 		case <-t.ctx.Done():
@@ -185,6 +191,23 @@ func (t *Tunnel) serve(c Transport) {
 			nc, err := t.dialer.Connect(t.ctx)
 			if err != nil {
 				t.log.Warn("reselect failed", "err", err)
+				continue
+			}
+			t.attach(nc)
+			time.AfterFunc(rotationGrace, c.Close)
+			c, errc = nc, t.startReader(nc)
+			rotate.Reset(rotationInterval())
+		case <-watch.C:
+			if !t.silent() {
+				continue
+			}
+			name := t.dialer.LastEntry
+			t.log.Warn("entry accepts connections but passes no traffic, switching", "entry", name)
+			t.dialer.MarkFailed(name)
+			nc, err := t.dialer.Connect(t.ctx)
+			if err != nil {
+				t.log.Warn("failover failed", "err", err)
+				t.touchAttached()
 				continue
 			}
 			t.attach(nc)
@@ -227,7 +250,9 @@ func (t *Tunnel) attach(c Transport) {
 	t.status.Entry = t.dialer.LastEntry
 	t.status.EntryRTT = float64(t.dialer.LastEntryRTT.Microseconds()) / 1000
 	t.status.Exit = t.dialer.Profile.ExitName
+	t.status.Skipped = slices.Clone(t.dialer.LastSkipped)
 	t.status.Since = time.Now()
+	t.attachedAt = time.Now()
 	t.status.LastError = ""
 	t.mu.Unlock()
 	t.log.Info("transport connected", "transport", c.Kind(), "family", c.Target().Family, "remote", c.Target().Addr)
@@ -334,4 +359,37 @@ func (t *Tunnel) Reselect() {
 
 func rotationInterval() time.Duration {
 	return rotationMin + rand.N(rotationJitter)
+}
+
+const (
+	watchInterval = 2 * time.Second
+	// silentFirst — сколько ждать первого рукопожатия WireGuard на новом транспорте, прежде чем считать вход «немым».
+	silentFirst = 20 * time.Second
+	// silentStale — предельный возраст рукопожатия: при keepalive WireGuard обновляет его примерно раз в две минуты.
+	silentStale = 210 * time.Second
+)
+
+func (t *Tunnel) touchAttached() {
+	t.mu.Lock()
+	t.attachedAt = time.Now()
+	t.mu.Unlock()
+}
+
+// silent — вход принимает соединения, но трафик через него не идёт (его путь дальше оборван):
+// рукопожатия нет слишком долго. Проверяется только при нескольких входах: переключаться некуда иначе.
+func (t *Tunnel) silent() bool {
+	if len(t.dialer.Profile.Entries) < 2 {
+		return false
+	}
+	t.mu.Lock()
+	since := time.Since(t.attachedAt)
+	t.mu.Unlock()
+	if since < silentFirst {
+		return false
+	}
+	hs := t.lastHandshake()
+	if hs.IsZero() {
+		return true
+	}
+	return time.Since(hs) > silentStale
 }

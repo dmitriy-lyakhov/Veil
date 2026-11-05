@@ -333,7 +333,10 @@ func (u *ui) showReport(r *helper.Report) {
 		u.updateStats(r.RxBytes, r.TxBytes, clock(elapsed))
 		sub := fmt.Sprintf("%s · %s · %s", transportShort(r.Transport), r.Family, clock(elapsed))
 		if r.Entry != "" {
-			sub = fmt.Sprintf("вход %s (%.0f мс) → выход %s\n%s", r.Entry, r.EntryRTT, r.Exit, sub)
+			sub = fmt.Sprintf(L("entry %s (%.0f ms) → exit %s\n%s", "вход %s (%.0f мс) → выход %s\n%s"), r.Entry, r.EntryRTT, r.Exit, sub)
+			if len(r.Skipped) > 0 {
+				sub += "\n" + L("Entries unavailable: ", "Недоступны входы: ") + strings.Join(r.Skipped, ", ")
+			}
 		}
 		u.setStatus(L("Connected", "Подключено"), sub, "")
 	case client.StateReconnecting:

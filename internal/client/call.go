@@ -1,7 +1,6 @@
 package client
 
 import (
-	"veil/internal/netpin"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -12,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"time"
+	"veil/internal/netpin"
 )
 
 const maxCallResponse = 1 << 20

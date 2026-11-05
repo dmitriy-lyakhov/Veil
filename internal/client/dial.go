@@ -61,6 +61,11 @@ type Dialer struct {
 	Prefer       Kind
 	LastEntry    string
 	LastEntryRTT time.Duration
+	// LastSkipped — входы, которые не удалось использовать перед последним удачным подключением.
+	LastSkipped []string
+
+	failMu sync.Mutex
+	failed map[string]time.Time // входы, которые недавно не работали, и когда
 }
 
 type dialResult struct {

@@ -3,9 +3,9 @@
 package client
 
 import (
-	"veil/internal/netpin"
 	"errors"
 	"strconv"
+	"veil/internal/netpin"
 
 	"fmt"
 	"log/slog"
@@ -86,7 +86,6 @@ func applyNetwork(nc NetConfig, log *slog.Logger) (*undoStack, error) {
 			log.Warn("metric", "family", fam, "err", err)
 		}
 	}
-
 
 	routes := []struct{ fam, prefix, hop string }{
 		{"ipv4", "0.0.0.0/1", "0.0.0.0"}, {"ipv4", "128.0.0.0/1", "0.0.0.0"},

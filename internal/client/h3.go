@@ -1,7 +1,6 @@
 package client
 
 import (
-	"veil/internal/netpin"
 	"bufio"
 	"bytes"
 	"context"
@@ -15,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"veil/internal/netpin"
 
 	"github.com/quic-go/qpack"
 	"github.com/quic-go/quic-go/quicvarint"
