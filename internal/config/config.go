@@ -8,7 +8,9 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"veil/internal/ipsecconf"
@@ -334,6 +336,9 @@ func SafeFileName(name string) string {
 	for _, r := range name {
 		switch {
 		case r == '/' || r == '\\' || r == ':' || r == 0 || r == '.' && len(out) == 0:
+			out = append(out, '_')
+		case runtime.GOOS == "windows" && strings.ContainsRune(`|*?"<>`, r):
+			// символы, недопустимые в именах файлов Windows
 			out = append(out, '_')
 		default:
 			out = append(out, r)
