@@ -1,0 +1,36 @@
+# Основной репозиторий — GitLab (monitoring/veil). В GitHub изменения попадают только отсюда, через этот пайплайн.
+#
+# Нужна переменная GITHUB_TOKEN (Settings → CI/CD → Variables, лучше masked и protected): токен с правом
+# записи в репозиторий GitHub (classic: scope `repo`; fine-grained: Contents → Read and write).
+# Необязательная переменная GITHUB_REPO — «владелец/репозиторий», по умолчанию dmitriy-lyakhov/Veil.
+#
+# Если в GitHub появились коммиты, которых нет в GitLab, отправка завершится ошибкой (принудительно не затираем):
+# перенесите их в GitLab и запустите пайплайн заново.
+
+stages:
+  - mirror
+
+variables:
+  GIT_DEPTH: "0"          # полная история, иначе отправка в GitHub сломается
+  GIT_STRATEGY: clone
+  GITHUB_REPO: "dmitriy-lyakhov/Veil"
+
+mirror-to-github:
+  stage: mirror
+  image:
+    name: alpine/git:latest
+    entrypoint: [""]
+  resource_group: github-mirror   # не больше одной отправки одновременно
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+  script:
+    - test -n "$GITHUB_TOKEN" || { echo "Не задана переменная GITHUB_TOKEN"; exit 1; }
+    # токен передаётся заголовком, а не в адресе: так он не попадает в вывод и в .git/config
+    - AUTH="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\n')"
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        git -c "http.extraHeader=Authorization: Basic ${AUTH}" push "https://github.com/${GITHUB_REPO}.git" "refs/tags/${CI_COMMIT_TAG}:refs/tags/${CI_COMMIT_TAG}"
+      else
+        git -c "http.extraHeader=Authorization: Basic ${AUTH}" push "https://github.com/${GITHUB_REPO}.git" "${CI_COMMIT_SHA}:refs/heads/${CI_DEFAULT_BRANCH}"
+      fi
