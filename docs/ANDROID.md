@@ -1,69 +1,89 @@
 # Android-клиент Veil
 
-Минимальный клиент протокола **Veil** (WireGuard внутри HTTPS) для Android 8.0+ (minSdk 26, targetSdk 34, `net.veil.android`).
+Клиент для Android 8.0+ (minSdk 26, targetSdk 34, `net.veil.android`, версия 0.2). Протоколы: **Veil** (WireGuard внутри HTTPS),
+**WireGuard** и **AmneziaWG**. Интерфейс по дизайну Veil: кольцо подключения, страницы вместо диалогов, тёмная и светлая тема, ru/en.
 
 ## Возможности
 
-- вставка ссылки `veil://…` (поле, кнопка «Вставить из буфера», открытие ссылки `veil://` из других приложений);
-- подключение/отключение через `VpnService` (foreground-сервис с уведомлением и кнопкой «Отключить»);
-- статус (подключение / подключено после рукопожатия WireGuard / переподключение), имя профиля, вход и транспорт, счётчики трафика;
-- каскад входов, `FrontSNI`/`FrontKey` и смена входа — как в десктопном клиенте (используется тот же код `internal/client`);
-- последний профиль хранится в SharedPreferences (без шифрования; ссылка и ключи в журнал не пишутся).
+- Подключение через `VpnService` (foreground-сервис с уведомлением и кнопкой «Отключить»); статус: подключение / подключено после рукопожатия /
+  переподключение / ошибка; транспорт и вход каскада, счётчики трафика (сеанс, день, месяц — только на устройстве), график последних 60 с.
+- Добавление сервера: ссылка `veil://` (в том числе из других приложений), вставка из буфера, текст `.conf` WireGuard/AmneziaWG,
+  JSON-профиль, QR (камера, разрешение запрашивается при первом запуске), файл `.conf`/`.veil` через системный выбор файла.
+- Несколько профилей: список, смена активного из шторки на главной, переименование, удаление с подтверждением.
+- Хранение: профили шифруются AES-256-GCM, ключ в Android Keystore (`files/profiles.bin`, без открытого текста); старое хранилище
+  `shared_prefs/veil.xml` при первом запуске переносится и очищается. Резервная копия — «Настройки → Серверы → Экспорт/Импорт»
+  (**файл содержит ссылки и ключи открытым текстом**). Ключ Keystore не переживает удаление приложения.
+- Раздельное туннелирование («Раздельный доступ»): по приложениям (`addAllowedApplication` / `addDisallowedApplication`; режимы «через VPN» и
+  «напрямую», свой пакет всегда вне туннеля) и по сайтам/адресам (домены разрешаются до подъёма туннеля; «через VPN» — только выбранные
+  маршруты и DNS; «напрямую» — на Android 13+ `excludeRoute`, ниже — дополнение маршрутов, считаемое в Go).
+- Автозапуск: «Автоподключение при запуске приложения», «Подключаться при включении устройства» (`BOOT_COMPLETED`), восстановление VPN после
+  обновления пакета (`MY_PACKAGE_REPLACED`), перезапуск сервиса системой (`START_STICKY`) и запуск системным Always-on VPN.
+- Настройки: DNS, KillSwitch (подсказка по системному Always-on VPN и «Блокировать соединения без VPN»), тема, язык, «Уменьшить движение»
+  (также учитывается системное «убрать анимацию»), журналы, «О Veil». Альбомная ориентация поддерживается (главная прокручивается).
 
 ## Структура
 
 | Путь | Что это |
 |---|---|
-| `mobile/` | Go-ядро (`package veilcore`) для `gomobile bind`: `Parse(link)`, `Start(link, tunFd, protector)`, `Stop()`, `Status()` |
-| `internal/netpin` | хук `SetProtect(func(fd int) bool)`; в `Control` (Linux/Android) вызывается первым и затем не мешает `SO_BINDTODEVICE` |
-| `android/` | Gradle-проект (Kotlin, AGP 8.3, без AndroidX): `MainActivity`, `VeilVpnService`, `Store` |
-| `tools/build-android.sh`, `tools/build-android.ps1` | сборка AAR + APK |
-| `tools/androidtestserver/` | локальный тестовый сервер Veil для проверки (ссылка пишется в файл) |
+| `mobile/` | Go-ядро (`package veilcore`) для `gomobile bind`: `Import`, `Rename`, `Entries`, `Parse`, `Plan`, `SetDNS`, `Start`, `Stop`, `Running`, `Status`, `Reselect` |
+| `internal/client/engine.go` | `StartEngine`: запуск движка по протоколу профиля (Veil, WireGuard, AmneziaWG) на готовом TUN |
+| `internal/netpin` | хук `SetProtect(func(fd int) bool)`: сокеты клиента защищаются от петли через `VpnService.protect` |
+| `android/` | Gradle-проект (Kotlin, без Compose): `MainActivity`, `Pages.kt` (экраны), `RingView.kt` (кольцо), `Ui.kt`, `Data.kt` (профили, настройки, статистика), `VeilVpnService`, `BootReceiver` |
+| `tools/build-android.sh`, `.ps1` | сборка AAR, debug- и release-APK |
+| `tools/androidtestserver/` | локальный тестовый сервер Veil (ссылка пишется в файл) |
 
-Как это работает: `VeilVpnService` вызывает `Veilcore.parse()` (адреса туннеля, DNS, MTU), настраивает `VpnService.Builder` (маршруты `0.0.0.0/0` и `::/0`), получает fd через `establish()` → `detachFd()` и передаёт его Go. Go создаёт TUN через `tun.CreateUnmonitoredTUNFromFD` (без netlink — он закрыт на Android 11+) и запускает `client.Start`. Сокеты клиента (TCP/TLS к входу, UDP для HTTP/3) защищаются от петли через `VpnService.protect(fd)` (интерфейс `Protector`). Адреса входов в профиле — IP, поэтому DNS-запросы самим клиентом не выполняются.
+Как это работает: `VeilVpnService` вызывает `Veilcore.parse()` (адреса туннеля, DNS, MTU, маршруты), настраивает `VpnService.Builder`
+(приложения, маршруты), получает fd через `establish()` → `detachFd()` и отдаёт его Go. Go создаёт TUN без netlink (он закрыт на Android 11+)
+и запускает движок. Адреса входов в профиле — IP, поэтому DNS-запросы самим клиентом не выполняются.
 
 ## Сборка
 
-Нужны: JDK 17, Android SDK (`platforms;android-34`, `build-tools;34.0.0`, `ndk;26.1.10909125`), Gradle 8.7, Go (версия из `go.mod`), `gomobile`/`gobind` (`go install golang.org/x/mobile/cmd/gomobile@latest golang.org/x/mobile/cmd/gobind@latest`). Скрипты по умолчанию ищут их в `..\android-tools` рядом с репозиторием (`TOOLS`, `JAVA_HOME`, `ANDROID_HOME`, `GRADLE` можно переопределить).
+Нужны: JDK 17, Android SDK (`platforms;android-34`, `build-tools;34.0.0`, `ndk;26.1.10909125`), Gradle 8.7, Go (версия из `go.mod`),
+`gomobile`/`gobind`. Скрипты по умолчанию ищут их в `..\android-tools` рядом с репозиторием (`TOOLS`, `JAVA_HOME`, `ANDROID_HOME`, `GRADLE` можно переопределить).
 
 ```
-tools/build-android.sh [aar|apk|all]        # Git Bash / Linux / macOS
-tools\build-android.ps1 -What all           # PowerShell
+tools/build-android.sh aar        # Go-ядро -> android/app/libs/veilcore.aar
+tools/build-android.sh apk        # debug-APK -> dist/android/veil-debug.apk
+tools/build-android.sh release    # R8 + подпись -> dist/android/veil-release.apk, проверка подписи через apksigner.jar
+tools/build-android.sh all        # aar + debug-APK
 ```
 
-Эквивалент вручную:
+`build-android.ps1 -What all` — то же для PowerShell (без release).
 
-```
-gomobile bind -target=android/arm64,android/amd64 -androidapi 26 -trimpath -o android/app/libs/veilcore.aar ./mobile
-cd android && gradle assembleDebug          # android/app/build/outputs/apk/debug/app-debug.apk
-```
+**Release** подписывается ключом из `android/signing/veil-release.jks` (в репозиторий не коммитится). Параметры — `VEIL_KEYSTORE`,
+`VEIL_STORE_PASSWORD`, `VEIL_KEY_ALIAS`, `VEIL_KEY_PASSWORD` либо файл `$TOOLS/signing-secrets.txt` (`KEY=VALUE`, вне репозитория).
+Подпись v2 + v3; APK не отладочный, ~54 МБ (arm64-v8a и x86_64, Go-ядро). Правила R8 — `android/app/proguard-rules.pro` (gomobile/JNI и zxing).
 
-Скрипт копирует APK в `dist/android/veil-debug.apk`. Подпись — отладочный keystore; release-сборка не настроена. `*.aar` и каталоги сборки в `.gitignore`.
+Установка: `adb install -r dist/android/veil-release.apk`. **Debug и release подписаны разными ключами**: чтобы поставить release поверх debug,
+сначала сделайте резервную копию серверов, затем `adb uninstall net.veil.android` (профили и ключ Keystore при удалении теряются) и импортируйте копию.
+При первом подключении Android покажет разовый запрос VPN — нужно нажать «ОК».
 
-Для `gomobile bind` в `go.mod` добавлена зависимость `golang.org/x/mobile` (версия, уже входившая в граф модулей).
-
-Установка: `adb install -r dist/android/veil-debug.apk`. При первом подключении Android покажет разовый диалог «Запрос на подключение» — нужно нажать «ОК».
-
-Замечание для Windows: если Gradle падает с `Unable to establish loopback connection`, укажите короткий `TEMP`/`TMP` (скрипты делают это сами, каталог `$TOOLS/tmp`).
+Замечания для Windows:
+- если Gradle падает с `Unable to establish loopback connection`, укажите короткий `TEMP`/`TMP` (скрипты делают это сами, каталог `$TOOLS/tmp`);
+- `apksigner.bat` может блокироваться групповой политикой — скрипт запускает `apksigner.jar` напрямую.
 
 ## Проверка без настоящего сервера
 
 ```
 go run ./tools/androidtestserver -port 18443 -link link.txt
 adb reverse tcp:18443 tcp:18443
-adb shell am start -a android.intent.action.VIEW -d "$(cat link.txt)" net.veil.android
+adb shell am start -a android.intent.action.VIEW -d "'$(cat link.txt)'" net.veil.android
 ```
 
-Внутри туннеля тестовый сервер отвечает ICMP и HTTP на `10.66.0.1:80` (`/big` — 8 МБ): `adb shell ping 10.66.0.1`.
+Внутри туннеля тестовый сервер отвечает ICMP и HTTP на `10.66.0.1:80` (`/big` — 8 МБ): `adb shell ping 10.66.0.1`. `adb reverse` пробрасывает только TCP,
+поэтому проверить рукопожатие WireGuard/AmneziaWG (UDP) так нельзя — нужен сервер, доступный из сети телефона.
+
+Полезные проверки на устройстве: маршруты — `adb shell ip route show table all | grep tun0`, правила по приложениям — `adb shell ip rule`.
+В debug-сборке настройки можно задать через `run-as net.veil.android` (`shared_prefs/settings.xml`). `uiautomator dump` в приложении
+не работает (`could not get idle state`), поэтому интерфейс проверяют по координатам и снимкам (`adb exec-out screencap -p`).
 
 ## Ограничения
 
-- протоколы: Veil, WireGuard и AmneziaWG (импорт `.conf` и JSON-профиля). OpenVPN и IPsec не поддерживаются: им нужны внешний
-  процесс `openvpn` и модуль ядра/служба strongSwan, которых нет в приложении Android; при импорте показывается сообщение;
-- нет QR-сканера (ссылка — вставкой или через intent `veil://`);
-- нет раздельного туннелирования: весь трафик (IPv4 и IPv6) идёт в туннель;
-- kill switch — только системный «Always-on VPN» + «Блокировать соединения без VPN» в настройках Android;
-- нет автозапуска при загрузке, нескольких профилей, настройки DNS и выбора входа в интерфейсе;
-- хранение ссылки в SharedPreferences без шифрования;
-- ABI: arm64-v8a и x86_64; APK ~50 МБ (отладочный, ядро Go);
-- Android 13+: для уведомления запрашивается POST_NOTIFICATIONS; на Android 14 сервис объявлен как `specialUse`.
+- OpenVPN и IPsec не поддерживаются: им нужны внешний процесс `openvpn` и модуль ядра/служба strongSwan, которых нет в приложении; при импорте
+  показывается сообщение (ru/en);
+- kill switch — только системный «Always-on VPN» + «Блокировать соединения без VPN» в настройках Android (приложение подсказывает, как включить);
+- не проверено на устройстве: рукопожатие WireGuard/AmneziaWG, `BOOT_COMPLETED` (нужна перезагрузка), системный Always-on VPN, перезапуск сервиса
+  после гибели процесса системой, смена Wi-Fi → мобильная сеть, Android 13/14, распознавание реального QR камерой;
+- при каскадных входах и в профилях с `FrontSNI`/`FrontKey` поведение как в десктопном клиенте (общий код `internal/client`), но на телефоне
+  с реальными каскадами не проверялось;
+- Android 14: сервис объявлен как `specialUse`; Android 13+: запрашивается `POST_NOTIFICATIONS`.
