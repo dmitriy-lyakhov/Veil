@@ -184,6 +184,11 @@ object Settings {
     fun splitActive(c: Context) = (appsOn(c) && apps(c).isNotEmpty()) || (sitesOn(c) && sites(c).isNotEmpty())
 
     fun dns(c: Context) = str(c, "dns_override")
+
+    // обновления
+    fun updateCheck(c: Context) = bool(c, "upd_check", true)
+    fun lastUpdateCheck(c: Context) = sp(c).getLong("upd_last", 0L)
+    fun setLastUpdateCheck(c: Context, t: Long) = sp(c).edit().putLong("upd_last", t).apply()
 }
 
 /** Локальные счётчики трафика: по дням и месяцам (только на устройстве). */

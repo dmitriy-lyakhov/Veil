@@ -293,6 +293,7 @@ class SettingsPage(a: MainActivity) : Page(a) {
         col.addView(sectionHeader(a, a.getString(R.string.sec_app)))
         add(a.row(a.getString(R.string.auto_app), null, null, Toggle(a, Settings.autoApp(a)) { Settings.setBool(a, "auto_app", it) }) {})
         add(a.row(a.getString(R.string.auto_boot), null, null, Toggle(a, Settings.autoBoot(a)) { Settings.setBool(a, "auto_boot", it) }) {})
+        add(a.row(a.getString(R.string.upd_check_title), a.getString(R.string.upd_check_sub), null, Toggle(a, Settings.updateCheck(a)) { Settings.setBool(a, "upd_check", it) }) {})
         add(a.row(a.getString(R.string.reduce_motion), a.getString(R.string.reduce_motion_sub), null, Toggle(a, Settings.reduceMotion(a)) { Settings.setBool(a, "reduce_motion", it) }) {})
         add(a.row(a.getString(R.string.traffic_title), null, null, chevron = true) { a.push(TrafficPage(a)) })
         add(a.row(a.getString(R.string.logs), null, null, chevron = true) { a.push(LogsPage(a)) })
@@ -568,6 +569,7 @@ class AboutPage(a: MainActivity) : Page(a) {
         val v = try { a.packageManager.getPackageInfo(a.packageName, 0).versionName } catch (_: Exception) { "" }
         col.addView(a.text(a.getString(R.string.about_version, v ?: ""), 13f, 500, T.p.muted))
         col.addView(a.text(a.getString(R.string.about_text), 14f, 500, T.p.muted).also { it.gravity = Gravity.CENTER; it.setPadding(0, dp(20), 0, 0) })
+        col.addView(a.button(a.getString(R.string.upd_check_now), primary = false) { a.checkUpdate(true) }, lp(MATCH, WRAP).apply { topMargin = dp(20) })
         return col
     }
 }

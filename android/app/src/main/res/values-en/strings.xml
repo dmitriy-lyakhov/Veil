@@ -202,4 +202,21 @@
     <string name="ac_remove_last">Remove the last node</string>
     <string name="ac_no_next">No further nodes</string>
     <string name="ac_pick_node">Choose a node</string>
+
+    <!-- Updates from GitHub releases -->
+    <string name="upd_check_title">Check for updates</string>
+    <string name="upd_check_sub">Check for a new version on launch (once a day)</string>
+    <string name="upd_check_now">Check for updates</string>
+    <string name="upd_checking">Checking…</string>
+    <string name="upd_none">You have the latest version</string>
+    <string name="upd_available">Update available</string>
+    <string name="upd_text">Version %1$s is out (you have %2$s). Veil will download the file, verify its checksum and hand it to the Android installer; the VPN connection will drop during the install.</string>
+    <string name="upd_download">Download and install</string>
+    <string name="upd_later">Later</string>
+    <string name="upd_progress">Downloading… %1$d of %2$d MB</string>
+    <string name="upd_allow">Allow Veil to install apps, then tap “Download and install” again</string>
+    <string name="upd_failed">Could not install the update: %1$s</string>
+    <string name="upd_err_sum">Checksum mismatch: the file was corrupted or replaced</string>
+    <string name="upd_err_nosums">The release has no checksums or APK: refusing to install an unverified file</string>
+    <string name="upd_err_net">Could not reach GitHub</string>
 </resources>

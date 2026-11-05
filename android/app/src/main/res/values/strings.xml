@@ -202,4 +202,21 @@
     <string name="ac_remove_last">Убрать последний узел</string>
     <string name="ac_no_next">Дальше узлов нет</string>
     <string name="ac_pick_node">Выберите узел</string>
+
+    <!-- Обновления из GitHub-релизов -->
+    <string name="upd_check_title">Проверять обновления</string>
+    <string name="upd_check_sub">Проверять новую версию при запуске (раз в сутки)</string>
+    <string name="upd_check_now">Проверить обновления</string>
+    <string name="upd_checking">Проверка…</string>
+    <string name="upd_none">Установлена последняя версия</string>
+    <string name="upd_available">Доступно обновление</string>
+    <string name="upd_text">Вышла версия %1$s (у вас %2$s). Veil скачает файл, проверит контрольную сумму и передаст его установщику Android; подключение VPN при установке оборвётся.</string>
+    <string name="upd_download">Скачать и установить</string>
+    <string name="upd_later">Позже</string>
+    <string name="upd_progress">Загрузка… %1$d из %2$d МБ</string>
+    <string name="upd_allow">Разрешите Veil устанавливать приложения и нажмите «Скачать и установить» ещё раз</string>
+    <string name="upd_failed">Не удалось установить обновление: %1$s</string>
+    <string name="upd_err_sum">Контрольная сумма не совпала: файл повреждён или подменён</string>
+    <string name="upd_err_nosums">В релизе нет контрольных сумм или APK: непроверенный файл ставить нельзя</string>
+    <string name="upd_err_net">Не удалось связаться с GitHub</string>
 </resources>

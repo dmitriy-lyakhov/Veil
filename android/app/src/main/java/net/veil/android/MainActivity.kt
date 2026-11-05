@@ -83,6 +83,7 @@ class MainActivity : Activity() {
         applyBars()
         show(rootPage(0))
         handleIntent(intent)
+        handler.postDelayed({ checkUpdate(false) }, 3000)
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 2)
         }
@@ -314,6 +315,68 @@ class MainActivity : Activity() {
         panel.animate().translationY(panel.height.toFloat()).setDuration(dur)
             .setInterpolator(android.view.animation.AccelerateInterpolator(1.4f))
             .withEndAction { if (gen == sheetGen) finish() }.start()
+    }
+
+    // ---------- обновления из GitHub ----------
+
+    private var updateBusy = false
+
+    /** Проверка обновления. manual — по просьбе пользователя (сообщает и «обновлений нет»); иначе — при запуске, не чаще раза в сутки. */
+    fun checkUpdate(manual: Boolean) {
+        if (updateBusy) return
+        if (!manual) {
+            if (!Settings.updateCheck(this) || System.currentTimeMillis() - Settings.lastUpdateCheck(this) < 24 * 3600_000L) return
+        }
+        updateBusy = true
+        if (manual) toast(getString(R.string.upd_checking))
+        Thread {
+            var rel: Updater.Release? = null
+            var failed = false
+            try { rel = Updater.fetch() } catch (_: Exception) { failed = true }
+            runOnUiThread {
+                updateBusy = false
+                if (!failed) Settings.setLastUpdateCheck(this, System.currentTimeMillis())
+                val cur = Updater.current(this)
+                when {
+                    failed -> if (manual) toast(getString(R.string.upd_err_net))
+                    rel != null && Updater.newer(rel.tag, cur) -> showUpdate(rel, cur)
+                    manual -> toast(getString(R.string.upd_none))
+                }
+            }
+        }.start()
+    }
+
+    private fun showUpdate(rel: Updater.Release, cur: String) {
+        val body = vbox()
+        body.addView(text(getString(R.string.upd_text, rel.version, cur), 14f, 500, T.p.muted).also { it.setLineSpacing(0f, 1.25f); it.setPadding(0, 0, 0, dp(14)) })
+        val status = text("", 13f, 500, T.p.muted).also { it.setPadding(0, 0, 0, dp(10)) }
+        body.addView(status)
+        var running = false
+        val go = button(getString(R.string.upd_download)) {}
+        go.setOnClickListener {
+            if (running) return@setOnClickListener
+            if (!Updater.ensureCanInstall(this)) { toast(getString(R.string.upd_allow)); return@setOnClickListener }
+            running = true; go.alpha = 0.5f
+            Thread {
+                try {
+                    val apk = Updater.download(this, rel, { done, total ->
+                        runOnUiThread { status.text = getString(R.string.upd_progress, done shr 20, maxOf(total, 0L) shr 20) }
+                    }, { overlay.visibility != View.VISIBLE })
+                    runOnUiThread { Updater.install(this, apk); closeSheet() }
+                } catch (_: InterruptedException) {
+                } catch (e: Exception) {
+                    val msg = when (e.message) {
+                        "E_SUM" -> getString(R.string.upd_err_sum)
+                        "E_NOSUMS", "E_NOAPK", "E_URL" -> getString(R.string.upd_err_nosums)
+                        else -> getString(R.string.upd_err_net)
+                    }
+                    runOnUiThread { running = false; go.alpha = 1f; status.text = msg }
+                }
+            }.start()
+        }
+        body.addView(go, lp(MATCH, WRAP))
+        body.addView(button(getString(R.string.upd_later), primary = false) { closeSheet() }, lp(MATCH, WRAP).apply { topMargin = dp(8) })
+        openSheet(getString(R.string.upd_available), body)
     }
 
     fun toast(s: String) = Toast.makeText(this, s, Toast.LENGTH_SHORT).show()

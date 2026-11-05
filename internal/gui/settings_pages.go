@@ -4,11 +4,13 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/netip"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -615,28 +617,85 @@ func newerVersion(latest, current string) bool {
 }
 
 // checkUpdates спрашивает у GitHub последнюю версию; verbose — показывать и «обновлений нет».
+// Для установленной под Windows версии предлагается скачать и поставить обновление (с проверкой контрольной суммы),
+// для остальных случаев (портативная, macOS, Linux) открывается страница загрузки.
 func (u *ui) checkUpdates(parent fyne.Window, verbose bool) {
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		latest, link, err := fetchLatestRelease(ctx)
+		rel, err := fetchLatestRelease(ctx)
 		fyne.Do(func() {
 			switch {
 			case err != nil:
 				if verbose {
 					showError(err, parent)
 				}
-			case newerVersion(latest, appVersion):
-				showConfirm(L("Update available", "Доступно обновление"), fmt.Sprintf(L("Version %s is out (you have %s). Open the download page?", "Вышла версия %s (у вас %s). Открыть страницу загрузки?"), latest, appVersion), func(ok bool) {
-					if ok {
-						if uu, err := url.Parse(link); err == nil {
-							_ = u.app.OpenURL(uu)
-						}
-					}
-				}, parent)
+			case newerVersion(rel.Tag, appVersion):
+				u.offerUpdate(rel, parent)
 			case verbose:
 				showInfo(L("No updates", "Обновлений нет"), L("You have the latest version: ", "Установлена последняя версия: ")+appVersion, parent)
 			}
+		})
+	}()
+}
+
+func (u *ui) offerUpdate(rel *release, parent fyne.Window) {
+	name := installerAsset(rel.Tag)
+	_, has := rel.Assets[name]
+	auto := name != "" && has && canSelfInstall()
+	msg := fmt.Sprintf(L("Version %s is out (you have %s). ", "Вышла версия %s (у вас %s). "), strings.TrimPrefix(rel.Tag, "v"), appVersion)
+	if !auto {
+		showConfirm(L("Update available", "Доступно обновление"), msg+L("Open the download page?", "Открыть страницу загрузки?"), func(ok bool) {
+			if ok {
+				if uu, err := url.Parse(rel.HTML); err == nil {
+					_ = u.app.OpenURL(uu)
+				}
+			}
+		}, parent)
+		return
+	}
+	newCustomConfirm(L("Update available", "Доступно обновление"),
+		L("Download and install", "Скачать и установить"), L("Later", "Позже"),
+		messageContent(msg+L("Veil will download it, verify the checksum, close and install the new version; the VPN connection will be dropped.", "Veil скачает её, проверит контрольную сумму, закроется и установит новую версию; VPN-подключение при этом оборвётся.")),
+		func(ok bool) {
+			if ok {
+				u.downloadAndInstall(rel, name, parent)
+			}
+		}, parent).Show()
+}
+
+// downloadAndInstall скачивает установщик с индикатором хода, проверяет его и запускает; приложение при этом закрывается.
+func (u *ui) downloadAndInstall(rel *release, name string, parent fyne.Window) {
+	bar := widget.NewProgressBar()
+	label := widget.NewLabel(L("Downloading…", "Загрузка…"))
+	ctx, cancel := context.WithCancel(context.Background())
+	dlg := newCustomConfirm(L("Update", "Обновление"), "", L("Cancel", "Отмена"), container.NewVBox(label, bar), func(bool) { cancel() }, parent)
+	dlg.Show()
+	go func() {
+		defer cancel()
+		path, err := downloadAsset(ctx, rel, name, func(done, total int64) {
+			fyne.Do(func() {
+				if total > 0 {
+					bar.SetValue(float64(done) / float64(total))
+				}
+				label.SetText(fmt.Sprintf(L("Downloading… %d of %d MB", "Загрузка… %d из %d МБ"), done>>20, total>>20))
+			})
+		})
+		fyne.Do(func() {
+			dlg.Hide()
+			if err != nil {
+				if !errors.Is(err, context.Canceled) {
+					showError(err, parent)
+				}
+				return
+			}
+			// /SILENT — окно хода установки без вопросов; /RELAUNCH=1 — установщик запустит новую версию по окончании
+			cmd := exec.Command(path, "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/RELAUNCH=1")
+			if err := cmd.Start(); err != nil {
+				showError(err, parent)
+				return
+			}
+			u.quit()
 		})
 	}()
 }
