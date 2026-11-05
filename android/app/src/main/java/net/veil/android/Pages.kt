@@ -79,10 +79,11 @@ class HomePage(a: MainActivity) : Page(a) {
         val srv = a.hbox().apply { gravity = Gravity.CENTER; setPadding(0, dp(12), 0, 0) }
         val sc = a.vbox().apply { gravity = Gravity.CENTER_HORIZONTAL }
         val line = a.hbox().apply { gravity = Gravity.CENTER }
-        serverName = a.text("", 28f, 600, lines = 1)
-        line.addView(serverName, lp(WRAP, WRAP))
+        serverName = a.text("", 22f, 600, lines = 1)
+        serverName.gravity = Gravity.CENTER
+        line.addView(serverName, LinearLayout.LayoutParams(0, WRAP, 1f))
         line.addView(a.icon(R.drawable.ic_down, 22f, T.p.muted).also { (it.layoutParams as LinearLayout.LayoutParams).leftMargin = dp(8) })
-        sc.addView(line)
+        sc.addView(line, lp(MATCH, WRAP))
         serverSub = a.text("", 13f, 500, T.p.muted, lines = 1); serverSub.setPadding(0, dp(6), 0, 0)
         serverSub.gravity = Gravity.CENTER
         sc.addView(serverSub, lp(MATCH, WRAP))
