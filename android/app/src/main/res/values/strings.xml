@@ -198,4 +198,8 @@
     <string name="ac_delete_ask">Удалить клиента «%1$s»? Его подключения будут разорваны.</string>
     <string name="ac_deleted">Клиент удалён</string>
     <string name="ac_save">Сохранить</string>
+    <string name="ac_next_through">Дальше через…</string>
+    <string name="ac_remove_last">Убрать последний узел</string>
+    <string name="ac_no_next">Дальше узлов нет</string>
+    <string name="ac_pick_node">Выберите узел</string>
 </resources>

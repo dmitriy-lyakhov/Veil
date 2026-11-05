@@ -198,4 +198,8 @@
     <string name="ac_delete_ask">Delete the client “%1$s”? Its connections will be terminated.</string>
     <string name="ac_deleted">Client deleted</string>
     <string name="ac_save">Save</string>
+    <string name="ac_next_through">Next through…</string>
+    <string name="ac_remove_last">Remove the last node</string>
+    <string name="ac_no_next">No further nodes</string>
+    <string name="ac_pick_node">Choose a node</string>
 </resources>

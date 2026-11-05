@@ -237,12 +237,21 @@ class NewClientPage(a: MainActivity) : Page(a) {
     private var name = ""
     private var note = ""
     private var role = "user"
+    private val route = mutableListOf<String>()   // имена узлов каскада от этого сервера: клиент выходит через последний
     private var busy = false
 
     override fun build(): View {
         val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(16)) }
         col.addView(a.field(a.getString(R.string.ac_name), name, a.getString(R.string.ac_name_hint)) { name = it }.first, lp(MATCH, WRAP))
         col.addView(a.field(a.getString(R.string.ac_note), note) { note = it }.first, lp(MATCH, WRAP).apply { topMargin = dp(8) })
+        // маршрут через каскад: показывается, только если у сервера есть следующие узлы (upstreams)
+        val ups = Access.state?.optJSONArray("upstreams")
+        if (ups != null && ups.length() > 0) {
+            col.addView(a.text(a.getString(R.string.ac_route), 12f, 600, T.p.muted).also { it.setPadding(dp(4), dp(16), 0, dp(8)) })
+            col.addView(a.row(if (route.isEmpty()) a.getString(R.string.ac_exit_here) else route.joinToString(" → "), null, null, bg = T.p.raised), lp(MATCH, WRAP))
+            col.addView(a.row(a.getString(R.string.ac_next_through), null, null, chevron = true) { pickNext() }, lp(MATCH, WRAP).apply { topMargin = dp(8) })
+            if (route.isNotEmpty()) col.addView(a.button(a.getString(R.string.ac_remove_last), primary = false) { route.removeAt(route.size - 1); a.rebuild() }, lp(MATCH, WRAP).apply { topMargin = dp(8) })
+        }
         col.addView(a.text(a.getString(R.string.ac_role), 12f, 600, T.p.muted).also { it.setPadding(dp(4), dp(16), 0, dp(8)) })
         col.addView(a.segmented(listOf(a.getString(R.string.ac_role_user), a.getString(R.string.ac_role_admin)), if (role == "admin") 1 else 0) {
             role = if (it == 1) "admin" else "user"; a.rebuild()
@@ -256,7 +265,7 @@ class NewClientPage(a: MainActivity) : Page(a) {
             val n = name.trim()
             if (n.isEmpty()) { a.toast(a.getString(R.string.err_empty)); return@setOnClickListener }
             busy = true; create.text = a.getString(R.string.ac_loading)
-            Access.call(a, "POST", "clients", JSONObject().put("name", n).put("note", note.trim()).put("role", role)) { r, e ->
+            Access.call(a, "POST", "clients", JSONObject().put("name", n).put("note", note.trim()).put("role", role).put("route", org.json.JSONArray(route))) { r, e ->
                 busy = false; create.text = a.getString(R.string.ac_create)
                 if (e != null || r == null) { a.toast(Access.errorText(a, e)); return@call }
                 Access.load(a, true)
@@ -267,6 +276,26 @@ class NewClientPage(a: MainActivity) : Page(a) {
         col.addView(create, lp(MATCH, WRAP).apply { topMargin = dp(16) })
         col.addView(a.button(a.getString(R.string.ac_cancel), primary = false) { a.pop() }, lp(MATCH, WRAP).apply { topMargin = dp(8) })
         return col
+    }
+
+    /** Шторка выбора следующего узла: первый шаг — из upstreams этого сервера, дальше — узлы, до которых доходит выбранный маршрут (API explore). */
+    private fun pickNext() {
+        fun show(names: List<String>) {
+            val body = a.vbox()
+            if (names.isEmpty()) body.addView(a.text(a.getString(R.string.ac_no_next), 14f, 500, T.p.muted).also { it.setPadding(0, 0, 0, dp(8)) })
+            for (n in names) body.addView(a.row(n, null, null, bg = T.p.high) { route.add(n); a.closeSheet(); a.rebuild() }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
+            a.openSheet(a.getString(R.string.ac_pick_node), body)
+        }
+        if (route.isEmpty()) {
+            val arr = Access.state?.optJSONArray("upstreams")
+            show(if (arr == null) emptyList() else (0 until arr.length()).map { arr.getJSONObject(it).optString("name") }.filter { it.isNotEmpty() })
+            return
+        }
+        Access.call(a, "POST", "explore", JSONObject().put("route", org.json.JSONArray(route))) { r, e ->
+            if (e != null || r == null) { a.toast(Access.errorText(a, e)); return@call }
+            val arr = r.optJSONArray("upstreams")
+            show(if (arr == null) emptyList() else (0 until arr.length()).map { arr.getString(it) })
+        }
     }
 }
 
