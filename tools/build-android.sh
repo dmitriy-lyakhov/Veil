@@ -49,6 +49,7 @@ if [ "$what" = release ]; then
   [ -n "${VEIL_KEYSTORE:-}" ] || { echo "нет параметров подписи (VEIL_KEYSTORE...)"; exit 1; }
   ( cd android && "$GRADLE" --no-daemon assembleRelease )
   mkdir -p dist/android && cp android/app/build/outputs/apk/release/app-release.apk dist/android/veil-release.apk
-  "$ANDROID_HOME/build-tools/34.0.0/apksigner.bat" verify --verbose dist/android/veil-release.apk 2>&1 | head -8 || true
+  # через jar, а не apksigner.bat: .bat на Windows бывает заблокирован групповой политикой
+  "$JAVA_HOME/bin/java" -jar "$ANDROID_HOME/build-tools/34.0.0/lib/apksigner.jar" verify --verbose dist/android/veil-release.apk 2>&1 | head -8 || true
   echo "APK: dist/android/veil-release.apk"
 fi
