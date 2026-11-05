@@ -15,3 +15,6 @@ local.properties
 android/signing/
 *.jks
 *.keystore
+
+# готовые сборки (собираются локально, публикуются в Releases)
+apps/
