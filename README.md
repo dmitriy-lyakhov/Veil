@@ -221,3 +221,4 @@ veil unblock              # снять остатки блокировки KillS
 
 - [Роли клиентов, админка каскада, https://admin, сетевой интерфейс](docs/ROLES-CASCADE-ADMIN.md)
 - [Сайт-прикрытие из репозитория](docs/COVER-SITE.md)
+- [Android-клиент (APK, сборка, ограничения)](docs/ANDROID.md)

@@ -1,2 +1,14 @@
 dist/
 .DS_Store
+
+# Android-клиент
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/libs/*.aar
+android/app/libs/*.jar
+*.aar
+*.apk
+.gradle/
+local.properties

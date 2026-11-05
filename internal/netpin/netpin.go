@@ -24,3 +24,23 @@ func Name() string {
 	s, _ := name.Load().(string)
 	return s
 }
+
+var protect atomic.Pointer[func(fd int) bool]
+
+// SetProtect задаёт хук защиты сокета от попадания в собственный туннель (Android: VpnService.protect).
+// Хук вызывается из Control (Linux/Android) для каждого нового сокета до остальной привязки; nil — отключить.
+func SetProtect(f func(fd int) bool) {
+	if f == nil {
+		protect.Store(nil)
+		return
+	}
+	protect.Store(&f)
+}
+
+// protectFD вызывает хук (если задан); false — хук отказал.
+func protectFD(fd int) bool {
+	if p := protect.Load(); p != nil {
+		return (*p)(fd)
+	}
+	return true
+}
