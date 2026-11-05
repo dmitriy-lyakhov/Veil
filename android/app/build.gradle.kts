@@ -56,4 +56,6 @@ dependencies {
     implementation(files("libs/veilcore.aar"))
     // QR-сканер
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    // zxing-android-embedded вызывает ContextCompat (запрос разрешения камеры), но не тянет androidx.core транзитивно
+    implementation("androidx.core:core:1.12.0")
 }
