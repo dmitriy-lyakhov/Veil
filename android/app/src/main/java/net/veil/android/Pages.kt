@@ -97,7 +97,24 @@ class HomePage(a: MainActivity) : Page(a) {
             }
             setPadding(dp(20), dp(12), dp(20), dp(20))
             gravity = Gravity.CENTER_HORIZONTAL
-            setOnClickListener { openServers() }
+            isClickable = true
+            // нажатие или смахивание вверх открывают список серверов (ручка вверху панели подсказывает жест)
+            var downY = 0f; var swiped = false
+            val slop = android.view.ViewConfiguration.get(a).scaledTouchSlop
+            setOnTouchListener { v, e ->
+                when (e.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> { downY = e.rawY; swiped = false; v.isPressed = true }
+                    android.view.MotionEvent.ACTION_MOVE -> if (!swiped && downY - e.rawY > maxOf(slop * 2, dp(24))) {
+                        swiped = true; v.isPressed = false; openServers()
+                    }
+                    android.view.MotionEvent.ACTION_UP -> {
+                        v.isPressed = false
+                        if (!swiped && Math.abs(e.rawY - downY) < slop) { v.performClick(); openServers() }
+                    }
+                    android.view.MotionEvent.ACTION_CANCEL -> v.isPressed = false
+                }
+                true
+            }
         }
         panel.addView(View(a).apply { background = rounded(T.p.high, 3f) }, lp(dp(44), dp(5)).apply { bottomMargin = dp(6) })
         val sc = a.vbox().apply { gravity = Gravity.CENTER_HORIZONTAL; minimumHeight = dp(44); setPadding(0, dp(8), 0, dp(8)) }
