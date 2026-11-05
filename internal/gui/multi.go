@@ -37,13 +37,22 @@ func (u *ui) managedProfiles() []*config.Profile {
 	return out
 }
 
-func (u *ui) openMultiEntryBuilder() {
+func (u *ui) openMultiEntryBuilder() { u.openCascadeBuilder(false) }
+
+// openCascadeBuilder — построитель подключения с несколькими входами. В режиме shareMode (вкладка «Доступ»)
+// результат предназначен другому человеку: он получает ОДНО подключение (ссылка, QR или файл) со всеми входами
+// внутри и не заводит серверы по отдельности; пароли, SSH и админ-доступ в него не попадают.
+func (u *ui) openCascadeBuilder(shareMode bool) {
 	servers := u.managedProfiles()
 	if len(servers) == 0 {
 		showInfo(L("No servers of your own", "Нет своих серверов"), L("First add at least one server over SSH.", "Сначала добавьте хотя бы один сервер по SSH."), u.win)
 		return
 	}
-	w := u.newSubPage(L("Via the nearest entry", "Через ближайший вход"))
+	title := L("Via the nearest entry", "Через ближайший вход")
+	if shareMode {
+		title = L("Share a cascade", "Поделиться каскадом")
+	}
+	w := u.newSubPage(title)
 	names := make([]string, len(servers))
 	for i, p := range servers {
 		names[i] = p.Name
@@ -56,6 +65,9 @@ func (u *ui) openMultiEntryBuilder() {
 	building := false
 	clientName := widget.NewEntry()
 	clientName.SetText(L("This device", "Это устройство"))
+	if shareMode {
+		clientName.SetText(L("New client", "Новый клиент"))
+	}
 	logLbl := widget.NewLabel("")
 	logLbl.Wrapping = fyne.TextWrapWord
 	say := func(s string) { logLbl.SetText(strings.TrimLeft(logLbl.Text+"\n"+s, "\n")) }
@@ -101,7 +113,11 @@ func (u *ui) openMultiEntryBuilder() {
 	})
 	exitRow, _ := switchRowFit(L("The exit can also be an entry", "Выход тоже может быть входом"), "", true, func(on bool) { exitAsEntry = on })
 
-	buildBtn := bigButton(L("Create connection", "Создать подключение"), "check", true, func() {
+	btnLabel, btnIcon := L("Create connection", "Создать подключение"), "check"
+	if shareMode {
+		btnLabel, btnIcon = L("Share the cascade", "Поделиться каскадом"), "share"
+	}
+	buildBtn := bigButton(btnLabel, btnIcon, true, func() {
 		if building {
 			return
 		}
@@ -142,8 +158,11 @@ func (u *ui) openMultiEntryBuilder() {
 				say(L("Error: ", "Ошибка: ") + err.Error())
 				return
 			}
-			u.showShare(w, L("Connection ready", "Подключение готово"), server.LinkResponse{Name: p.Name, Link: link, File: config.SafeFileName(p.Name) + config.FileExt},
-				fmt.Sprintf(L("On every connection the client will pick the nearest entry itself; the exit is always “%s”.", "При каждом подключении клиент сам выберет ближайший вход; выход всегда «%s»."), exit.Name), true)
+			noteTxt := fmt.Sprintf(L("On every connection the client will pick the nearest entry itself; the exit is always “%s”.", "При каждом подключении клиент сам выберет ближайший вход; выход всегда «%s»."), exit.Name)
+			if shareMode {
+				noteTxt = L("The recipient adds one connection: all entries are inside it and switch automatically. Shown once: the config contains a private key.", "Получатель добавит одно подключение: все входы внутри него и переключаются автоматически. Показывается один раз: в конфиге приватный ключ.")
+			}
+			u.showShare(w, L("Connection ready", "Подключение готово"), server.LinkResponse{Name: p.Name, Link: link, File: config.SafeFileName(p.Name) + config.FileExt}, noteTxt, true)
 		})
 	})
 	content := newVBoxFit()

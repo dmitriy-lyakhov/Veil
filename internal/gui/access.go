@@ -149,9 +149,11 @@ func (s *shareState) renderConnection(m *manager) {
 		s.render()
 	}))
 	s.body.Add(s.u.fieldSelect(L("Connection format", "Формат подключения"), fmtApp, []string{fmtApp}, func(string) {}))
+	cascade := bigButton(L("Share a cascade…", "Поделиться каскадом…"), "", false, func() { s.u.openCascadeBuilder(true) })
 	s.body.Add(spacerH(8))
 	s.body.Add(share)
 	s.body.Add(route)
+	s.body.Add(cascade)
 }
 
 func (s *shareState) renderUsers(m *manager) {
