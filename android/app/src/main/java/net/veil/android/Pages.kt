@@ -152,7 +152,7 @@ class HomePage(a: MainActivity) : Page(a) {
         for (p in list) {
             // выбор сервера: панель сворачивается, затем профиль становится активным
             body.addView(a.row(p.name, protoName(a, p.protocol), null, a.radio(p.id == act), bg = T.p.high) {
-                if (p.id == act) drawer.animateTo(0f) else drawer.animateTo(0f) { a.switchProfile(p.id) }
+                if (p.id == act) drawer.animateTo(0f) else drawer.animateTo(0f, end = { a.switchProfile(p.id) })
             }, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
         }
         if (a.running() && Profiles.active(a)?.protocol == "veil") {

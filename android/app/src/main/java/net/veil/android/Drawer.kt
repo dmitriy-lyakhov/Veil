@@ -60,14 +60,16 @@ class ServerDrawer(ctx: Context, val top: View, list: View) : LinearLayout(ctx) 
     fun setProgress(v: Float) { t = v.coerceIn(0f, 1f); apply() }
 
     /** Плавно доехать до положения target (0 или 1); при «Уменьшить движение» — сразу. */
-    fun animateTo(target: Float, velocity: Float = 0f, end: (() -> Unit)? = null) {
+    fun animateTo(target: Float, velocity: Float = 0f, settle: Boolean = false, end: (() -> Unit)? = null) {
         anim?.cancel()
         if (Settings.reduceMotion(context) || height == 0) { setProgress(target); end?.invoke(); return }
         val dist = abs(target - t)
-        // при быстром жесте — быстрее: оставшийся путь / скорость, но от 120 до 300 мс
-        val ms = if (velocity > 0f) (dist * range / velocity * 1000f).toLong().coerceIn(120L, 300L) else (300f * dist).toLong().coerceAtLeast(140L)
+        // доводка после жеста: движение продолжается от пальца с плавным замедлением (200–420 мс, быстрее при быстром броске);
+        // переключение нажатием — по кривой дизайна
+        val ms = if (settle) (200f + 220f * dist).let { base -> (base * dp(900) / maxOf(velocity, dp(900).toFloat())).toLong().coerceAtLeast(160L) }
+                 else (300f * dist).toLong().coerceAtLeast(140L)
         anim = ValueAnimator.ofFloat(t, target).apply {
-            duration = ms; interpolator = ease
+            duration = ms; interpolator = if (settle) android.view.animation.DecelerateInterpolator(1.8f) else ease
             addUpdateListener { setProgress(it.animatedValue as Float) }
             addListener(object : AnimatorListenerAdapter() {
                 private var cancelled = false
@@ -109,11 +111,16 @@ class ServerDrawer(ctx: Context, val top: View, list: View) : LinearLayout(ctx) 
                 val v = tracker?.yVelocity ?: 0f   // отрицательная — вверх
                 tracker?.recycle(); tracker = null
                 dragging = false
+                // любое движение вверх от начала жеста раскрывает панель до конца, вниз — сворачивает, даже если палец уже отпущен;
+                // только явный быстрый бросок в обратную сторону меняет решение
+                val moved = t - startT
                 val target = when {
-                    abs(v) > dp(600) -> if (v < 0) 1f else 0f
-                    else -> if (t > 0.5f) 1f else 0f
+                    abs(v) > dp(900) -> if (v < 0) 1f else 0f
+                    moved > 0f -> 1f
+                    moved < 0f -> 0f
+                    else -> if (startT > 0.5f) 1f else 0f
                 }
-                animateTo(target, abs(v))
+                animateTo(target, abs(v), settle = true)
             }
         }
         return true
