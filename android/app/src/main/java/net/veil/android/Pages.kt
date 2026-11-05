@@ -71,6 +71,7 @@ class HomePage(a: MainActivity) : Page(a) {
         skipped = a.text("", 13f, 500, T.p.accentInk); skipped.gravity = Gravity.CENTER
         traffic = a.text("", 13f, 400, T.p.muted).also { it.typeface = android.graphics.Typeface.SANS_SERIF; it.minHeight = dp(16) }
         traffic.gravity = Gravity.CENTER
+        traffic.setOnClickListener { a.push(TrafficPage(a)) }
         status.addView(titleView, lp(MATCH, WRAP))
         status.addView(hint, lp(MATCH, WRAP).apply { topMargin = dp(4) })
         status.addView(skipped, lp(MATCH, WRAP).apply { topMargin = dp(4) })
@@ -293,6 +294,7 @@ class SettingsPage(a: MainActivity) : Page(a) {
         add(a.row(a.getString(R.string.auto_app), null, null, Toggle(a, Settings.autoApp(a)) { Settings.setBool(a, "auto_app", it) }) {})
         add(a.row(a.getString(R.string.auto_boot), null, null, Toggle(a, Settings.autoBoot(a)) { Settings.setBool(a, "auto_boot", it) }) {})
         add(a.row(a.getString(R.string.reduce_motion), a.getString(R.string.reduce_motion_sub), null, Toggle(a, Settings.reduceMotion(a)) { Settings.setBool(a, "reduce_motion", it) }) {})
+        add(a.row(a.getString(R.string.traffic_title), null, null, chevron = true) { a.push(TrafficPage(a)) })
         add(a.row(a.getString(R.string.logs), null, null, chevron = true) { a.push(LogsPage(a)) })
         col.addView(sectionHeader(a, a.getString(R.string.sec_look)))
         add(a.row(a.getString(R.string.theme), themeName(Settings.theme(a)), null, chevron = true) { choose(a.getString(R.string.theme), listOf("system" to R.string.theme_system, "dark" to R.string.theme_dark, "light" to R.string.theme_light), Settings.theme(a), "theme") })

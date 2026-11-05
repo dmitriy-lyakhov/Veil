@@ -24,7 +24,11 @@ const (
 func EncodeLink(p *Profile) (string, error) {
 	shared := *p
 	shared.SSH = nil
-	shared.AdminUser, shared.AdminPassword, shared.AdminURL = "", "", ""
+	shared.AdminUser, shared.AdminPassword = "", ""
+	// адрес админки в туннеле остаётся только в профиле администратора: по нему телефон обращается к админ-API (это не секрет)
+	if shared.Role != "admin" {
+		shared.AdminURL = ""
+	}
 	return packLink(LinkScheme, shared)
 }
 

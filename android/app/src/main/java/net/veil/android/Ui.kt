@@ -195,17 +195,17 @@ fun Context.radio(selected: Boolean): View {
     return box
 }
 
-/** Сегментный переключатель (2–3 варианта). */
+/** Сегментный переключатель по дизайну: высота 52, радиус 16, поля 4; выбранный сегмент на surface-high (радиус 12), текст 15/600. */
 fun Context.segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit): LinearLayout = hbox().apply {
-    background = rounded(T.p.raised, 14f)
+    background = rounded(T.p.raised, 16f)
     setPadding(dp(4), dp(4), dp(4), dp(4))
+    minimumHeight = dp(52)
     options.forEachIndexed { i, o ->
-        val t = text(o, 14f, 600, if (i == selected) T.p.ink else T.p.muted)
+        val t = text(o, 15f, 600, T.p.ink)
         t.gravity = Gravity.CENTER
-        t.setPadding(dp(8), dp(10), dp(8), dp(10))
-        if (i == selected) t.background = rounded(T.p.high, 10f)
+        if (i == selected) t.background = rounded(T.p.high, 12f)
         t.setOnClickListener { onSelect(i) }
-        addView(t, lp(0, WRAP, 1f))
+        addView(t, lp(0, MATCH, 1f))
     }
 }
 

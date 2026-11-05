@@ -25,6 +25,7 @@ import (
 func main() {
 	port := flag.Int("port", 18443, "TCP-порт на 127.0.0.1")
 	linkFile := flag.String("link", "link.txt", "куда записать ссылку veil://")
+	admin := flag.Bool("admin", false, "выдать клиенту роль администратора (вкладка «Доступ» на телефоне)")
 	flag.Parse()
 
 	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
@@ -32,6 +33,12 @@ func main() {
 	check(err)
 	prof, err := provision.AddPeer(cfg, "android")
 	check(err)
+	if *admin {
+		// клиент-администратор: сервер узнаёт его по адресу в туннеле, админ-API доступно без пароля
+		cfg.Peers[len(cfg.Peers)-1].Role = "admin"
+		prof.Role = "admin"
+		prof.AdminURL = provision.AdminURL(cfg)
+	}
 	s4 := netip.MustParsePrefix(cfg.Address4).Addr()
 	s6 := netip.MustParsePrefix(cfg.Address6).Addr()
 	tunDev, tnet, err := netstack.CreateNetTUN([]netip.Addr{s4, s6}, nil, cfg.MTU)

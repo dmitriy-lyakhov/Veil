@@ -1,6 +1,7 @@
 package net.veil.android
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -129,7 +130,7 @@ class MainActivity : Activity() {
 
     fun rootPage(i: Int): Page = when (i) {
         0 -> HomePage(this)
-        1 -> TrafficPage(this)
+        1 -> AccessPage(this)
         2 -> SettingsPage(this)
         else -> AddPage(this)
     }
@@ -140,7 +141,7 @@ class MainActivity : Activity() {
             setPadding(dp(8), 0, dp(8), 0)
         }
         val icons = intArrayOf(R.drawable.ic_home, R.drawable.ic_share, R.drawable.ic_sliders, R.drawable.ic_plus)
-        val names = intArrayOf(R.string.tab_home, R.string.tab_traffic, R.string.tab_settings, R.string.tab_add)
+        val names = intArrayOf(R.string.tab_home, R.string.tab_access, R.string.tab_settings, R.string.tab_add)
         navIcons.clear()
         for (i in icons.indices) {
             val cell = FrameLayout(this)
@@ -398,6 +399,13 @@ class MainActivity : Activity() {
                     toast(getString(R.string.backup_saved))
                 } catch (_: Exception) { toast(getString(R.string.err_generic)) }
             }
+            REQ_SAVE -> if (resultCode == RESULT_OK) data?.data?.let { uri ->
+                try {
+                    contentResolver.openOutputStream(uri)?.use { it.write((pendingSave ?: "").toByteArray()) }
+                    toast(getString(R.string.ac_file_saved))
+                } catch (_: Exception) { toast(getString(R.string.err_generic)) }
+                pendingSave = null
+            }
             REQ_IMPORT -> if (resultCode == RESULT_OK) data?.data?.let { uri ->
                 try {
                     val t = contentResolver.openInputStream(uri)?.use { it.readBytes().take(1 shl 20).toByteArray().toString(Charsets.UTF_8) } ?: ""
@@ -443,6 +451,25 @@ class MainActivity : Activity() {
         startActivityForResult(i, REQ_EXPORT)
     }
 
+    private var pendingSave: String? = null
+
+    /** Сохранить текст (ссылку клиента) в выбранный пользователем файл. */
+    fun saveText(fileName: String, text: String) {
+        pendingSave = text
+        val i = Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("application/octet-stream").putExtra(Intent.EXTRA_TITLE, fileName)
+        @Suppress("DEPRECATION")
+        startActivityForResult(i, REQ_SAVE)
+    }
+
+    /** Скопировать в буфер; на Android 13+ с пометкой «конфиденциально» (система не показывает содержимое в подсказке). */
+    fun copyText(text: String) {
+        val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("veil", text)
+        if (Build.VERSION.SDK_INT >= 33) clip.description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+        cm.setPrimaryClip(clip)
+        toast(getString(R.string.ac_copied))
+    }
+
     fun importBackupFile() {
         val i = Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
         @Suppress("DEPRECATION")
@@ -461,6 +488,7 @@ class MainActivity : Activity() {
         const val REQ_FILE = 11
         const val REQ_EXPORT = 12
         const val REQ_IMPORT = 13
+        const val REQ_SAVE = 14
     }
 }
 

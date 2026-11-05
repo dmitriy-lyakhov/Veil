@@ -52,6 +52,7 @@ type parsed struct {
 	Routes    []string `json:"routes"` // не пусто — в туннель идут только эти сети (AllowedIPs WireGuard)
 	Role      string   `json:"role,omitempty"`
 	Host      string   `json:"host,omitempty"`
+	AdminURL  string   `json:"admin_url,omitempty"` // адрес админки в туннеле (только у профиля с ролью admin)
 }
 
 func protocolOf(p *config.Profile) string {
@@ -116,6 +117,11 @@ func describe(p *config.Profile) (parsed, error) {
 		for _, d := range p.DNS {
 			if _, err := netip.ParseAddr(d); err == nil {
 				out.DNS = append(out.DNS, d)
+			}
+		}
+		if p.Role == "admin" {
+			if b, err := adminBase(p); err == nil {
+				out.AdminURL = b + "/admin"
 			}
 		}
 		for _, e := range p.Entries {

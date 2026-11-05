@@ -16,6 +16,12 @@
 - Раздельное туннелирование («Раздельный доступ»): по приложениям (`addAllowedApplication` / `addDisallowedApplication`; режимы «через VPN» и
   «напрямую», свой пакет всегда вне туннеля) и по сайтам/адресам (домены разрешаются до подъёма туннеля; «через VPN» — только выбранные
   маршруты и DNS; «напрямую» — на Android 13+ `excludeRoute`, ниже — дополнение маршрутов, считаемое в Go).
+- Доступ (вкладка «Доступ», только профиль с ролью «Администратор» и поднятый туннель): список клиентов сервера с ролями, трафиком и состоянием,
+  создание клиента (имя, заметка, роль «Пользователь» / «Администратор») и выдача QR, ссылки или файла `.veil`, смена роли, блокировка и
+  разблокировка, новый конфиг, имя и заметка, удаление. Работает через админ-API сервера (`/admin/api/…`) по туннелю: Go-ядро (`Veilcore.admin`)
+  проверяет отпечаток сертификата профиля и шлёт запрос обычным сокетом, сервер узнаёт администратора по адресу в туннеле (пароль не нужен).
+  Для профилей Veil приложение не исключается из VPN (сокеты ядра защищены `protect`); профилям без роли администратора вкладка показывает пояснение.
+  «Трафик» вынесен в «Настройки → Трафик» и открывается по нажатию на строку трафика на главной.
 - Автозапуск: «Автоподключение при запуске приложения», «Подключаться при включении устройства» (`BOOT_COMPLETED`), восстановление VPN после
   обновления пакета (`MY_PACKAGE_REPLACED`), перезапуск сервиса системой (`START_STICKY`) и запуск системным Always-on VPN.
 - Настройки: DNS, KillSwitch (подсказка по системному Always-on VPN и «Блокировать соединения без VPN»), тема, язык, «Уменьшить движение»
@@ -25,10 +31,10 @@
 
 | Путь | Что это |
 |---|---|
-| `mobile/` | Go-ядро (`package veilcore`) для `gomobile bind`: `Import`, `Rename`, `Entries`, `Parse`, `Plan`, `SetDNS`, `Start`, `Stop`, `Running`, `Status`, `Reselect` |
+| `mobile/` | Go-ядро (`package veilcore`) для `gomobile bind`: `Import`, `Rename`, `Entries`, `Parse`, `Plan`, `SetDNS`, `Start`, `Stop`, `Running`, `Status`, `Reselect`, `Admin` (админ-API, `admin.go`) |
 | `internal/client/engine.go` | `StartEngine`: запуск движка по протоколу профиля (Veil, WireGuard, AmneziaWG) на готовом TUN |
 | `internal/netpin` | хук `SetProtect(func(fd int) bool)`: сокеты клиента защищаются от петли через `VpnService.protect` |
-| `android/` | Gradle-проект (Kotlin, без Compose): `MainActivity`, `Pages.kt` (экраны), `RingView.kt` (кольцо), `Ui.kt`, `Data.kt` (профили, настройки, статистика), `VeilVpnService`, `BootReceiver` |
+| `android/` | Gradle-проект (Kotlin, без Compose): `MainActivity`, `Pages.kt` (экраны), `Access.kt` (вкладка «Доступ»), `Drawer.kt` (выдвижная панель серверов), `RingView.kt` (кольцо), `Ui.kt`, `Data.kt` (профили, настройки, статистика), `VeilVpnService`, `BootReceiver` |
 | `tools/build-android.sh`, `.ps1` | сборка AAR, debug- и release-APK |
 | `tools/androidtestserver/` | локальный тестовый сервер Veil (ссылка пишется в файл) |
 
@@ -65,7 +71,7 @@ tools/build-android.sh all        # aar + debug-APK
 ## Проверка без настоящего сервера
 
 ```
-go run ./tools/androidtestserver -port 18443 -link link.txt
+go run ./tools/androidtestserver -port 18443 -link link.txt   # флаг -admin: клиент получает роль администратора (вкладка «Доступ»)
 adb reverse tcp:18443 tcp:18443
 adb shell am start -a android.intent.action.VIEW -d "'$(cat link.txt)'" net.veil.android
 ```

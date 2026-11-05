@@ -104,7 +104,7 @@ class VeilVpnService : VpnService() {
                 }
                 for (d in dnsList) try { b.addDnsServer(d) } catch (_: Exception) { }
 
-                applyApps(b)
+                applyApps(b, p)
                 val routeCount = applyRoutes(b, p, dnsList)
                 val pfd = b.establish() ?: throw IllegalStateException("E_VPN")
                 tun = pfd
@@ -127,14 +127,19 @@ class VeilVpnService : VpnService() {
         }
     }
 
-    /** Раздельное туннелирование по приложениям. Свой пакет всегда вне VPN (сокеты ядра, WireGuard UDP). */
-    private fun applyApps(b: Builder) {
+    /**
+     * Раздельное туннелирование по приложениям. Для WireGuard/AmneziaWG свой пакет всегда вне VPN (UDP ядра не защищается protect).
+     * Для Veil своё приложение остаётся в туннеле: сокеты ядра защищены protect(), а админ-API вкладки «Доступ» ходит по туннелю обычным сокетом.
+     */
+    private fun applyApps(b: Builder, p: JSONObject) {
+        val veil = p.optString("protocol") == "veil"
         val apps = Settings.apps(this).filter { it != packageName }
         if (Settings.appsOn(this) && apps.isNotEmpty() && Settings.appsMode(this) == "via") {
             for (a in apps) try { b.addAllowedApplication(a) } catch (_: Exception) { }
+            if (veil) try { b.addAllowedApplication(packageName) } catch (_: Exception) { }
             return
         }
-        try { b.addDisallowedApplication(packageName) } catch (_: Exception) { }
+        if (!veil) try { b.addDisallowedApplication(packageName) } catch (_: Exception) { }
         if (Settings.appsOn(this) && Settings.appsMode(this) == "direct") {
             for (a in apps) try { b.addDisallowedApplication(a) } catch (_: Exception) { }
         }
@@ -155,6 +160,9 @@ class VeilVpnService : VpnService() {
                 val r = plan.getJSONArray("routes")
                 for (i in 0 until r.length()) route(r.getString(i))
                 for (d in dns) try { route(d) } catch (_: Exception) { } // DNS туннеля всегда через туннель
+                // адрес админки сервера в туннеле (вкладка «Доступ») — тоже через туннель
+                val adminHost = p.optString("admin_url").substringAfter("://").substringBefore("/").substringBefore(":")
+                if (adminHost.isNotEmpty()) try { route(adminHost) } catch (_: Exception) { }
                 return n
             }
             if (Build.VERSION.SDK_INT >= 33) {
