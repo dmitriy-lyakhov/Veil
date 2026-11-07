@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"veil/internal/client"
+	"veil/internal/client/dialer"
 	"veil/internal/config"
 )
 
@@ -94,7 +94,7 @@ func (s *Server) ProbeNow(ctx context.Context) {
 			defer wg.Done()
 			pctx, cancel := context.WithTimeout(ctx, probeTimeout)
 			defer cancel()
-			d := &client.Dialer{Profile: up.Link.DialProfile()}
+			d := &dialer.Dialer{Profile: up.Link.DialProfile()}
 			rtt, err := d.Probe(pctx, relayAPISuffix, relayRequest{Op: relayOpPing})
 			s.recordProbe(up, rtt, err)
 		}()

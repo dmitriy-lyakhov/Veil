@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"veil/internal/wgconf"
-	"veil/internal/wgkey"
+	"veil/internal/vpnconf/wgconf"
+	"veil/internal/vpnconf/wgkey"
 )
 
 // Обычный WireGuard на сервере: интерфейс veilwg, конфиг /etc/wireguard/veilwg.conf,

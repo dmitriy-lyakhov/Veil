@@ -17,9 +17,11 @@ import (
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
 
+	"veil/internal/client/dialer"
+	"veil/internal/client/netsys"
 	"veil/internal/config"
-	"veil/internal/streambind"
-	"veil/internal/wgkey"
+	"veil/internal/transport/streambind"
+	"veil/internal/vpnconf/wgkey"
 )
 
 const (
@@ -63,12 +65,12 @@ type Status struct {
 }
 
 const (
-	AdminHostsOK     = "ok"
-	AdminHostsFailed = "failed"
+	AdminHostsOK     = netsys.AdminHostsOK
+	AdminHostsFailed = netsys.AdminHostsFailed
 )
 
 type Tunnel struct {
-	dialer     *Dialer
+	dialer     *dialer.Dialer
 	bind       *streambind.Bind
 	dev        *device.Device
 	log        *slog.Logger
@@ -87,7 +89,7 @@ type Tunnel struct {
 
 type countingSink struct {
 	t *Tunnel
-	c Transport
+	c dialer.Transport
 }
 
 func (s countingSink) WritePacket(p []byte) error {
@@ -98,20 +100,20 @@ func (s countingSink) WritePacket(p []byte) error {
 	return nil
 }
 
-func Start(prof *config.Profile, tunDev tun.Device, dial DialFunc, log *slog.Logger) (*Tunnel, error) {
+func Start(prof *config.Profile, tunDev tun.Device, dial dialer.DialFunc, log *slog.Logger) (*Tunnel, error) {
 	uapi, err := deviceConfig(prof)
 	if err != nil {
 		return nil, err
 	}
 	bind := streambind.New()
-	dev := device.NewDevice(holdUp(tunDev), bind, quietLogger())
+	dev := device.NewDevice(netsys.HoldUp(tunDev), bind, quietLogger())
 	if err := dev.IpcSet(uapi); err != nil {
 		dev.Close()
 		return nil, fmt.Errorf("wireguard config: %w", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &Tunnel{
-		dialer: &Dialer{Profile: prof, Dial: dial},
+		dialer: &dialer.Dialer{Profile: prof, Dial: dial},
 		bind:   bind,
 		dev:    dev,
 		log:    log,
@@ -179,7 +181,7 @@ func (t *Tunnel) run() {
 	}
 }
 
-func (t *Tunnel) serve(c Transport) {
+func (t *Tunnel) serve(c dialer.Transport) {
 	errc := t.startReader(c)
 	rotate := time.NewTimer(rotationInterval())
 	defer rotate.Stop()
@@ -241,7 +243,7 @@ func (t *Tunnel) serve(c Transport) {
 	}
 }
 
-func (t *Tunnel) startReader(c Transport) chan error {
+func (t *Tunnel) startReader(c dialer.Transport) chan error {
 	errc := make(chan error, 1)
 	ep := t.bind.Virtual()
 	go func() {
@@ -253,7 +255,7 @@ func (t *Tunnel) startReader(c Transport) chan error {
 	return errc
 }
 
-func (t *Tunnel) attach(c Transport) {
+func (t *Tunnel) attach(c dialer.Transport) {
 	t.bind.SetDefault(countingSink{t, c})
 	t.mu.Lock()
 	t.status.State = StateConnected
@@ -413,7 +415,7 @@ type rttProber interface {
 }
 
 // sampleRTT измеряет задержку до входа в фоне и кладёт в статус. Для транспортов без PING остаётся замер входа.
-func (t *Tunnel) sampleRTT(c Transport) {
+func (t *Tunnel) sampleRTT(c dialer.Transport) {
 	p, ok := c.(rttProber)
 	if !ok {
 		t.mu.Lock()

@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"veil/internal/ipsecconf"
+	"veil/internal/vpnconf/ipsecconf"
 )
 
 // IPsec/IKEv2 на сервере: strongSwan (swanctl), собственный центр сертификации Veil, серверный

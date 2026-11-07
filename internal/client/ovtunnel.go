@@ -19,9 +19,10 @@ import (
 	"sync"
 	"time"
 
+	"veil/internal/client/netsys"
 	"veil/internal/config"
-	"veil/internal/ovpnconf"
 	"veil/internal/routing"
+	"veil/internal/vpnconf/ovpnconf"
 )
 
 // OpenVPN в приложение не встроен (лицензия GPL и собственный драйвер): используется установленный
@@ -251,7 +252,7 @@ func startOpenVPN(prof *config.Profile, dns []string, log *slog.Logger) (*ovTunn
 	}
 	cmd := exec.Command(exe, ovArgs(cfgPath, logPath, mport, pwPath)...)
 	cmd.Dir = filepath.Dir(exe)
-	hideWindow(cmd)
+	netsys.HideWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return fail(fmt.Errorf("не удалось запустить OpenVPN: %w", err))
 	}
@@ -447,7 +448,7 @@ func startOpenVPNSystem(prof *config.Profile, rc *routing.Config, opt Options, l
 		tn.Close()
 		return nil, err
 	}
-	st := &SystemTunnel{Engine: tn, Iface: "OpenVPN", log: log, u: &undoStack{}, stop: make(chan struct{}),
+	st := &SystemTunnel{Engine: tn, Iface: "OpenVPN", log: log, u: &netsys.Undo{}, stop: make(chan struct{}),
 		appliedVia: map[netip.Prefix]bool{}, appliedDirect: map[netip.Prefix]bool{}}
 	log.Info("openvpn up", "status", tn.Status())
 	return st, nil

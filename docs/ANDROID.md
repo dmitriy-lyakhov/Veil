@@ -31,11 +31,11 @@
 
 | Путь | Что это |
 |---|---|
-| `mobile/` | Go-ядро (`package veilcore`) для `gomobile bind`: `Import`, `Rename`, `Entries`, `Parse`, `Plan`, `SetDNS`, `Start`, `Stop`, `Running`, `Status`, `Reselect`, `Admin` (админ-API, `admin.go`) |
+| `mobile/core/` | Go-ядро (`package veilcore`) для `gomobile bind`: `Import`, `Rename`, `Entries`, `Parse`, `Plan`, `SetDNS`, `Start`, `Stop`, `Running`, `Status`, `Reselect`, `Admin` (админ-API, `admin.go`) |
 | `internal/client/engine.go` | `StartEngine`: запуск движка по протоколу профиля (Veil, WireGuard, AmneziaWG) на готовом TUN |
-| `internal/netpin` | хук `SetProtect(func(fd int) bool)`: сокеты клиента защищаются от петли через `VpnService.protect` |
-| `android/` | Gradle-проект (Kotlin, без Compose): `MainActivity`, `Pages.kt` (экраны), `Access.kt` (вкладка «Доступ»), `Drawer.kt` (выдвижная панель серверов), `RingView.kt` (кольцо), `Ui.kt`, `Data.kt` (профили, настройки, статистика), `VeilVpnService`, `BootReceiver` |
-| `tools/build-android.sh`, `.ps1` | сборка AAR, debug- и release-APK |
+| `internal/transport/netpin` | хук `SetProtect(func(fd int) bool)`: сокеты клиента защищаются от петли через `VpnService.protect` |
+| `mobile/android/` | Gradle-проект (Kotlin, без Compose): `MainActivity`, `Pages.kt` (экраны), `Access.kt` (вкладка «Доступ»), `Drawer.kt` (выдвижная панель серверов), `RingView.kt` (кольцо), `Ui.kt`, `Data.kt` (профили, настройки, статистика), `VeilVpnService`, `BootReceiver` |
+| `scripts/build-android.sh`, `.ps1` | сборка AAR, debug- и release-APK |
 | `tools/androidtestserver/` | локальный тестовый сервер Veil (ссылка пишется в файл) |
 
 Как это работает: `VeilVpnService` вызывает `Veilcore.parse()` (адреса туннеля, DNS, MTU, маршруты), настраивает `VpnService.Builder`
@@ -48,17 +48,17 @@
 `gomobile`/`gobind`. Скрипты по умолчанию ищут их в `..\android-tools` рядом с репозиторием (`TOOLS`, `JAVA_HOME`, `ANDROID_HOME`, `GRADLE` можно переопределить).
 
 ```
-tools/build-android.sh aar        # Go-ядро -> android/app/libs/veilcore.aar
-tools/build-android.sh apk        # debug-APK -> dist/android/veil-debug.apk
-tools/build-android.sh release    # R8 + подпись -> dist/android/veil-release.apk, проверка подписи через apksigner.jar
-tools/build-android.sh all        # aar + debug-APK
+scripts/build-android.sh aar        # Go-ядро -> mobile/android/app/libs/veilcore.aar
+scripts/build-android.sh apk        # debug-APK -> dist/android/veil-debug.apk
+scripts/build-android.sh release    # R8 + подпись -> dist/android/veil-release.apk, проверка подписи через apksigner.jar
+scripts/build-android.sh all        # aar + debug-APK
 ```
 
 `build-android.ps1 -What all` — то же для PowerShell (без release).
 
-**Release** подписывается ключом из `android/signing/veil-release.jks` (в репозиторий не коммитится). Параметры — `VEIL_KEYSTORE`,
+**Release** подписывается ключом из `mobile/android/signing/veil-release.jks` (в репозиторий не коммитится). Параметры — `VEIL_KEYSTORE`,
 `VEIL_STORE_PASSWORD`, `VEIL_KEY_ALIAS`, `VEIL_KEY_PASSWORD` либо файл `$TOOLS/signing-secrets.txt` (`KEY=VALUE`, вне репозитория).
-Подпись v2 + v3; APK не отладочный, ~54 МБ (arm64-v8a и x86_64, Go-ядро). Правила R8 — `android/app/proguard-rules.pro` (gomobile/JNI и zxing).
+Подпись v2 + v3; APK не отладочный, ~54 МБ (arm64-v8a и x86_64, Go-ядро). Правила R8 — `mobile/android/app/proguard-rules.pro` (gomobile/JNI и zxing).
 
 Установка: `adb install -r dist/android/veil-release.apk`. **Debug и release подписаны разными ключами**: чтобы поставить release поверх debug,
 сначала сделайте резервную копию серверов, затем `adb uninstall net.veil.android` (профили и ключ Keystore при удалении теряются) и импортируйте копию.

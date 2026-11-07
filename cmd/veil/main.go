@@ -4,8 +4,8 @@ import (
 	"os"
 	"strings"
 
-	"veil/internal/cli"
-	"veil/internal/gui"
+	"veil/internal/app/cli"
+	"veil/internal/app/gui"
 )
 
 func main() {

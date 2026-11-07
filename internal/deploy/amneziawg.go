@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"veil/internal/wgconf"
-	"veil/internal/wgkey"
+	"veil/internal/vpnconf/wgconf"
+	"veil/internal/vpnconf/wgkey"
 )
 
 // AmneziaWG на сервере: интерфейс veilawg, конфиг /etc/amnezia/amneziawg/veilawg.conf, служба

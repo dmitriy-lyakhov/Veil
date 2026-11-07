@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"veil/internal/ovpnconf"
+	"veil/internal/vpnconf/ovpnconf"
 )
 
 func TestParseMgmtLine(t *testing.T) {

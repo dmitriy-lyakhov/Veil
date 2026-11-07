@@ -19,9 +19,10 @@ import (
 	"time"
 	"unicode/utf16"
 
+	"veil/internal/client/netsys"
 	"veil/internal/config"
-	"veil/internal/ipsecconf"
 	"veil/internal/routing"
+	"veil/internal/vpnconf/ipsecconf"
 )
 
 // IPsec/IKEv2 в Windows — встроенный системный VPN (без wintun): подключение создаётся через
@@ -131,9 +132,9 @@ func psEncoded(script string) string {
 // runQuiet запускает команду; в тексте ошибки нет аргументов (в них могут быть пароли).
 func runQuiet(args ...string) (string, error) {
 	cmd := exec.Command(args[0], args[1:]...)
-	hideWindow(cmd)
+	netsys.HideWindow(cmd)
 	raw, err := cmd.CombinedOutput()
-	out := strings.TrimSpace(decodeOutput(raw))
+	out := strings.TrimSpace(netsys.DecodeOutput(raw))
 	if err != nil {
 		return out, fmt.Errorf("%s: %v: %s", args[0], err, out)
 	}
@@ -310,13 +311,13 @@ func startIPsec(prof *config.Profile, rc *routing.Config, opt Options, log *slog
 	if runtime.GOOS != "windows" {
 		return nil, errors.New("подключение IPsec/IKEv2 из приложения поддерживается только в Windows; на этом устройстве настройте встроенный IKEv2 по инструкции из профиля")
 	}
-	if err := Unblock(); err != nil {
+	if err := netsys.Unblock(); err != nil {
 		log.Warn("unblock", "err", err)
 	}
 	if opt.KillSwitch {
 		log.Warn("kill switch не поддерживается для IPsec/IKEv2, защита отключена")
 	}
-	nc := NetConfig{Iface: IPsecConnName}
+	nc := netsys.NetConfig{Iface: IPsecConnName}
 	for _, d := range append(append([]string(nil), c.DNS...), prof.DNS...) {
 		if a, err := netip.ParseAddr(d); err == nil {
 			nc.DNS = append(nc.DNS, a)
@@ -335,7 +336,7 @@ func startIPsec(prof *config.Profile, rc *routing.Config, opt Options, log *slog
 		log.Info("routing plan", "summary", plan.Summary())
 		nc.Plan = plan
 	}
-	prepareRoutes(nc) // физический шлюз определяется до подъёма VPN
+	netsys.PrepareRoutes(nc) // физический шлюз определяется до подъёма VPN
 
 	caFile, err := writeTemp("veil-ca-*.crt", []byte(c.CAPEM))
 	if err != nil {
@@ -353,7 +354,7 @@ func startIPsec(prof *config.Profile, rc *routing.Config, opt Options, log *slog
 		}
 		defer os.Remove(p12File)
 	}
-	if out, err := powershell(ipsecSetupScript(c, filepath.ToSlash(caFile), filepath.ToSlash(p12File), !fullTunnel(nc))); err != nil {
+	if out, err := powershell(ipsecSetupScript(c, filepath.ToSlash(caFile), filepath.ToSlash(p12File), !netsys.FullTunnel(nc))); err != nil {
 		if strings.Contains(out, errCANotTrusted) || strings.Contains(err.Error(), errCANotTrusted) {
 			return nil, errors.New("сертификат центра сертификации Veil не добавлен в доверенные: разрешите это на странице профиля IPsec и подключитесь снова")
 		}
@@ -395,9 +396,9 @@ func startIPsec(prof *config.Profile, rc *routing.Config, opt Options, log *slog
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
-	u := &undoStack{}
-	if err := applyPlan(nc, u, log); err != nil {
-		u.run()
+	u := &netsys.Undo{}
+	if err := netsys.ApplyPlan(nc, u, log); err != nil {
+		u.Run()
 		eng.Close()
 		return nil, fmt.Errorf("настройка маршрутов: %w", err)
 	}

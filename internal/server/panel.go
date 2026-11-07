@@ -1,22 +1,19 @@
 package server
 
 import (
-	"embed"
 	"net/http"
 	"strings"
+
+	"veil/internal/assets"
 )
 
-// Montserrat (OFL) отдаётся только авторизованному администратору: /admin/fonts/<файл>.
-//
-//go:embed fonts/*.ttf
-var panelFonts embed.FS
-
+// Montserrat (OFL) из internal/assets отдаётся только авторизованному администратору: /admin/fonts/<файл>.
 func serveAdminFont(w http.ResponseWriter, name string) {
-	if name == "" || strings.ContainsAny(name, "/\\") {
+	if name == "" || strings.ContainsAny(name, "/\\") || !strings.HasSuffix(name, ".ttf") {
 		http.NotFound(w, nil)
 		return
 	}
-	data, err := panelFonts.ReadFile("fonts/" + name)
+	data, err := assets.Fonts.ReadFile("fonts/" + name)
 	if err != nil {
 		http.NotFound(w, nil)
 		return

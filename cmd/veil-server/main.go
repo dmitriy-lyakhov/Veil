@@ -13,13 +13,13 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"veil/internal/front"
 
 	"github.com/quic-go/quic-go"
 	"golang.zx2c4.com/wireguard/tun"
 
 	"veil/internal/config"
 	"veil/internal/server"
+	"veil/internal/transport/front"
 )
 
 func main() {

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"veil/internal/ovpnconf"
+	"veil/internal/vpnconf/ovpnconf"
 )
 
 // OpenVPN на сервере: PKI easy-rsa в /etc/openvpn/veil, конфиг /etc/openvpn/server/veil.conf,

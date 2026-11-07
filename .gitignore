@@ -2,17 +2,17 @@ dist/
 .DS_Store
 
 # Android-клиент
-android/.gradle/
-android/build/
-android/app/build/
-android/local.properties
-android/app/libs/*.aar
-android/app/libs/*.jar
+mobile/android/.gradle/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/local.properties
+mobile/android/app/libs/*.aar
+mobile/android/app/libs/*.jar
 *.aar
 *.apk
 .gradle/
 local.properties
-android/signing/
+mobile/android/signing/
 *.jks
 *.keystore
 

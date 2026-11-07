@@ -21,7 +21,7 @@ import (
 
 	"veil/internal/config"
 	"veil/internal/site"
-	"veil/internal/wgkey"
+	"veil/internal/vpnconf/wgkey"
 )
 
 const (

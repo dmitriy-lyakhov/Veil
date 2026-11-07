@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"veil/internal/ovpnconf"
+	"veil/internal/vpnconf/ovpnconf"
 )
 
 func TestValidateOVInstall(t *testing.T) {

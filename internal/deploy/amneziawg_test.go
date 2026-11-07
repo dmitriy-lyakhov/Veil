@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"veil/internal/wgconf"
+	"veil/internal/vpnconf/wgconf"
 )
 
 func TestValidateAWGInstallDefaults(t *testing.T) {

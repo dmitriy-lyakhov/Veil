@@ -14,8 +14,8 @@ import (
 	"golang.zx2c4.com/wireguard/tun/tuntest"
 
 	"veil/internal/config"
-	"veil/internal/wgconf"
-	"veil/internal/wgkey"
+	"veil/internal/vpnconf/wgconf"
+	"veil/internal/vpnconf/wgkey"
 )
 
 // Клиентский движок WireGuard против настоящего устройства wireguard-go на loopback:

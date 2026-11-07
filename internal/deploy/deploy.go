@@ -20,10 +20,10 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"veil/internal/config"
-	"veil/internal/front"
-	"veil/internal/netpin"
 	"veil/internal/provision"
 	"veil/internal/site"
+	"veil/internal/transport/front"
+	"veil/internal/transport/netpin"
 )
 
 const (

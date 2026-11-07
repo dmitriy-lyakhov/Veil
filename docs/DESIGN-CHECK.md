@@ -2,12 +2,12 @@
 
 Метод: у дизайна (`App.dc.html`, окно 1000x700, платформа Windows, тёмная тема, ru) снимаются размеры DOM
 (`getBoundingClientRect`, computed style) для каждого экрана из `SCREENS`; у приложения те же величины берутся из
-дерева объектов Fyne тестом `TestMeasureDump` (`internal/gui/measure_test.go`):
+дерева объектов Fyne тестом `TestMeasureDump` (`internal/app/gui/measure_test.go`):
 
-    VEIL_MEASURE=client-new,settings VEIL_MEASURE_OUT=<папка> go test -run TestMeasureDump ./internal/gui
+    VEIL_MEASURE=client-new,settings VEIL_MEASURE_OUT=<папка> go test -run TestMeasureDump ./internal/app/gui
 
 Результат: текст (x, y, размер) и карточки (x, y, ширина, высота, радиус) в координатах окна (у дизайна вычтена
-панель заголовка 32 px). Допуск 2 px. Контрольно сняты и реальные снимки экрана (`tools/uishot.sh`, теперь с `VEIL_MULTI=1`,
+панель заголовка 32 px). Допуск 2 px. Контрольно сняты и реальные снимки экрана (`scripts/uishot.sh`, теперь с `VEIL_MULTI=1`,
 чтобы запуск не упирался в уже работающий Veil).
 
 ## Исправлено глобально

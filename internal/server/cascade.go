@@ -11,10 +11,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"veil/internal/client"
+	"veil/internal/client/dialer"
 	"veil/internal/config"
 	"veil/internal/provision"
-	"veil/internal/wgkey"
+	"veil/internal/vpnconf/wgkey"
 )
 
 const (
@@ -79,13 +79,13 @@ func (s *Server) counter(peer string) *relayCounter {
 	return c
 }
 
-func (s *Server) preferredKind(upstream string) client.Kind {
+func (s *Server) preferredKind(upstream string) dialer.Kind {
 	s.sessMu.Lock()
 	defer s.sessMu.Unlock()
 	return s.hopKinds[upstream]
 }
 
-func (s *Server) rememberKind(upstream string, k client.Kind) {
+func (s *Server) rememberKind(upstream string, k dialer.Kind) {
 	s.sessMu.Lock()
 	s.hopKinds[upstream] = k
 	s.sessMu.Unlock()
@@ -100,7 +100,7 @@ func (s *Server) upstreamLocked(name string) *config.Upstream {
 	return nil
 }
 
-func (s *Server) upstreamDialer(name, authKey string) (*client.Dialer, error) {
+func (s *Server) upstreamDialer(name, authKey string) (*dialer.Dialer, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	up := s.upstreamLocked(name)
@@ -111,7 +111,7 @@ func (s *Server) upstreamDialer(name, authKey string) (*client.Dialer, error) {
 	if authKey != "" {
 		prof.AuthKey = authKey
 	}
-	return &client.Dialer{Profile: prof}, nil
+	return &dialer.Dialer{Profile: prof}, nil
 }
 
 func (s *Server) nextHop(peer string) (hop, bool) {
@@ -149,7 +149,7 @@ func (s *Server) relaySession(ctx context.Context, peer string, h hop, ds downst
 			}
 		})
 	}()
-	up, err := (&client.Dialer{Profile: h.profile, Prefer: s.preferredKind(h.name)}).Connect(ctx)
+	up, err := (&dialer.Dialer{Profile: h.profile, Prefer: s.preferredKind(h.name)}).Connect(ctx)
 	if err != nil {
 		ds.kill()
 		<-readErr
@@ -216,7 +216,7 @@ func (s *Server) serveRelayAPI(w http.ResponseWriter, r *http.Request, from stri
 			err = errors.New("route too long")
 			break
 		}
-		var d *client.Dialer
+		var d *dialer.Dialer
 		if d, err = s.upstreamDialer(req.Route[0], ""); err == nil {
 			err = d.Call(ctx, relayAPISuffix, relayRequest{Op: relayOpLatency, Route: req.Route[1:]}, &resp)
 		}
@@ -497,7 +497,7 @@ func (s *Server) AddUpstream(ctx context.Context, name, linkText string) error {
 	if err != nil {
 		return err
 	}
-	probe := &client.Dialer{Profile: link.DialProfile()}
+	probe := &dialer.Dialer{Profile: link.DialProfile()}
 	var resp relayResponse
 	if err := probe.Call(ctx, relayAPISuffix, relayRequest{Op: relayOpExplore}, &resp); err != nil {
 		return fmt.Errorf("следующий узел не принял ключ каскада: %w", err)

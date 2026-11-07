@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"veil/internal/config"
-	"veil/internal/front"
+	"veil/internal/transport/front"
 )
 
 // FrontKey — общий ключ метки; отдаётся только владельцу через управляющий сокет.

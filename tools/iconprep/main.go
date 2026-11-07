@@ -1,8 +1,8 @@
 // iconprep: рисует значки приложения в PNG.
 //
-//	go run ./tools/iconprep internal/gui/icon.png 256            значок приложения (знак на тёмной плитке)
-//	go run ./tools/iconprep internal/gui/tray_on.png 64 tray-on   значок в трее при подключении (красный слой)
-//	go run ./tools/iconprep internal/gui/tray_off.png 64 tray-off значок в трее при отключении (полностью серый)
+//	go run ./tools/iconprep internal/app/gui/icon.png 256            значок приложения (знак на тёмной плитке)
+//	go run ./tools/iconprep internal/app/gui/tray_on.png 64 tray-on   значок в трее при подключении (красный слой)
+//	go run ./tools/iconprep internal/app/gui/tray_off.png 64 tray-off значок в трее при отключении (полностью серый)
 package main
 
 import (

@@ -18,7 +18,7 @@ import (
 
 	"veil/internal/config"
 	"veil/internal/provision"
-	"veil/internal/wgkey"
+	"veil/internal/vpnconf/wgkey"
 )
 
 const (
@@ -42,7 +42,7 @@ type ClientInfo struct {
 	Created       time.Time     `json:"created,omitzero"`
 	Disabled      bool          `json:"disabled"`
 	Role          string        `json:"role,omitempty"` // "user" | "admin" | "" (клиент без роли — вход в панель по паролю)
-	Route        []string      `json:"route"`
+	Route         []string      `json:"route"`
 	RelayOf       string        `json:"relay_of,omitempty"`
 	Online        bool          `json:"online"`
 	Sessions      []SessionInfo `json:"sessions"`

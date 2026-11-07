@@ -4,16 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 	"net/netip"
-	"os/exec"
-	"strings"
 	"sync"
 	"time"
-	"veil/internal/netpin"
 
+	"veil/internal/client/netsys"
 	"veil/internal/config"
 	"veil/internal/routing"
+	"veil/internal/transport/netpin"
 )
 
 const (
@@ -21,29 +19,15 @@ const (
 	routeRefreshEvery = 10 * time.Minute
 )
 
-type NetConfig struct {
-	Iface   string
-	Addr4   netip.Prefix
-	Addr6   netip.Prefix
-	MTU     int
-	Servers []netip.Addr
-	DNS     []netip.Addr
-	Plan    *routing.Plan // nil — весь трафик в туннель
-
-	// BypassServers — собственные пакеты движка идут до сервера в обход туннеля отдельным маршрутом
-	// (протоколы без привязки сокетов к интерфейсу: обычный WireGuard и т.п.)
-	BypassServers bool
-}
-
 type SystemTunnel struct {
 	Engine
 	Iface string
 
 	adminHosts string // результат записи имени «admin» в hosts: AdminHostsOK, AdminHostsFailed или ""
 
-	nc      NetConfig
+	nc      netsys.NetConfig
 	log     *slog.Logger
-	u       *undoStack
+	u       *netsys.Undo
 	rcfg    *routing.Config
 	stop    chan struct{}
 	stopped sync.Once
@@ -62,7 +46,7 @@ type Options struct {
 }
 
 func StartSystem(prof *config.Profile, rc *routing.Config, opt Options, log *slog.Logger) (*SystemTunnel, error) {
-	pinnedIface = opt.Interface
+	netsys.SetInterface(opt.Interface)
 	netpin.SetName(opt.Interface)
 	if prof.Protocol == "openvpn" {
 		return startOpenVPNSystem(prof, rc, opt, log)
@@ -74,9 +58,9 @@ func StartSystem(prof *config.Profile, rc *routing.Config, opt Options, log *slo
 	if err != nil {
 		return nil, err
 	}
-	removeStaleAdminAlias()
+	netsys.RemoveStaleAdminAlias()
 	// остатки блокировки после аварийного завершения прошлого сеанса
-	if err := Unblock(); err != nil {
+	if err := netsys.Unblock(); err != nil {
 		log.Warn("unblock", "err", err)
 	}
 	if rc != nil && rc.Enabled && !rc.Empty() {
@@ -93,10 +77,10 @@ func StartSystem(prof *config.Profile, rc *routing.Config, opt Options, log *slo
 		log.Info("routing plan", "summary", plan.Summary())
 		nc.Plan = plan
 	}
-	if err := prepareNetwork(nc); err != nil {
+	if err := netsys.PrepareNetwork(nc); err != nil {
 		return nil, fmt.Errorf("подготовка сети: %w", err)
 	}
-	tunDev, err := createTUN(nc.MTU)
+	tunDev, err := netsys.CreateTUN(nc.MTU)
 	if err != nil {
 		return nil, fmt.Errorf("создание TUN: %w", err)
 	}
@@ -124,14 +108,14 @@ func StartSystem(prof *config.Profile, rc *routing.Config, opt Options, log *slo
 		tn.Close()
 		return nil, err
 	}
-	u, err := applyNetwork(nc, log)
+	u, err := netsys.ApplyNetwork(nc, log)
 	if err != nil {
 		tn.Close()
 		return nil, fmt.Errorf("настройка сети: %w", err)
 	}
-	adminHosts := installAdminAlias(prof, u, log)
+	adminHosts := netsys.InstallAdminAlias(prof, u, log)
 	if opt.KillSwitch {
-		if err := armKillSwitch(nc, u, log); err != nil {
+		if err := netsys.ArmKillSwitch(nc, u, log); err != nil {
 			log.Warn("kill switch", "err", err)
 		}
 	}
@@ -161,7 +145,7 @@ func (s *SystemTunnel) Status() Status {
 
 func (s *SystemTunnel) Close() {
 	s.stopped.Do(func() { close(s.stop) })
-	s.u.run()
+	s.u.Run()
 	s.Engine.Close()
 }
 
@@ -196,7 +180,7 @@ func (s *SystemTunnel) refreshLoop() {
 			}
 		}
 		if len(newVia)+len(newDirect) > 0 {
-			if err := applyRoutes(s.nc, newVia, newDirect, s.u, s.log); err != nil {
+			if err := netsys.ApplyRoutes(s.nc, newVia, newDirect, s.u, s.log); err != nil {
 				s.log.Warn("routing refresh apply", "err", err)
 			} else {
 				for _, p := range newVia {
@@ -212,29 +196,11 @@ func (s *SystemTunnel) refreshLoop() {
 	}
 }
 
-// applyPlan добавляет маршруты списков. Вызывается из applyNetwork после основных настроек.
-func applyPlan(nc NetConfig, u *undoStack, log *slog.Logger) error {
-	if nc.Plan == nil {
-		return nil
-	}
-	via := append([]netip.Prefix(nil), nc.Plan.Via...)
-	if nc.Plan.Selective {
-		// в выборочном режиме запросы к DNS туннеля тоже должны идти в туннель
-		for _, d := range nc.DNS {
-			via = append(via, netip.PrefixFrom(d, d.BitLen()))
-		}
-	}
-	return applyRoutes(nc, via, nc.Plan.Direct, u, log)
-}
-
-// fullTunnel — нужен ли общий маршрут «всё в туннель» (половинки 0.0.0.0/1 и 128.0.0.0/1).
-func fullTunnel(nc NetConfig) bool { return nc.Plan == nil || !nc.Plan.Selective }
-
-func netConfigFor(p *config.Profile) (NetConfig, error) {
+func netConfigFor(p *config.Profile) (netsys.NetConfig, error) {
 	if !p.IsVeil() {
 		return protocolNetConfig(p)
 	}
-	nc := NetConfig{MTU: p.EffectiveMTU()}
+	nc := netsys.NetConfig{MTU: p.EffectiveMTU()}
 	var err error
 	if nc.Addr4, err = netip.ParsePrefix(p.Address4); err != nil {
 		return nc, fmt.Errorf("address4: %w", err)
@@ -257,56 +223,13 @@ func netConfigFor(p *config.Profile) (NetConfig, error) {
 	return nc, nil
 }
 
-type undoStack struct {
-	mu  sync.Mutex
-	fns []func()
-}
-
-func (u *undoStack) push(f func()) {
-	u.mu.Lock()
-	u.fns = append(u.fns, f)
-	u.mu.Unlock()
-}
-
-func (u *undoStack) run() {
-	u.mu.Lock()
-	fns := u.fns
-	u.fns = nil
-	u.mu.Unlock()
-	for i := len(fns) - 1; i >= 0; i-- {
-		fns[i]()
-	}
-}
-
-func run(args ...string) (string, error) {
-	cmd := exec.Command(args[0], args[1:]...)
-	hideWindow(cmd)
-	raw, err := cmd.CombinedOutput()
-	out := []byte(decodeOutput(raw))
-	s := strings.TrimSpace(string(out))
-	if err != nil {
-		return s, fmt.Errorf("%s: %v: %s", strings.Join(args, " "), err, s)
-	}
-	return s, nil
-}
-
-func fields(out, key string) string {
-	for _, line := range strings.Split(out, "\n") {
-		k, v, ok := strings.Cut(strings.TrimSpace(line), ":")
-		if ok && strings.TrimSpace(k) == key {
-			return strings.TrimSpace(v)
-		}
-	}
-	return ""
-}
-
 // protocolNetConfig — сетевые настройки для профилей обычных протоколов (сейчас WireGuard).
-func protocolNetConfig(p *config.Profile) (NetConfig, error) {
+func protocolNetConfig(p *config.Profile) (netsys.NetConfig, error) {
 	c := p.WG
 	if c == nil {
-		return NetConfig{}, fmt.Errorf("протокол %q не поддерживается этим клиентом", p.Protocol)
+		return netsys.NetConfig{}, fmt.Errorf("протокол %q не поддерживается этим клиентом", p.Protocol)
 	}
-	nc := NetConfig{MTU: c.MTU, BypassServers: true}
+	nc := netsys.NetConfig{MTU: c.MTU, BypassServers: true}
 	if nc.MTU == 0 {
 		nc.MTU = 1380
 	}
@@ -353,33 +276,4 @@ func coversEverything(ps []netip.Prefix) bool {
 		}
 	}
 	return v4 && v6
-}
-
-// stepIsV6 — шаг настройки адаптера, относящийся к IPv6.
-func stepIsV6(args []string) bool {
-	for _, a := range args {
-		if a == "-6" || a == "inet6" {
-			return true
-		}
-	}
-	return false
-}
-
-// pinnedIface — имя сетевого интерфейса, выбранного пользователем (пусто — автоматически).
-// Задаётся в StartSystem до подготовки сети.
-var pinnedIface string
-
-// pinnedInterface возвращает выбранный интерфейс или ошибку, если его нет или он не активен.
-func pinnedInterface() (*net.Interface, error) {
-	if pinnedIface == "" {
-		return nil, nil
-	}
-	ifc, err := net.InterfaceByName(pinnedIface)
-	if err != nil {
-		return nil, fmt.Errorf("сетевой интерфейс «%s» не найден: выберите другой в Настройки → Подключение → Сетевой интерфейс", pinnedIface)
-	}
-	if ifc.Flags&net.FlagUp == 0 {
-		return nil, fmt.Errorf("сетевой интерфейс «%s» не активен", pinnedIface)
-	}
-	return ifc, nil
 }

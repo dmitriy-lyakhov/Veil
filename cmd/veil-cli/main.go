@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"veil/internal/cli"
+	"veil/internal/app/cli"
 )
 
 func main() {

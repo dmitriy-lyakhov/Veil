@@ -22,12 +22,12 @@ import (
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
 
-	"veil/internal/client"
+	"veil/internal/client/dialer"
 	"veil/internal/config"
-	"veil/internal/proto"
 	"veil/internal/site"
-	"veil/internal/streambind"
-	"veil/internal/wgkey"
+	"veil/internal/transport/proto"
+	"veil/internal/transport/streambind"
+	"veil/internal/vpnconf/wgkey"
 )
 
 const (
@@ -57,7 +57,7 @@ type Server struct {
 	sessMu   sync.Mutex
 	sessions map[*session]struct{}
 	counters map[string]*relayCounter
-	hopKinds map[string]client.Kind
+	hopKinds map[string]dialer.Kind
 
 	tunnelNets []netip.Prefix
 	onFront    func()
@@ -119,7 +119,7 @@ func New(cfg *config.Server, cfgPath string, tunDev tun.Device, log *slog.Logger
 		selfCert: cert,
 		sessions: map[*session]struct{}{},
 		counters: map[string]*relayCounter{},
-		hopKinds: map[string]client.Kind{},
+		hopKinds: map[string]dialer.Kind{},
 
 		lat:           latencyBook{links: map[string]*LinkLatency{}},
 		probeEvery:    defaultProbeInterval,

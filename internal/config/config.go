@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"veil/internal/ipsecconf"
-	"veil/internal/ovpnconf"
 	"veil/internal/site"
-	"veil/internal/wgconf"
+	"veil/internal/vpnconf/ipsecconf"
+	"veil/internal/vpnconf/ovpnconf"
+	"veil/internal/vpnconf/wgconf"
 )
 
 const (

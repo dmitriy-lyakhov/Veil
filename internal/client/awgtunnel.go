@@ -19,8 +19,8 @@ import (
 	wgtun "golang.zx2c4.com/wireguard/tun"
 
 	"veil/internal/config"
-	"veil/internal/wgconf"
-	"veil/internal/wgkey"
+	"veil/internal/vpnconf/wgconf"
+	"veil/internal/vpnconf/wgkey"
 )
 
 // amneziawg-go — отдельная копия wireguard-go со своими пакетами tun/conn/device: типы не смешиваются.

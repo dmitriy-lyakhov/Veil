@@ -6,7 +6,7 @@ import (
 	"testing"
 	"unicode/utf16"
 
-	"veil/internal/ipsecconf"
+	"veil/internal/vpnconf/ipsecconf"
 )
 
 const testCA = "-----BEGIN CERTIFICATE-----\nQUJD\nREVG\n-----END CERTIFICATE-----\n"

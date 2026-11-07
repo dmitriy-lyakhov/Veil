@@ -1,13 +1,13 @@
 package routing
 
 import (
-	"os"
-	"strconv"
-	"sync"
 	"context"
 	"errors"
 	"net/netip"
+	"os"
+	"strconv"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -93,7 +93,7 @@ func TestResolveCap(t *testing.T) {
 	for i := 0; i < MaxResolve+50; i++ {
 		sb.WriteString("h")
 		sb.WriteString(strings.Repeat("a", i%5))
-		sb.WriteString(string(rune('a'+i%26)))
+		sb.WriteString(string(rune('a' + i%26)))
 		sb.WriteString(strconv.Itoa(i))
 		sb.WriteString(".example\n")
 	}

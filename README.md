@@ -180,23 +180,47 @@ veil unblock              # снять остатки блокировки KillS
 
 ## Структура
 
-| Путь | Что |
-|---|---|
-| `internal/proto` | токены аутентификации, кадрирование с padding |
-| `internal/streambind` | `conn.Bind` для wireguard-go поверх потоков |
-| `internal/server` | TLS/HTTP/2 и HTTP/3 сервер, админ-панель, управление клиентами, NAT, редирект с порта 80 |
-| `internal/site` | генератор сайта-визитки |
-| `internal/client` | uTLS + HTTP/2, uquic + HTTP/3, Happy Eyeballs, туннель, маршруты/DNS, KillSwitch (Windows, macOS, Linux); движки WireGuard, AmneziaWG, OpenVPN, IPsec |
-| `internal/netpin` | привязка собственных сокетов к физическому интерфейсу (Windows) |
-| `internal/routing` | списки «через VPN» / «напрямую»: разбор записей, сворачивание в подсети, домены, каталог opencck |
-| `internal/settings` | настройки приложения (`settings.json`) |
-| `internal/wgconf`, `internal/ovpnconf`, `internal/ipsecconf` | разбор и формирование конфигураций WireGuard/AmneziaWG, OpenVPN, IPsec |
-| `internal/deploy` | установка сервера и протоколов по SSH |
-| `internal/helper` | привилегированный процесс туннеля и управление им |
-| `internal/gui` | интерфейс на Fyne |
-| `internal/config` | профили и формат ссылок `veil://` |
-| `internal/e2e` | сквозные тесты; `live_test.go` — против развёрнутого сервера |
-| `tools/` | служебные утилиты разработчика (разбор pcap, подготовка иконки) |
+```
+cmd/                  точки входа: veil (GUI), veil-cli, veil-server
+internal/
+  app/                настольное приложение
+    cli/              консольные команды veil / veil-cli
+    gui/              интерфейс на Fyne: страницы и диалоги
+      kit/            виджеты, тема, иконки, модальные окна
+      i18n/           язык интерфейса, L("en", "ru")
+      platform/       автозапуск, единственный экземпляр, меню в трее (Windows / остальные)
+    helper/           привилегированный процесс туннеля и управление им
+    settings/         настройки приложения (settings.json)
+  client/             движки туннеля: Veil, WireGuard, AmneziaWG, OpenVPN, IPsec; SystemTunnel
+    dialer/           подключение к серверу: uTLS + HTTP/2, uquic + HTTP/3, Happy Eyeballs, точки входа
+    netsys/           TUN, адреса, маршруты, DNS, KillSwitch, hosts (Windows, macOS, Linux)
+  server/             TLS/HTTP/2 и HTTP/3 сервер, админ-панель, клиенты, NAT, редирект с порта 80
+  transport/          общее для клиента и сервера
+    proto/            токены аутентификации, кадрирование с padding
+    front/            разбор ClientHello, проксирование посторонних подключений
+    streambind/       conn.Bind для wireguard-go поверх потоков
+    netpin/           привязка собственных сокетов к физическому интерфейсу
+  vpnconf/            конфигурации протоколов
+    wgconf/ wgkey/    WireGuard / AmneziaWG, ключи
+    ovpnconf/         OpenVPN
+    ipsecconf/        IPsec
+  config/             профили и формат ссылок veil://
+  routing/            списки «через VPN» / «напрямую»: подсети, домены, каталог opencck
+  deploy/             установка сервера и протоколов по SSH
+  provision/          новый сервер, клиенты (пиры), ключи, пароль администратора, отпечаток сертификата
+  site/               генератор сайта-визитки
+  assets/             общие ресурсы (шрифт Montserrat)
+mobile/
+  core/               Go-ядро для gomobile bind (package veilcore)
+  android/            Android-приложение (Kotlin, Gradle)
+test/
+  e2e/                сквозные тесты; live_test.go — против развёрнутого сервера
+  env/                Dockerfile тестового сервера (systemd + SSH)
+scripts/              сборка: build-windows.ps1, build-android.sh|.ps1; снимки интерфейса uishot.sh
+tools/                Go-утилиты разработчика: разбор pcap, подготовка иконок, тестовый сервер для Android
+packaging/            установщики: Windows (Inno Setup), macOS (DMG, портативная сборка)
+docs/                 документация
+```
 
 ## Статус платформ
 
