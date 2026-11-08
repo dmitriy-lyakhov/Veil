@@ -207,6 +207,9 @@ func messageContent(s string) fyne.CanvasObject {
 	return container.NewGridWrap(fyne.NewSize(modalMinWidth-24, float32(lines)*22+12), l)
 }
 
+// MessageContent — текст сообщения для своих окон (NewCustomConfirm): перенос по словам и высота по числу строк.
+func MessageContent(s string) fyne.CanvasObject { return messageContent(s) }
+
 func ShowInfo(title, msg string, win fyne.Window) {
 	NewCustom(title, "OK", messageContent(msg), win).Show()
 }

@@ -64,9 +64,16 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\Veil"; 
 Type: files; Name: "{app}\uninstall.cmd"
 
 [Run]
+; обновление из самого приложения (/SILENT /RELAUNCH=1): после установки запускаем новую версию
+Filename: "{app}\veil.exe"; Flags: nowait; Check: RelaunchRequested
 Filename: "{app}\veil.exe"; Description: "{cm:LaunchProgram,Veil}"; Flags: nowait postinstall skipifsilent
 
 [Code]
+function RelaunchRequested: Boolean;
+begin
+  Result := ExpandConstant('{param:RELAUNCH|0}') = '1';
+end;
+
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   Dir: String;
