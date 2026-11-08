@@ -33,7 +33,7 @@ func demoState(name string) server.State {
 	long := name + " — основной клиент с очень длинным именем для проверки"
 	return server.State{
 		Server: server.ServerInfo{
-			Version: "0.7.1", Company: "Горизонт Инжиниринг Партнёры Северо-Запад", PublicIPv4: "72.56.74.28", PublicIPv6: longIPv6,
+			Version: "1.0.0", Company: "Горизонт Инжиниринг Партнёры Северо-Запад", PublicIPv4: "72.56.74.28", PublicIPv6: longIPv6,
 			Port: 443, Domain: "very-long-subdomain.example-company-name.international", AdminURL: "https://10.66.0.1/admin",
 			Started: time.Now().Add(-49 * time.Hour), Clients: 3, Online: 2, RxBytes: 12 << 30, TxBytes: 3 << 30,
 			Front: server.FrontInfo{Enabled: true, SNI: "ya.ru", Dest: "ya.ru:443"},

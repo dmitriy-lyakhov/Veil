@@ -1,10 +1,10 @@
 ; Установщик Veil для Windows (Inno Setup 6). Сборка:
-;   ISCC.exe /DAppVersion=0.7.1 /DSrcDir=<папка с veil.exe, veil-cli.exe и server\> /DOutDir=<куда> packaging\windows\veil.iss
+;   ISCC.exe /DAppVersion=1.0.0 /DSrcDir=<папка с veil.exe, veil-cli.exe и server\> /DOutDir=<куда> packaging\windows\veil.iss
 ; Ставит без прав администратора в %LOCALAPPDATA%\Programs\Veil (папку можно выбрать), делает ярлыки и деинсталлятор.
 ; Настройки и профили (%APPDATA%\Veil) при удалении по умолчанию сохраняются.
 
 #ifndef AppVersion
-  #define AppVersion "0.7.1"
+  #define AppVersion "1.0.0"
 #endif
 #ifndef SrcDir
   #define SrcDir "..\..\dist\windows"

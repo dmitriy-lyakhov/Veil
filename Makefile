@@ -1,5 +1,5 @@
 GO      ?= go
-VERSION := 0.7.1
+VERSION := 1.0.0
 DIST    := dist
 APP     := $(DIST)/Veil.app
 DMG     := $(DIST)/Veil-$(VERSION).dmg
