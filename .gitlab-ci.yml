@@ -51,7 +51,7 @@ github-release:
     - test -n "$GITHUB_TOKEN" || { echo "Не задана переменная GITHUB_TOKEN"; exit 1; }
     - apk add --no-cache curl jq git >/dev/null
     - V="${CI_COMMIT_TAG#v}"
-    - FILES="Veil-${V}-windows-setup.exe Veil-${V}-windows-portable.zip Veil-${V}-android.apk veil-server-${V}-linux-amd64 veil-server-${V}-linux-arm64 SHA256SUMS.txt"
+    - FILES="Veil-${V}-windows-setup.exe Veil-${V}-windows-portable.zip Veil-${V}-android.apk veil-server-${V}-linux-amd64 veil-server-${V}-linux-arm64 wireguard-go-${V}-linux-amd64 wireguard-go-${V}-linux-arm64 amneziawg-go-${V}-linux-amd64 amneziawg-go-${V}-linux-arm64 SHA256SUMS.txt"
     - mkdir -p out
     - |
       for f in $FILES; do

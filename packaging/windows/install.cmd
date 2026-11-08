@@ -12,7 +12,7 @@ set "LNK=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Veil.lnk"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK);$s.TargetPath=$env:DST+'\veil.exe';$s.WorkingDirectory=$env:DST;$s.Save()"
 set "K=HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Veil"
 reg add "%K%" /v DisplayName /d "Veil" /f >nul
-reg add "%K%" /v DisplayVersion /d "1.0.0" /f >nul
+reg add "%K%" /v DisplayVersion /d "1.1.0" /f >nul
 reg add "%K%" /v Publisher /d "Veil" /f >nul
 reg add "%K%" /v DisplayIcon /d "%DST%\veil.exe" /f >nul
 reg add "%K%" /v UninstallString /d "\"%DST%\uninstall.cmd\"" /f >nul
