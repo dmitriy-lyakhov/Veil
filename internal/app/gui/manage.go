@@ -163,7 +163,7 @@ type manager struct {
 	roles   map[string]string // роли клиентов по имени (из последнего ответа сервера)
 	body    *fyne.Container
 	status  *kit.StatusLine
-	tabs    []*widget.Button
+	tabs    *tabBar
 	section int
 
 	loaded      bool   // состояние сервера загружено (был вход по SSH)
@@ -171,6 +171,11 @@ type manager struct {
 	onLoaded    func() // вызывается после обновления данных (для встроенного режима)
 
 	callHook func(method, path string, in, out any, done func(error)) // подмена запросов к серверу (тесты, демо)
+
+	docker        *dockerInfo // контейнеры на сервере (вкладка «Управление»), nil — ещё не загружены
+	dockerLoading bool
+	dockerBusy    map[string]bool // контейнеры, которые сейчас перезапускаются
+	anims         []func()        // остановка анимаций текущей отрисовки
 }
 
 func (u *ui) openManager(p *config.Profile) {
@@ -189,13 +194,11 @@ func (u *ui) buildManager(p *config.Profile) *manager {
 	m := &manager{u: u, p: p, w: u.newSubPage(p.Name)}
 	m.status = kit.NewStatusLine()
 	m.body = kit.NewVBoxFit()
-	seg := container.NewGridWithColumns(4)
-	for i, title := range []string{L("Protocol", "Протокол"), L("Services", "Сервисы"), L("Cascade", "Каскад"), L("Management", "Управление")} {
-		b := widget.NewButton(title, func() { m.show(i) })
-		m.tabs = append(m.tabs, b)
-		seg.Add(b)
+	m.tabs = newTabBar(managerTabs(), 0, m.show)
+	if sp, ok := m.w.(*subPage); ok {
+		m.tabs.grid.onFix = func() { sp.root.Objects[0].Refresh() }
 	}
-	header := container.NewVBox(kit.Lead(kit.NewFitText(sshSummary(p), 14, kit.ColMuted, false)), seg, m.status.Label)
+	header := container.NewVBox(kit.Lead(kit.NewFitText(sshSummary(p), 14, kit.ColMuted, false)), m.tabs.obj, m.status.Label)
 	m.w.SetContent(container.NewPadded(container.NewBorder(header, nil, nil, nil, container.NewVScroll(m.body))))
 	m.w.Resize(fyne.NewSize(winWidth+80, 720))
 	m.w.Show()
@@ -222,13 +225,16 @@ func (m *manager) ensureSession(ok func(), fail func(error)) {
 }
 
 func (m *manager) highlight() {
-	for i, b := range m.tabs {
-		if i == m.section {
-			b.Importance = widget.HighImportance
+	if m.tabs != nil {
+		m.tabs.set(m.section)
+	}
+	// «Связи» и «Управление» — в две колонки и списки контейнеров: на широком окне колонка шире
+	if sp, ok := m.w.(*subPage); ok {
+		if m.section == tabLinks || m.section == tabManagement {
+			sp.setMaxWidth(wideColumns)
 		} else {
-			b.Importance = widget.MediumImportance
+			sp.setMaxWidth(0)
 		}
-		b.Refresh()
 	}
 }
 
@@ -310,17 +316,27 @@ func (m *manager) render() {
 		}
 		return
 	}
+	for _, stop := range m.anims {
+		stop()
+	}
+	m.anims = nil
 	m.body.RemoveAll()
 	switch m.section {
-	case 0:
+	case tabProtocol:
 		m.renderProtocol()
-	case 1:
+	case tabServices:
 		if m.loaded {
 			m.renderServer()
 		} else {
 			m.renderLogin(L("The cover site, domain and admin panel password settings are stored on the server. Sign in over SSH to open them.", "Настройки сайта-прикрытия, домена и пароля админ-панели хранятся на сервере. Чтобы их открыть, войдите по SSH."))
 		}
-	case 2:
+	case tabLinks:
+		if m.loaded {
+			m.renderLinks()
+		} else {
+			m.renderLogin(L("Links between networks are configured on the server. Sign in over SSH to open them.", "Связи между сетями настраиваются на сервере. Чтобы их открыть, войдите по SSH."))
+		}
+	case tabCascade:
 		if m.loaded {
 			m.renderCascade()
 		} else {
@@ -649,7 +665,6 @@ func (m *manager) renderServer() {
 	m.body.Add(kit.Card(container.NewVBox(kit.Lead(kit.Text(L("Admin panel password", "Пароль админ-панели"), 15, kit.ColText, true)),
 		widget.NewForm(widget.NewFormItem(L("New", "Новый"), pw), widget.NewFormItem(L("Repeat", "Ещё раз"), rep)),
 		container.NewVBox(gen, savePw))))
-	m.body.Add(m.updateButton(st.Version))
 	m.body.Add(layout.NewSpacer())
 }
 
@@ -658,10 +673,12 @@ func (m *manager) updateButton(serverVersion string) fyne.CanvasObject {
 	if serverVersion == appVersion {
 		label = L("Reinstall the server part (", "Переустановить серверную часть (") + appVersion + ")"
 	}
-	return bigButton(label, "download", false, func() {
-		if m.sess == nil {
-			return
-		}
+	return bigButton(label, "download", false, m.updateServer)
+}
+
+// updateServer обновляет серверную часть до версии приложения (при необходимости спросит пароль SSH).
+func (m *manager) updateServer() {
+	m.ensureSession(func() {
 		m.status.SetText(L("Updating server…", "Обновление сервера…"))
 		go func() {
 			err := m.sess.Update(context.Background(), "", func(f string, a ...any) {
@@ -676,5 +693,5 @@ func (m *manager) updateButton(serverVersion string) fyne.CanvasObject {
 				m.refresh()
 			})
 		}()
-	})
+	}, nil)
 }

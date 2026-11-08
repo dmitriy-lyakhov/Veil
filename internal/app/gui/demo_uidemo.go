@@ -158,6 +158,35 @@ func init() {
 					a.Name, b.Name = "Амстердам", "Франкфурт"
 					job := multiJob{u: u, exit: b, entries: []*config.Profile{a, b}}
 					u.showSharedCascade(u.win, server.LinkResponse{Name: "Каскад команды", Link: "veil://eyJjYXNj"}, job)
+				case "deploy", "deploywg":
+					if page == "deploywg" {
+						u.deployForm(1)
+					} else {
+						u.deployForm(0)
+					}
+				case "install", "installdone", "installfail":
+					u.demoInstallView(map[string]string{"install": "progress", "installdone": "done", "installfail": "fail"}[page])
+				case "existing":
+					prof, res := demoExisting("Амстердам")
+					u.openExisting(nil, demoInstallJob("wireguard", "Амстердам"), prof, res)
+				case "links", "containers":
+					p := demoServer()
+					u.profiles = append(u.profiles, p)
+					m := u.buildManager(p)
+					dm := demoManagerUI(u, p)
+					m.state, m.roles, m.callHook, m.loaded = dm.state, dm.roles, dm.callHook, true
+					m.state.Server.Links = config.Links{ClientToClient: true, ClientToSite: true}
+					if page == "links" {
+						m.show(tabLinks)
+					} else {
+						m.docker = demoDocker()
+						m.show(tabManagement)
+					}
+				case "subnets":
+					m := demoManagerUI(u, demoServer())
+					m.openClientSubnets(m.state.Clients[2], func() {})
+				case "containerlog":
+					u.showLogSheet(u.win, "veil", demoContainerLog)
 				case "switching":
 					p := demoServer()
 					p.Entries = []config.Entry{{Name: "Амстердам"}, {Name: "Токио"}}
@@ -211,7 +240,8 @@ func demoManagerUI(u *ui, p *config.Profile) *manager {
 	m.state = server.State{Clients: []server.ClientInfo{
 		{Name: "Телефон Ани", Note: "Android", TxBytes: 1200 << 20, RxBytes: 340 << 20, Route: []string{"Амстердам", "Токио", "Франкфурт"}, Auto: &server.AutoInfo{CostMs: 142}},
 		{Name: "Ноутбук", TxBytes: 4800 << 20, RxBytes: 900 << 20},
-		{Name: "Роутер", Disabled: true},
+		{Name: "Роутер-Офис", Address4: "10.66.0.4/32", Subnets: []string{"192.168.1.0/24"}},
+		{Name: "Роутер", Disabled: true, Address4: "10.66.0.5/32"},
 	}}
 	m.roles = map[string]string{"Ноутбук": "admin"}
 	return m

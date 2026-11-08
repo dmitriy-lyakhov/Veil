@@ -1,7 +1,6 @@
 package gui
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -103,129 +102,13 @@ func (u *ui) showAddChooser() {
 	d.Show()
 }
 
-func (u *ui) showDeployForm() {
-	w := u.newSubPage(L("New server", "Новый сервер"))
-	name := widget.NewEntry()
-	name.SetPlaceHolder(L("For example: Amsterdam", "Например: Амстердам"))
-	ipv6 := widget.NewEntry()
-	ipv6.SetPlaceHolder("2001:db8::10")
-	ipv4 := widget.NewEntry()
-	ipv4.SetPlaceHolder("203.0.113.10")
-	port := widget.NewEntry()
-	port.SetText("22")
-	user := widget.NewEntry()
-	user.SetText("root")
-	password := widget.NewPasswordEntry()
-	keyPath := widget.NewEntry()
-	keyPath.SetPlaceHolder("~/.ssh/id_ed25519")
-	passphrase := widget.NewPasswordEntry()
-	langName := "Русский"
-	method := methodPassword()
-	frontPick := newFrontPicker(u, "")
-	installing := false
-
-	authBox := kit.NewVBoxFit()
-	renderAuth := func() {
-		authBox.RemoveAll()
-		if method == methodKey() {
-			authBox.Add(fieldEntry(L("SSH key", "SSH-ключ"), keyPath))
-			authBox.Add(bigButton(L("Choose key file…", "Выбрать файл ключа…"), "file", false, func() {
-				dialog.NewFileOpen(func(r fyne.URIReadCloser, err error) {
-					if err == nil && r != nil {
-						keyPath.SetText(r.URI().Path())
-						r.Close()
-					}
-				}, w).Show()
-			}))
-			authBox.Add(fieldEntry(L("Key passphrase", "Пароль ключа"), passphrase))
-		} else {
-			authBox.Add(fieldEntry(L("Password", "Пароль"), password))
-		}
-		authBox.Refresh()
+// protocolProfile — профиль обычного протокола, поставленного прямо из формы: SSH хранится в нём самом,
+// и он же служит «сервером» для управления (ServerRef указывает на себя).
+func protocolProfile(req deploy.Request, proto string, res *deploy.ProtocolResult) *config.Profile {
+	return &config.Profile{
+		Name: req.Name, Protocol: proto, IPv4: req.IPv4, IPv6: req.IPv6, SSH: res.SSH, ServerRef: req.Name,
+		WG: res.WG, OVPN: res.OVPN, IPsec: res.IPsec,
 	}
-	renderAuth()
-	segment := kit.NewSegmented([]string{methodPassword(), methodKey()}, 0, func(i int) {
-		method = []string{methodPassword(), methodKey()}[i]
-		renderAuth()
-	})
-
-	logLbl := widget.NewLabel("")
-	logLbl.Wrapping = fyne.TextWrapBreak
-	progress := kit.NewThinBar()
-	progress.Hide()
-	appendLog := func(s string) {
-		logLbl.SetText(strings.TrimLeft(logLbl.Text+"\n"+s, "\n"))
-	}
-	install := bigButton(L("Install and connect", "Установить и подключить"), "download", true, func() {
-		if installing {
-			return
-		}
-		req, err := buildRequest(name.Text, ipv4.Text, ipv6.Text, port.Text, user.Text, method, password.Text, keyPath.Text, passphrase.Text)
-		if err != nil {
-			kit.ShowError(err, w)
-			return
-		}
-		req.SiteLang = siteLangs[langName]
-		sni, err := frontPick.SNI()
-		if err != nil {
-			kit.ShowError(err, w)
-			return
-		}
-		req.FrontSNI = sni
-		if u.profileExists(req.Name) {
-			kit.ShowError(fmt.Errorf(L("server “%s” already exists — choose a different name", "сервер «%s» уже есть — выберите другое название"), req.Name), w)
-			return
-		}
-		installing = true
-		progress.Show()
-		progress.Start()
-		logLbl.SetText("")
-		go func() {
-			logf := func(format string, args ...any) {
-				line := fmt.Sprintf(format, args...)
-				fyne.Do(func() { appendLog(line) })
-			}
-			prof, err := deploy.Deploy(context.Background(), req, logf)
-			if err == nil {
-				err = saveProfile(prof)
-			}
-			fyne.Do(func() {
-				progress.Stop()
-				progress.Hide()
-				installing = false
-				if err != nil {
-					appendLog(L("Error: ", "Ошибка: ") + err.Error())
-					return
-				}
-				appendLog(L("Done. Profile saved.", "Готово. Профиль сохранён."))
-				u.reload()
-				u.selectProfile(prof.Name)
-				w.Close()
-				u.showPage(0)
-				if u.handle == nil {
-					u.toggle()
-				}
-			})
-		}()
-	})
-
-	content := kit.NewVBoxFit()
-	content.Add(note(L("The app will connect over SSH, install Veil (port 443, TCP and UDP) and generate a cover site. The SSH password is not stored.", "Приложение подключится по SSH, установит Veil (порт 443, TCP и UDP) и сгенерирует сайт-прикрытие. Пароль SSH не сохраняется.")))
-	content.Add(fieldEntry(L("Name", "Название"), name))
-	content.Add(fieldEntry("IPv6", ipv6))
-	content.Add(fieldEntry("IPv4", ipv4))
-	content.Add(fieldEntry(L("SSH port", "SSH-порт"), port))
-	content.Add(fieldEntry(L("User", "Пользователь"), user))
-	content.Add(u.fieldSelect(L("Site language", "Язык сайта"), langName, []string{"Русский", "English"}, func(s string) { langName = s }))
-	content.Add(frontPick.View())
-	content.Add(segment)
-	content.Add(authBox)
-	content.Add(install)
-	content.Add(progress)
-	content.Add(logLbl)
-	w.SetContent(container.NewPadded(container.NewVScroll(content)))
-	w.Resize(fyne.NewSize(winWidth+40, 700))
-	w.Show()
 }
 
 func (u *ui) showImport() {

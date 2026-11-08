@@ -37,12 +37,13 @@ func demoState(name string) server.State {
 			Port: 443, Domain: "very-long-subdomain.example-company-name.international", AdminURL: "https://10.66.0.1/admin",
 			Started: time.Now().Add(-49 * time.Hour), Clients: 3, Online: 2, RxBytes: 12 << 30, TxBytes: 3 << 30,
 			Front: server.FrontInfo{Enabled: true, SNI: "ya.ru", Dest: "ya.ru:443"},
+			Links: config.Links{ClientToClient: true, ClientToSite: true},
 		},
 		Clients: []server.ClientInfo{
 			{Name: long, Note: "Ноутбук бухгалтерии, подключается из офиса и из дома, заметка тоже длинная", Address4: "10.66.0.2/32", Address6: "fd00:7e11:1234:5678::2/128",
 				Online: true, Sessions: []server.SessionInfo{{Transport: "HTTP/3", Remote: "[2a03:6f02:0000:0000:0000:0000:0001:039b]:54493", Since: time.Now()}}, RxBytes: 5 << 30, TxBytes: 1 << 30,
 				Route: []string{"Амстердам-основной-шлюз", "Франкфурт-резервный-узел"}},
-			{Name: "Телефон", Address4: "10.66.0.3/32", Address6: "fd00:7e11:1234:5678::3/128", Disabled: true, Sessions: []server.SessionInfo{}},
+			{Name: "Телефон", Address4: "10.66.0.3/32", Address6: "fd00:7e11:1234:5678::3/128", Disabled: true, Sessions: []server.SessionInfo{}, Subnets: []string{"192.168.1.0/24", "10.20.0.0/16"}},
 			{Name: "Транзит от соседнего узла каскада с длинным названием", RelayOf: "соседний-узел", Address4: "10.66.0.4/32", Online: true,
 				Sessions: []server.SessionInfo{}, Auto: &server.AutoInfo{Exit: "Франкфурт-резервный-узел", CostMs: 42}},
 		},
@@ -133,10 +134,11 @@ func matrixPages() []uiPage {
 			}
 		}},
 	}
-	for i := 0; i < 4; i++ {
+	for i := 0; i < len(managerTabs()); i++ {
 		pages = append(pages, managerPage(i))
 	}
 	pages = append(pages, measureExtra()...)
+	pages = append(pages, screenPages()...)
 	return pages
 }
 

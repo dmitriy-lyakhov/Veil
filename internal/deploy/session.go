@@ -19,8 +19,10 @@ var ErrOutdated = errors.New("на сервере старая версия Veil
 
 type Session struct {
 	Profile *config.Profile
-	r       *remote
-	arch    string
+	// BinDir — где искать готовые бинарники для сервера (пусто — рядом с приложением).
+	BinDir string
+	r      *remote
+	docker map[string]bool // протокол → установлен в контейнере
 }
 
 func NeedsPassword(p *config.Profile) bool {
@@ -61,7 +63,8 @@ func Open(ctx context.Context, p *config.Profile, password, passphrase string) (
 func (s *Session) Close() { _ = s.r.c.Close() }
 
 func (s *Session) Call(method, path string, in, out any) error {
-	if _, err := s.r.exec("test -S "+controlSocket, nil, true); err != nil {
+	r := s.proto("veil")
+	if _, err := r.exec("test -S "+controlSocket, nil, true); err != nil {
 		var ee *ssh.ExitError
 		if !errors.As(err, &ee) {
 			return fmt.Errorf("SSH-соединение с сервером потеряно: %w", err)
@@ -76,7 +79,7 @@ func (s *Session) Call(method, path string, in, out any) error {
 		}
 		cmd += " " + base64.StdEncoding.EncodeToString(body)
 	}
-	stdout, err := s.r.exec(cmd, nil, true)
+	stdout, err := r.exec(cmd, nil, true)
 	if err != nil {
 		var e struct {
 			Error string `json:"error"`
@@ -96,6 +99,15 @@ func (s *Session) Call(method, path string, in, out any) error {
 }
 
 func (s *Session) Update(ctx context.Context, binDir string, logf Logf) error {
+	if s.inDocker("veil") {
+		// новый бинарник и Docker-файлы, пересборка образа; конфиг и клиенты в /etc/veil хоста не меняются
+		on, _ := s.AdminPanel()
+		if err := s.r.startContainer("veil", binDir, veilEnv(on), true, logf); err != nil {
+			return err
+		}
+		logf("Сервер обновлён (контейнер veil)")
+		return ctx.Err()
+	}
 	machine, err := s.r.exec("uname -sm", nil, false)
 	if err != nil {
 		return err
@@ -150,6 +162,13 @@ func (s *Session) Reboot() error {
 
 // Uninstall останавливает службу и удаляет с сервера всё, что поставил Veil.
 func (s *Session) Uninstall() error {
+	if s.inDocker("veil") {
+		if err := s.r.removeContainer("veil"); err != nil {
+			return err
+		}
+		_, err := s.r.exec("rm -rf /etc/veil "+dockerRoot+"/docker/veil "+dockerRoot+"/bin/veil-server-linux-*", nil, true)
+		return err
+	}
 	const script = `systemctl stop veil 2>/dev/null; systemctl disable veil >/dev/null 2>&1
 rm -f /etc/systemd/system/veil.service /usr/local/bin/veil-server
 rm -rf /etc/veil /run/veil /var/lib/veil

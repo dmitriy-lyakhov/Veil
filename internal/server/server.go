@@ -61,6 +61,10 @@ type Server struct {
 
 	tunnelNets []netip.Prefix
 	onFront    func()
+	onLinks    func()
+	adminKey   string // подпись запросов к отдельной панели (Admin.Mode = container)
+	events     *eventLog
+	traffic    trafficStats
 
 	lat           latencyBook
 	tuneMu        sync.Mutex
@@ -108,6 +112,8 @@ func New(cfg *config.Server, cfgPath string, tunDev tun.Device, log *slog.Logger
 	}
 	s := &Server{
 		cfgPath:  cfgPath,
+		adminKey: newAdminKey(),
+		events:   newEventLog(cfgPath),
 		cfg:      cfg,
 		bind:     bind,
 		dev:      dev,
@@ -162,6 +168,7 @@ func New(cfg *config.Server, cfgPath string, tunDev tun.Device, log *slog.Logger
 	loopCtx, stop := context.WithCancel(context.Background())
 	s.stopLoops = stop
 	s.backgroundLoops(loopCtx)
+	go s.trafficLoop(loopCtx.Done())
 	s.siteRepo = newSiteRepoManager(s, cfgPath, log)
 	s.siteRepo.start(loopCtx)
 	return s, nil
@@ -245,6 +252,10 @@ func peerConfig(p config.Peer) (string, error) {
 		if a != "" {
 			fmt.Fprintf(&b, "allowed_ip=%s\n", a)
 		}
+	}
+	// сети за клиентом-шлюзом (site-to-site, client-to-site)
+	for _, sn := range p.Subnets {
+		fmt.Fprintf(&b, "allowed_ip=%s\n", sn)
 	}
 	return b.String(), nil
 }
@@ -341,7 +352,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if (r.URL.Path == adminPrefix || strings.HasPrefix(r.URL.Path, adminPrefix+"/")) && s.fromTunnel(r) {
-		s.serveAdmin(w, r)
+		s.routeAdmin(w, r)
 		return
 	}
 	s.web.ServeHTTP(w, r)

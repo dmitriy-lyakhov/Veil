@@ -34,7 +34,13 @@ func (s *Server) ServeControl(path string) (func(), error) {
 	}
 	hs := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			s.handleAPI(w, r, strings.TrimPrefix(r.URL.Path, "/"), true)
+			p := strings.TrimPrefix(r.URL.Path, "/")
+			if strings.HasPrefix(p, adminFrontCtl) {
+				// процесс админ-панели (контейнер veil-admin): права как у веб-панели, не как у SSH
+				s.handleAdminFront(w, r, strings.TrimPrefix(p, adminFrontCtl))
+				return
+			}
+			s.handleAPI(w, r, p, true)
 		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}

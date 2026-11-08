@@ -1,0 +1,74 @@
+# AmneziaWG (интерфейс veilawg, UDP 51821, подсеть 10.9.1.0/24 + ULA /64, обфускация Jc/Jmin/Jmax/S1/S2/H1–H4).
+# Работает через amneziawg-go: модуль ядра на хосте не нужен.
+# Отдельно:  docker compose -f docker/amneziawg/compose.yml up -d --build
+# Клиенты:   docker compose exec amneziawg client add phone | list | show NAME | remove NAME
+
+name: veil-amneziawg
+
+services:
+  amneziawg:
+    container_name: veil-amneziawg
+    labels:
+      net.veil.protocol: amneziawg
+    build:
+      context: ../..
+      dockerfile: docker/amneziawg/Dockerfile
+      args:
+        # source — собрать Go-бинарники из исходников; prebuilt — взять готовые из bin/ (так делает приложение)
+        BIN_FROM: ${VEIL_BIN_FROM:-source}
+    image: ${VEIL_IMAGE_REGISTRY:-veil}/amneziawg:${VEIL_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    cap_add: [NET_ADMIN]
+    devices: ["/dev/net/tun:/dev/net/tun"]
+    sysctls:
+      net.ipv4.ip_forward: 1
+      net.ipv4.conf.all.src_valid_mark: 1
+      net.ipv6.conf.all.disable_ipv6: 0
+      net.ipv6.conf.default.disable_ipv6: 0
+      net.ipv6.conf.all.forwarding: 1
+    environment:
+      VEIL_HOST: ${VEIL_HOST:-}
+      VEIL_DETECT_IP: ${VEIL_DETECT_IP:-1}
+      WG_PORT: ${AWG_PORT:-51821}
+      WG_PUBLIC_PORT: ${AWG_PORT:-51821}
+      WG_SUBNET: ${AWG_SUBNET:-10.9.1.0/24}
+      WG_FIRST_CLIENT: ${AWG_FIRST_CLIENT-client}
+      AWG_JC: ${AWG_JC:-4}
+      AWG_JMIN: ${AWG_JMIN:-10}
+      AWG_JMAX: ${AWG_JMAX:-50}
+      # пусто — случайные значения при первом запуске
+      AWG_S1: ${AWG_S1:-}
+      AWG_S2: ${AWG_S2:-}
+      AWG_S3: ${AWG_S3:-}
+      AWG_S4: ${AWG_S4:-}
+      AWG_H1: ${AWG_H1:-}
+      AWG_H2: ${AWG_H2:-}
+      AWG_H3: ${AWG_H3:-}
+      AWG_H4: ${AWG_H4:-}
+    ports:
+      - "${AWG_PORT:-51821}:${AWG_PORT:-51821}/udp"
+    volumes:
+      - amneziawg-data:/etc/amnezia/amneziawg
+    networks:
+      - amneziawg
+    healthcheck:
+      test: ["CMD", "awg", "show", "veilawg", "listen-port"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  amneziawg:
+    enable_ipv6: true
+    driver_opts:
+      # MTU внешнего интерфейса сервера (облака часто дают 1450–1460); приложение выставляет его само
+      com.docker.network.driver.mtu: ${VEIL_DOCKER_MTU:-1500}
+    ipam:
+      config:
+        - subnet: ${AWG_NET_IPV6:-fd76:6569:6c00:3::/64}
+
+volumes:
+  amneziawg-data:

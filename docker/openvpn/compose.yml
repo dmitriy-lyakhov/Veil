@@ -1,0 +1,59 @@
+# OpenVPN (UDP 1194 по умолчанию, подсеть 10.9.0.0/24 + ULA /64, PKI easy-rsa).
+# Отдельно:  docker compose -f docker/openvpn/compose.yml up -d --build
+# Клиенты:   docker compose exec openvpn client add laptop | list | show NAME | remove NAME
+
+name: veil-openvpn
+
+services:
+  openvpn:
+    container_name: veil-openvpn
+    labels:
+      net.veil.protocol: openvpn
+    build:
+      context: ../..
+      dockerfile: docker/openvpn/Dockerfile
+    image: ${VEIL_IMAGE_REGISTRY:-veil}/openvpn:${VEIL_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    cap_add: [NET_ADMIN]
+    devices: ["/dev/net/tun:/dev/net/tun"]
+    sysctls:
+      net.ipv4.ip_forward: 1
+      net.ipv6.conf.all.disable_ipv6: 0
+      net.ipv6.conf.default.disable_ipv6: 0
+      net.ipv6.conf.all.forwarding: 1
+    environment:
+      VEIL_HOST: ${VEIL_HOST:-}
+      VEIL_DETECT_IP: ${VEIL_DETECT_IP:-1}
+      OVPN_PORT: ${OVPN_PORT:-1194}
+      OVPN_PUBLIC_PORT: ${OVPN_PORT:-1194}
+      OVPN_PROTO: ${OVPN_PROTO:-udp}
+      # не совпадает с пулом IPsec (10.10.0.0/24) и подсетью AmneziaWG (10.9.1.0/24)
+      OVPN_SUBNET: ${OVPN_SUBNET:-10.9.0.0/24}
+      OVPN_FIRST_CLIENT: ${OVPN_FIRST_CLIENT-client}
+    ports:
+      - "${OVPN_PORT:-1194}:${OVPN_PORT:-1194}/${OVPN_PROTO:-udp}"
+    volumes:
+      - openvpn-data:/etc/openvpn/veil
+    networks:
+      - openvpn
+    healthcheck:
+      test: ["CMD-SHELL", "pidof openvpn >/dev/null && ip link show tun0 >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      start_period: 90s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  openvpn:
+    enable_ipv6: true
+    driver_opts:
+      # MTU внешнего интерфейса сервера (облака часто дают 1450–1460); приложение выставляет его само
+      com.docker.network.driver.mtu: ${VEIL_DOCKER_MTU:-1500}
+    ipam:
+      config:
+        - subnet: ${OVPN_NET_IPV6:-fd76:6569:6c00:4::/64}
+
+volumes:
+  openvpn-data:

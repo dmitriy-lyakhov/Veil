@@ -1,0 +1,99 @@
+# Сервер Veil (собственный протокол: HTTP/3 + HTTP/2 на 443, редирект с 80).
+# Отдельно:  docker compose -f docker/veil/compose.yml up -d --build
+# Вместе с остальными протоколами — compose.yml в корне репозитория.
+
+name: veil
+
+services:
+  veil:
+    container_name: veil
+    labels:
+      net.veil.protocol: veil
+    build:
+      context: ../..
+      dockerfile: docker/veil/Dockerfile
+      args:
+        # source — собрать Go-бинарники из исходников; prebuilt — взять готовые из bin/ (так делает приложение)
+        BIN_FROM: ${VEIL_BIN_FROM:-source}
+    image: ${VEIL_IMAGE_REGISTRY:-veil}/veil-server:${VEIL_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    cap_add: [NET_ADMIN]
+    devices: ["/dev/net/tun:/dev/net/tun"]
+    sysctls:
+      net.ipv4.ip_forward: 1
+      net.ipv6.conf.all.disable_ipv6: 0
+      net.ipv6.conf.default.disable_ipv6: 0
+      net.ipv6.conf.all.forwarding: 1
+    ulimits:
+      nofile: 65535
+    environment:
+      # публичные адреса сервера для конфигов клиентов; пусто — определить автоматически при первом запуске
+      VEIL_PUBLIC_IPV4: ${VEIL_PUBLIC_IPV4:-}
+      VEIL_PUBLIC_IPV6: ${VEIL_PUBLIC_IPV6:-}
+      VEIL_DETECT_IP: ${VEIL_DETECT_IP:-1}
+      VEIL_SITE_LANG: ${VEIL_SITE_LANG:-ru}
+      VEIL_FRONT: ${VEIL_FRONT:-}
+      VEIL_DOMAIN: ${VEIL_DOMAIN:-}
+      VEIL_FIRST_CLIENT: ${VEIL_FIRST_CLIENT-client}
+      VEIL_DEBUG: ${VEIL_DEBUG:-}         # непусто — подробный журнал WireGuard
+      # веб-панель: container — в отдельном контейнере veil-admin (запускается профилем admin),
+      # off — нет (/admin отвечает 404)
+      VEIL_ADMIN: ${VEIL_ADMIN:-container}
+    ports:
+      # Docker публикует порты и на IPv4, и на IPv6 (0.0.0.0 и [::])
+      - "${VEIL_HTTPS_PORT:-443}:443/tcp"
+      - "${VEIL_HTTPS_PORT:-443}:443/udp"
+      - "${VEIL_HTTP_PORT:-80}:80/tcp"
+    volumes:
+      # VEIL_DATA=/etc/veil — каталог хоста вместо тома (так ставит приложение: конфиг правится по SSH)
+      - ${VEIL_DATA:-veil-data}:/etc/veil
+      # сокет управления и ключ панели — общие с veil-admin
+      - veil-run:/run/veil
+    networks:
+      - veil
+    healthcheck:
+      test: ["CMD", "veil-server", "ctl", "GET", "state"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # Админ-панель в отдельном контейнере. Включается профилем: COMPOSE_PROFILES=admin (или --profile admin).
+  # Портов наружу нет: veil пропускает к ней только клиентов VPN (https://10.66.0.1/admin) и подписывает
+  # запросы общим ключом; без панели /admin отвечает 404.
+  veil-admin:
+    profiles: [admin]
+    container_name: veil-admin
+    labels:
+      net.veil.protocol: admin
+    image: ${VEIL_IMAGE_REGISTRY:-veil}/veil-server:${VEIL_IMAGE_TAG:-latest}
+    entrypoint: ["/sbin/tini", "--", "veil-server", "admin", "-listen", ":8080"]
+    restart: unless-stopped
+    depends_on: [veil]
+    volumes:
+      - veil-run:/run/veil
+      # страница «Протоколы» управляет контейнерами Veil через Docker. Доступ к Docker равен правам root
+      # на хосте, поэтому по умолчанию его нет: VEIL_ADMIN_DOCKER_SOCK=/var/run/docker.sock включает
+      - ${VEIL_ADMIN_DOCKER_SOCK:-/dev/null}:/var/run/docker.sock
+    networks:
+      - veil
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  veil:
+    enable_ipv6: true
+    driver_opts:
+      # MTU внешнего интерфейса сервера (облака часто дают 1450–1460); приложение выставляет его само
+      com.docker.network.driver.mtu: ${VEIL_DOCKER_MTU:-1500}
+    ipam:
+      config:
+        - subnet: ${VEIL_NET_IPV6:-fd76:6569:6c00:1::/64}
+
+volumes:
+  veil-data:
+  veil-run:

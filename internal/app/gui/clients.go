@@ -140,6 +140,11 @@ func (m *manager) openClient(name string) {
 			}, w)
 		}))
 		body.Add(kit.ListRow(L("Name and note", "Имя и заметка"), "", arrow(), func() { m.openClientEdit(c, func(newName string) { after(newName)(nil) }) }))
+		subSub := L("None: an ordinary device", "Нет: обычное устройство")
+		if len(c.Subnets) > 0 {
+			subSub = strings.Join(c.Subnets, ", ")
+		}
+		body.Add(kit.ListRow(L("Networks behind client (site)", "Сети за клиентом (site)"), subSub, arrow(), func() { m.openClientSubnets(c, func() { after("")(nil) }) }))
 		block, blockTitle := !c.Disabled, L("Block", "Заблокировать")
 		if c.Disabled {
 			blockTitle = L("Unblock", "Разблокировать")

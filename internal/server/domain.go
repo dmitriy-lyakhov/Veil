@@ -87,6 +87,9 @@ func (c *certManager) warm(domain string) {
 	c.log.Info("acme certificate ready", "domain", domain)
 }
 
+// NormalizeDomain — то же, что проверка домена в SetDomain: для начальной настройки без запущенного сервера.
+func NormalizeDomain(d string) (string, error) { return normalizeDomain(d) }
+
 func normalizeDomain(d string) (string, error) {
 	d = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(d)), ".")
 	d = strings.TrimPrefix(strings.TrimPrefix(d, "https://"), "http://")

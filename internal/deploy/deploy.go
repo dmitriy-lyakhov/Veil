@@ -64,6 +64,11 @@ type Request struct {
 	ServerBinDir  string
 	SiteLang      string
 	FrontSNI      string
+	// AdminPanel — для Veil в Docker: запустить веб-панель в отдельном контейнере veil-admin
+	// (иначе /admin отвечает 404). Без Docker панель работает внутри veil-server, как раньше.
+	AdminPanel bool
+	// Progress получает шаги установки для экрана прогресса (может быть nil).
+	Progress Progress
 }
 
 type Logf func(format string, args ...any)
@@ -78,13 +83,21 @@ func Deploy(ctx context.Context, req Request, logf Logf) (*config.Profile, error
 	if req.Name == "" {
 		req.Name = firstNonEmpty(req.IPv4, req.IPv6)
 	}
+	r := &remote{password: req.Password, prog: req.Progress}
+	r.step("ssh", "Подключение по SSH", req.User+"@"+firstNonEmpty(req.IPv4, req.IPv6), "active")
 	client, hostKey, err := connect(ctx, req, logf)
 	if err != nil {
+		r.step("ssh", "Подключение по SSH", err.Error(), "fail")
 		return nil, err
 	}
 	defer client.Close()
-	r := &remote{c: client, password: req.Password}
-	return r.install(ctx, req, hostKey, logf)
+	r.c = client
+	r.step("ssh", "Подключение по SSH", req.User+"@"+firstNonEmpty(req.IPv4, req.IPv6)+", ключ хоста "+hostKey, "done")
+	prof, err := r.install(ctx, req, hostKey, logf)
+	if err == nil {
+		r.step("profile", "Профиль сохранён", "Подключение к "+req.Name, "done")
+	}
+	return prof, err
 }
 
 func connect(ctx context.Context, req Request, logf Logf) (*ssh.Client, string, error) {
@@ -192,6 +205,10 @@ type remote struct {
 	c        *ssh.Client
 	password string
 	root     bool
+	ctr      string // непусто — команды выполняются внутри этого контейнера (docker exec)
+	prog     Progress
+	// adminPanel — при установке Veil в Docker поднять и контейнер veil-admin
+	adminPanel bool
 }
 
 func (r *remote) exec(cmd string, stdin []byte, asRoot bool) (string, error) {
@@ -200,6 +217,10 @@ func (r *remote) exec(cmd string, stdin []byte, asRoot bool) (string, error) {
 		return "", err
 	}
 	defer sess.Close()
+	if r.ctr != "" {
+		cmd = "docker exec -i " + shellQuote(r.ctr) + " sh -c " + shellQuote(cmd)
+		asRoot = true
+	}
 	full := cmd
 	if asRoot && !r.root {
 		if r.password != "" {
@@ -254,8 +275,17 @@ func (r *remote) install(ctx context.Context, req Request, hostKey string, logf 
 		return nil, err
 	}
 	logf("Сервер: %s → linux/%s", machine, arch)
-	if _, err := r.exec("command -v systemctl", nil, false); err != nil {
-		return nil, errors.New("на сервере нет systemd — пока поддерживаются только дистрибутивы с systemd")
+	r.step("system", "Проверка системы", r.osName()+", linux/"+arch, "done")
+	useDocker, err := r.veilDockerMode(logf)
+	if err != nil {
+		r.step("docker", "Docker", err.Error(), "fail")
+		return nil, err
+	}
+	r.adminPanel = req.AdminPanel
+	if !useDocker {
+		if _, err := r.exec("command -v systemctl", nil, false); err != nil {
+			return nil, errors.New("на сервере нет ни Docker, ни systemd — установка невозможна")
+		}
 	}
 	if _, err := r.exec("test -c /dev/net/tun || (mkdir -p /dev/net && mknod /dev/net/tun c 10 200)", nil, true); err != nil {
 		return nil, fmt.Errorf("на сервере недоступен /dev/net/tun (контейнер без TUN?): %w", err)
@@ -319,14 +349,29 @@ func (r *remote) install(ctx context.Context, req Request, hostKey string, logf 
 		logf("Админ-панель: %s — пароль не менялся (задан при первой установке)", prof.AdminURL)
 	}
 
-	logf("Загрузка серверного бинарника (%d КБ)…", len(bin)/1024)
-	if err := r.upload(bin, remoteBinary, "0755"); err != nil {
-		return nil, err
-	}
 	cfgJSON, err := json.MarshalIndent(srvCfg, "", "  ")
 	if err != nil {
 		return nil, err
 	}
+	if useDocker {
+		// /etc/veil хоста смонтирован в контейнер: конфиг пишется так же, как без Docker
+		if err := r.upload(cfgJSON, remoteConfig, "0600"); err != nil {
+			return nil, err
+		}
+		r.openFirewall(logf)
+		if err := r.runVeilContainer(req.ServerBinDir, logf); err != nil {
+			return nil, err
+		}
+		logf("Контейнер veil запущен, устройств на сервере: %d", len(srvCfg.Peers))
+		return prof, nil
+	}
+	logf("Загрузка серверного бинарника (%d КБ)…", len(bin)/1024)
+	r.step("files", "Загрузка veil-server", fmt.Sprintf("%s, %d КБ", remoteBinary, len(bin)/1024), "active")
+	if err := r.upload(bin, remoteBinary, "0755"); err != nil {
+		r.step("files", "Загрузка veil-server", err.Error(), "fail")
+		return nil, err
+	}
+	r.step("files", "Загрузка veil-server", fmt.Sprintf("%s, %d КБ", remoteBinary, len(bin)/1024), "done")
 	if err := r.upload(cfgJSON, remoteConfig, "0600"); err != nil {
 		return nil, err
 	}
@@ -335,13 +380,17 @@ func (r *remote) install(ctx context.Context, req Request, hostKey string, logf 
 	}
 	r.openFirewall(logf)
 	logf("Запуск службы veil…")
+	r.step("start", "Служба veil", "systemd, порты 80 и 443", "active")
 	if _, err := r.exec("systemctl daemon-reload && systemctl enable veil >/dev/null 2>&1; systemctl restart veil", nil, true); err != nil {
+		r.step("start", "Служба veil", err.Error(), "fail")
 		return nil, err
 	}
 	if err := r.waitActive(); err != nil {
 		journal, _ := r.exec("journalctl -u veil -n 30 --no-pager", nil, true)
+		r.step("start", "Служба veil", "служба не запустилась", "fail")
 		return nil, fmt.Errorf("служба не запустилась: %w\n%s", err, journal)
 	}
+	r.step("start", "Служба veil", "systemd, порты 80 и 443", "done")
 	logf("Служба veil запущена, устройств на сервере: %d", len(srvCfg.Peers))
 	return prof, nil
 }
@@ -431,8 +480,11 @@ func goArch(unameSM string) (string, error) {
 	return "", fmt.Errorf("архитектура %s пока не поддерживается", f[1])
 }
 
-func ServerBinary(dir, arch string) ([]byte, error) {
-	name := "veil-server-linux-" + arch
+func ServerBinary(dir, arch string) ([]byte, error) { return findBinary(dir, "veil-server", arch) }
+
+// findBinary ищет бинарник <base>-linux-<arch> в каталоге server рядом с приложением (и в VEIL_SERVER_DIR, dist/server).
+func findBinary(dir, base, arch string) ([]byte, error) {
+	name := base + "-linux-" + arch
 	var candidates []string
 	if dir != "" {
 		candidates = append(candidates, dir)

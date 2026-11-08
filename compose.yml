@@ -1,0 +1,19 @@
+# Veil и все протоколы в отдельных контейнерах: veil, veil-wireguard, veil-amneziawg, veil-openvpn, veil-ipsec.
+#
+#   cp .env.example .env            # адреса сервера и порты (можно оставить пустыми — определятся сами)
+#   docker compose up -d --build    # всё сразу
+#   docker compose up -d --build veil wireguard   # только нужные
+#
+# Клиенты:  docker compose exec veil client add phone
+#           docker compose exec wireguard client add laptop     (и amneziawg, openvpn, ipsec)
+# Каждый протокол можно поднять и отдельно: docker compose -f docker/<протокол>/compose.yml up -d --build
+# Подробно: docs/DOCKER.md
+
+name: veil
+
+include:
+  - path: docker/veil/compose.yml
+  - path: docker/wireguard/compose.yml
+  - path: docker/amneziawg/compose.yml
+  - path: docker/openvpn/compose.yml
+  - path: docker/ipsec/compose.yml

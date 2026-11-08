@@ -27,6 +27,7 @@ const usage = `Использование:
   veil deploy [флаги]          установить сервер по SSH и сохранить профиль
   veil import <файл|ссылка> [название]  добавить сервер из файла .veil или ссылки veil://
   veil connect <профиль|файл>  поднять туннель в терминале (нужны права root или администратора)
+  veil connect -gateway <профиль>  то же, и это устройство — шлюз своей локальной сети (site-to-site, Linux)
   veil unblock                 снять остатки блокировки KillSwitch после аварийного завершения
   veil list                    показать сохранённые профили
 `
@@ -123,6 +124,17 @@ func resolveProfile(arg string) (string, error) {
 }
 
 func cmdConnect(args []string, log *slog.Logger) error {
+	// -gateway: это устройство — шлюз своей локальной сети (site-to-site, client-to-site)
+	gateway := false
+	var rest []string
+	for _, a := range args {
+		if a == "-gateway" || a == "--gateway" {
+			gateway = true
+			continue
+		}
+		rest = append(rest, a)
+	}
+	args = rest
 	if len(args) != 1 {
 		return fmt.Errorf("укажите профиль")
 	}
@@ -150,6 +162,18 @@ func cmdConnect(args []string, log *slog.Logger) error {
 		return err
 	}
 	defer tn.Close()
+	if gateway {
+		restore, warns, err := netsys.EnableGateway(tn.Iface)
+		if err != nil {
+			return err
+		}
+		defer restore()
+		for _, w := range warns {
+			fmt.Println("Внимание:", w)
+		}
+		fmt.Printf("Режим шлюза: пересылка между локальной сетью и туннелем %s включена.\n", tn.Iface)
+		fmt.Println("Сети за этим устройством задаются на сервере: «Сети за клиентом» в приложении или админ-панели.")
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	t := time.NewTicker(10 * time.Second)

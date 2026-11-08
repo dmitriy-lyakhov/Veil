@@ -39,6 +39,7 @@ type adminState struct {
 	dummy    []byte
 	mu       sync.Mutex
 	sessions map[[32]byte]time.Time
+	meta     map[[32]byte]*sessMeta // адрес, браузер и последняя активность сессии
 	attempts map[string]*loginAttempts
 }
 
@@ -164,6 +165,20 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
+	// кто действует — для журнала событий; заголовки клиента не принимаются
+	ip := clientIP(r)
+	actor := defaultAdminUser
+	if c := s.adminCredentials(); c.User != "" {
+		actor = c.User
+	}
+	roleLogin := sessKey == [32]byte{}
+	if roleLogin {
+		actor = "клиент-администратор"
+	} else {
+		s.admin.touch(sessKey, ip, r.UserAgent())
+	}
+	r.Header.Set(actorHeader, actor)
+	r.Header.Set(actorIPHeader, ip)
 	switch {
 	case path == adminPrefix && r.Method == http.MethodGet:
 		h.Set("Content-Type", "text/html; charset=utf-8")
@@ -173,6 +188,10 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) {
 		serveAdminFont(w, strings.TrimPrefix(path, adminPrefix+"/fonts/"))
 	case strings.HasPrefix(path, adminPrefix+"/api/"):
 		api := strings.TrimPrefix(path, adminPrefix+"/api/")
+		if serveAdminLocal(w, r, api, adminLocal{st: s.admin, cur: sessKey, user: actor, ip: ip, roleUser: roleLogin, mode: "builtin",
+			event: func(kind, text string) { s.Event(kind, actor, ip, text) }}) {
+			return
+		}
 		if node := r.URL.Query().Get("node"); node != "" {
 			// общая админка каскада: запрос выполняется на выбранном узле (имена узлов через «>»)
 			s.proxyAdmin(w, r, api, strings.Split(node, ">"))
@@ -227,13 +246,21 @@ func (s *Server) adminLogin(w http.ResponseWriter, r *http.Request) {
 	if !userOK || !passOK || creds.PasswordHash == "" {
 		s.admin.recordFailure(ip, now)
 		s.log.Warn("admin login failed", "ip", ip)
+		s.Event("login", "—", ip, "Неудачный вход в панель")
+		if s.admin.blocked(ip, now) {
+			s.Event("login", "—", ip, "Вход с адреса заблокирован на 15 минут")
+		}
 		time.Sleep(loginFailDelay)
 		s.renderLogin(w, s.web.site.T("bad_login"))
 		return
 	}
 	tok := s.admin.newSession(now)
+	if raw, err := hex.DecodeString(tok); err == nil {
+		s.admin.touch(sha256.Sum256(raw), ip, r.UserAgent())
+	}
 	http.SetCookie(w, &http.Cookie{Name: adminCookie, Value: tok, Path: adminPrefix, MaxAge: int(adminSessionTTL.Seconds()), HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode})
 	s.log.Info("admin login", "ip", ip)
+	s.Event("login", user, ip, "Вход в панель")
 	http.Redirect(w, r, adminPrefix, http.StatusSeeOther)
 }
 

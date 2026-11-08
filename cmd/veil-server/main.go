@@ -23,8 +23,17 @@ import (
 )
 
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "ctl" {
-		os.Exit(ctl(os.Args[2:]))
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "ctl":
+			os.Exit(ctl(os.Args[2:]))
+		case "init":
+			os.Exit(initCmd(os.Args[2:]))
+		case "client":
+			os.Exit(clientCmd(os.Args[2:], server.DefaultControlSocket))
+		case "admin":
+			os.Exit(adminCmd(os.Args[2:]))
+		}
 	}
 	cfgPath := flag.String("config", "/etc/veil/server.json", "path to server config")
 	socket := flag.String("control", server.DefaultControlSocket, "control socket path")
@@ -91,11 +100,23 @@ func run(cfgPath, socket string, log *slog.Logger) error {
 		return err
 	}
 	defer ns.Teardown()
+	// связывание сетей: маршруты к сетям шлюзов и правила client/site-to-client/site
+	applyLinks := func() {
+		if err := ns.ApplyLinks(srv.LinkPolicy()); err != nil {
+			log.Warn("link rules", "err", err)
+		}
+	}
+	applyLinks()
+	srv.OnLinksChange(applyLinks)
 	stopCtl, err := srv.ServeControl(socket)
 	if err != nil {
 		return err
 	}
 	defer stopCtl()
+	// ключ для отдельной админ-панели (контейнер veil-admin читает его из общего каталога сокета)
+	if err := srv.WriteAdminKey(server.AdminKeyPath(socket)); err != nil {
+		log.Warn("admin key", "err", err)
+	}
 
 	hs, err := srv.HTTPServer()
 	if err != nil {
@@ -125,6 +146,7 @@ func run(cfgPath, socket string, log *slog.Logger) error {
 		}
 	}
 	log.Info("veil server started", "tcp", ln.Addr().String(), "peers", len(cfg.Peers), "iface", ifname, "masked", srv.FrontConfig() != nil)
+	srv.Event("system", "veil", "", fmt.Sprintf("veil-server %s запущен, клиентов: %d", server.Version, len(cfg.Peers)))
 	select {
 	case <-ctx.Done():
 	case err := <-errc:

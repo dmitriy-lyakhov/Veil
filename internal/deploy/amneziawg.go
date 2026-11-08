@@ -189,15 +189,51 @@ func awgScript(o AWGInstall, serverAddr string) string {
 
 // AmneziaWGInstalled — есть ли на сервере установка Veil-AmneziaWG.
 func (s *Session) AmneziaWGInstalled() bool {
+	if s.inDocker("amneziawg") {
+		return true
+	}
 	_, err := s.r.exec("test -f "+awgConf, nil, true)
 	return err == nil
 }
 
+// awgEnv — переменные compose для контейнера AmneziaWG с параметрами, выбранными в приложении.
+func awgEnv(o AWGInstall, host string) map[string]string {
+	a := o.AWG
+	env := map[string]string{
+		"AWG_PORT": strconv.Itoa(o.Port), "AWG_SUBNET": o.Subnet, "VEIL_HOST": host, "AWG_FIRST_CLIENT": "", "VEIL_DETECT_IP": "0",
+		"AWG_JC": strconv.Itoa(a.Jc), "AWG_JMIN": strconv.Itoa(a.Jmin), "AWG_JMAX": strconv.Itoa(a.Jmax),
+		"AWG_S1": strconv.Itoa(a.S1), "AWG_S2": strconv.Itoa(a.S2),
+		"AWG_H1": a.H1, "AWG_H2": a.H2, "AWG_H3": a.H3, "AWG_H4": a.H4,
+	}
+	if a.S3 != 0 {
+		env["AWG_S3"] = strconv.Itoa(a.S3)
+	}
+	if a.S4 != 0 {
+		env["AWG_S4"] = strconv.Itoa(a.S4)
+	}
+	return env
+}
+
 // InstallAmneziaWG ставит AmneziaWG на сервер (если ещё не стоит) и выдаёт первого клиента.
+// По возможности — в контейнер veil-amneziawg (amneziawg-go, модуль ядра не нужен), иначе из PPA Amnezia.
 func (s *Session) InstallAmneziaWG(o AWGInstall, host string, logf Logf) (*wgconf.Config, error) {
 	o, srvAddr, err := ValidateAWGInstall(o)
 	if err != nil {
 		return nil, err
+	}
+	if s.inDocker("amneziawg") {
+		logf("AmneziaWG уже работает в контейнере — выдаю клиента")
+		return s.AmneziaWGAddClient("Клиент 1", host)
+	}
+	if strings.HasSuffix(o.Subnet, "/24") {
+		docker, err := s.tryDocker("amneziawg", "AmneziaWG", "test -f "+awgConf, awgEnv(o, host), logf)
+		if err != nil {
+			return nil, err
+		}
+		if docker {
+			logf("AmneziaWG запущен в контейнере %s, порт %d/UDP", containers["amneziawg"].name, o.Port)
+			return s.AmneziaWGAddClient("Клиент 1", host)
+		}
 	}
 	logf("Установка AmneziaWG на сервер (может занять несколько минут: собирается модуль ядра)…")
 	out, err := s.r.exec(awgScript(o, srvAddr), nil, true)
@@ -216,11 +252,12 @@ func (s *Session) InstallAmneziaWG(o AWGInstall, host string, logf Logf) (*wgcon
 // AmneziaWGAddClient добавляет клиента на сервер и возвращает его готовую конфигурацию
 // (с теми же Jc/Jmin/Jmax, S1, S2, H1–H4, что на сервере).
 func (s *Session) AmneziaWGAddClient(name, host string) (*wgconf.Config, error) {
-	conf, err := s.r.exec("cat "+awgConf, nil, true)
+	r := s.proto("amneziawg")
+	conf, err := r.exec("cat "+awgConf, nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось прочитать конфиг AmneziaWG на сервере: %w", err)
 	}
-	ip, _, err := freeClientIP(conf)
+	ip, iface, err := freeClientIP(conf)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +265,7 @@ func (s *Session) AmneziaWGAddClient(name, host string) (*wgconf.Config, error) 
 	if port == 0 {
 		return nil, errors.New("в конфиге сервера нет ListenPort")
 	}
-	srvPub, err := s.r.exec("awg show "+AWGIface+" public-key", nil, true)
+	srvPub, err := r.exec("awg show "+AWGIface+" public-key", nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("служба AmneziaWG не запущена: %w", err)
 	}
@@ -244,22 +281,18 @@ func (s *Session) AmneziaWGAddClient(name, host string) (*wgconf.Config, error) 
 	if label == "" {
 		label = "client"
 	}
-	peer := fmt.Sprintf("\n# veil: %s\n[Peer]\nPublicKey = %s\nPresharedKey = %s\nAllowedIPs = %s/32\n", label, pub, psk, ip)
-	if _, err := s.r.exec("cat >> "+awgConf, []byte(peer), true); err != nil {
+	allowed, addrs, dns := clientAddrs(conf, ip, iface)
+	peer := fmt.Sprintf("\n# veil: %s\n[Peer]\nPublicKey = %s\nPresharedKey = %s\nAllowedIPs = %s\n", label, pub, psk, allowed)
+	if _, err := r.exec("cat >> "+awgConf, []byte(peer), true); err != nil {
 		return nil, err
 	}
 	apply := "awg-quick strip " + AWGIface + " > /tmp/veilawg.sync && awg syncconf " + AWGIface + " /tmp/veilawg.sync; rm -f /tmp/veilawg.sync"
-	if _, err := s.r.exec(apply, nil, true); err != nil {
+	if _, err := r.exec(apply, nil, true); err != nil {
 		return nil, fmt.Errorf("не удалось применить клиента: %w", err)
 	}
-	endpoint := fmt.Sprintf("%s:%d", host, port)
-	if a, err := netip.ParseAddr(host); err == nil && a.Is6() {
-		endpoint = fmt.Sprintf("[%s]:%d", host, port)
-	}
 	cfg := &wgconf.Config{
-		PrivateKey: priv, Address: []netip.Prefix{netip.PrefixFrom(ip, 32)},
-		DNS: []netip.Addr{netip.MustParseAddr("1.1.1.1"), netip.MustParseAddr("1.0.0.1")}, MTU: awgClientMTU,
-		PublicKey: strings.TrimSpace(srvPub), PresharedKey: psk, Endpoint: endpoint,
+		PrivateKey: priv, Address: addrs, DNS: dns, MTU: awgClientMTU,
+		PublicKey: strings.TrimSpace(srvPub), PresharedKey: psk, Endpoint: endpointFor(host, port),
 		AllowedIPs: []netip.Prefix{netip.MustParsePrefix("0.0.0.0/0"), netip.MustParsePrefix("::/0")}, Keepalive: 25,
 		AWG: obfs,
 	}
@@ -268,6 +301,9 @@ func (s *Session) AmneziaWGAddClient(name, host string) (*wgconf.Config, error) 
 
 // RemoveAmneziaWG останавливает AmneziaWG и удаляет настройки Veil-AmneziaWG (пакеты остаются).
 func (s *Session) RemoveAmneziaWG() error {
+	if s.inDocker("amneziawg") {
+		return s.r.removeContainer("amneziawg")
+	}
 	const script = `systemctl disable --now awg-quick@` + AWGIface + ` >/dev/null 2>&1 || true
 rm -f ` + awgConf + ` /etc/sysctl.d/99-veilawg.conf`
 	_, err := s.r.exec(script, nil, true)

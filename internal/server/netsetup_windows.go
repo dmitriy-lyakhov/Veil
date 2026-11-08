@@ -14,3 +14,6 @@ func SetupNetwork(*config.Server, string, *slog.Logger) (*NetSetup, error) {
 }
 
 func (n *NetSetup) Teardown() {}
+
+// ApplyLinks — правила связывания сетей; серверная часть работает только на Linux.
+func (n *NetSetup) ApplyLinks(LinkPolicy) error { return nil }

@@ -42,6 +42,7 @@ type ClientInfo struct {
 	Created       time.Time     `json:"created,omitzero"`
 	Disabled      bool          `json:"disabled"`
 	Role          string        `json:"role,omitempty"` // "user" | "admin" | "" (клиент без роли — вход в панель по паролю)
+	Subnets       []string      `json:"subnets,omitempty"` // сети за клиентом-шлюзом
 	Route         []string      `json:"route"`
 	RelayOf       string        `json:"relay_of,omitempty"`
 	Online        bool          `json:"online"`
@@ -87,6 +88,7 @@ type ServerInfo struct {
 	Cert       certStatus `json:"cert"`
 	AdminURL   string     `json:"admin_url"`
 	Front      FrontInfo  `json:"front"`
+	Links      config.Links `json:"links"`
 	Started    time.Time  `json:"started"`
 	Clients    int        `json:"clients"`
 	Online     int        `json:"online"`
@@ -174,6 +176,7 @@ func (s *Server) State() State {
 		Cert:       s.certs.Status(),
 		AdminURL:   provision.AdminURL(s.cfg),
 		Front:      s.frontInfoLocked(),
+		Links:      s.cfg.EffectiveLinks(),
 		Started:    s.started,
 	}, Clients: []ClientInfo{}, Relays: []RelayInfo{}, Upstreams: []UpstreamInfo{}, Latency: latency, SiteRepo: s.siteRepo.get()}
 	relayClients := map[string]int{}
@@ -181,7 +184,7 @@ func (s *Server) State() State {
 	for _, p := range s.cfg.Peers {
 		ci := ClientInfo{
 			Name: p.Name, Note: p.Note, Address4: p.Address4, Address6: p.Address6, Created: p.Created,
-			Disabled: p.Disabled, Role: p.Role, Route: p.Route, RelayOf: p.RelayOf, Sessions: live[p.Name],
+			Disabled: p.Disabled, Role: p.Role, Route: p.Route, RelayOf: p.RelayOf, Sessions: live[p.Name], Subnets: p.Subnets,
 		}
 		if ci.Route == nil {
 			ci.Route = []string{}
@@ -319,7 +322,11 @@ func (s *Server) AddClientWithKey(ctx context.Context, name, note string, route 
 }
 
 func (s *Server) RemoveClient(ctx context.Context, name string) error {
-	return s.removePeer(ctx, name, "")
+	err := s.removePeer(ctx, name, "")
+	if err == nil {
+		s.linksChanged() // вместе с клиентом уходят и сети за ним
+	}
+	return err
 }
 
 func (s *Server) ReissueClient(ctx context.Context, name string) (*config.Profile, error) {
@@ -434,6 +441,9 @@ func (s *Server) UpdateClient(name string, u ClientUpdate) error {
 	}
 	if !disabled && wasDisabled {
 		s.log.Info("client unblocked", "name", newName)
+	}
+	if disabled != wasDisabled {
+		s.linksChanged() // сети за заблокированным шлюзом не маршрутизируются
 	}
 	return nil
 }

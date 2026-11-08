@@ -10,13 +10,22 @@ LDFLAGS := -s -w
 
 WINDIR  := $(DIST)/windows
 
-.PHONY: all server app app-universal icns macos-app dmg portable macos-release windows test clean
+.PHONY: all server docker app app-universal icns macos-app dmg portable macos-release windows test clean
 
 all: server app
 
 server:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -trimpath -ldflags '$(LDFLAGS)' -o $(DIST)/server/veil-server-linux-amd64 ./cmd/veil-server
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) build -trimpath -ldflags '$(LDFLAGS)' -o $(DIST)/server/veil-server-linux-arm64 ./cmd/veil-server
+	# userspace WireGuard и AmneziaWG для контейнеров (образы собираются на сервере из этих бинарников)
+	for a in amd64 arm64; do \
+		CGO_ENABLED=0 GOOS=linux GOARCH=$$a $(GO) build -trimpath -ldflags '$(LDFLAGS)' -o $(DIST)/server/wireguard-go-linux-$$a golang.zx2c4.com/wireguard && \
+		CGO_ENABLED=0 GOOS=linux GOARCH=$$a $(GO) build -trimpath -ldflags '$(LDFLAGS)' -o $(DIST)/server/amneziawg-go-linux-$$a github.com/amnezia-vpn/amneziawg-go || exit 1; \
+	done
+
+# Docker: образы протоколов из исходников (docker compose в корне репозитория)
+docker:
+	docker compose build
 
 app:
 	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o $(DIST)/veil ./cmd/veil
@@ -38,7 +47,7 @@ macos-app: server app-universal icns
 	rm -rf $(APP)
 	mkdir -p $(APP)/Contents/MacOS $(APP)/Contents/Resources/server
 	cp $(DIST)/veil-universal $(APP)/Contents/MacOS/veil
-	cp $(DIST)/server/veil-server-linux-* $(APP)/Contents/Resources/server/
+	cp $(DIST)/server/*-linux-* $(APP)/Contents/Resources/server/
 	cp $(DIST)/Veil.icns $(APP)/Contents/Resources/Veil.icns
 	cp packaging/macos/icon.png $(APP)/Contents/Resources/icon.png
 	sed 's/@VERSION@/$(VERSION)/g' packaging/macos/Info.plist > $(APP)/Contents/Info.plist
@@ -74,4 +83,4 @@ windows: server
 	mkdir -p $(WINDIR)/server
 	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 $(GO) build -trimpath -ldflags '$(LDFLAGS) -H=windowsgui' -o $(WINDIR)/veil.exe ./cmd/veil
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GO) build -trimpath -ldflags '$(LDFLAGS)' -o $(WINDIR)/veil-cli.exe ./cmd/veil-cli
-	cp $(DIST)/server/veil-server-linux-* $(WINDIR)/server/
+	cp $(DIST)/server/*-linux-* $(WINDIR)/server/

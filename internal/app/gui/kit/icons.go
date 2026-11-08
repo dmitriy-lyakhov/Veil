@@ -42,6 +42,7 @@ var iconPaths = map[string]string{
 	"user":     "M9 3h6v6H9zM4 21v-6h16v6",
 	"globe":    "M3 12h18M12 3v18M5 5h14v14H5z",
 	"empty":    "M3 8l9-5 9 5v9l-9 5-9-5zM3 8l9 5 9-5M12 13v9",
+	"minus":    "M5 12h14",
 }
 
 // Знак Veil: два слоя вуали (красный и серый) и светлый треугольник на пересечении.

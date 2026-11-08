@@ -1,0 +1,13 @@
+.git
+.claude
+dist
+apps
+mobile
+packaging
+docs
+test
+tools
+scripts
+**/*.apk
+**/*.aar
+**/*.exe

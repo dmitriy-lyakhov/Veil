@@ -1,0 +1,60 @@
+# IPsec/IKEv2 (strongSwan, UDP 500 и 4500, пул 10.10.0.0/24 + ULA, EAP-MSCHAPv2 или сертификаты).
+# Отдельно:  docker compose -f docker/ipsec/compose.yml up -d --build
+# Клиенты:   docker compose exec ipsec client add laptop | add-cert NAME | list | remove NAME
+
+name: veil-ipsec
+
+services:
+  ipsec:
+    container_name: veil-ipsec
+    labels:
+      net.veil.protocol: ipsec
+    build:
+      context: ../..
+      dockerfile: docker/ipsec/Dockerfile
+    image: ${VEIL_IMAGE_REGISTRY:-veil}/ipsec:${VEIL_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    # charon управляет политиками и SA ядра (XFRM)
+    cap_add: [NET_ADMIN]
+    sysctls:
+      net.ipv4.ip_forward: 1
+      net.ipv6.conf.all.disable_ipv6: 0
+      net.ipv6.conf.default.disable_ipv6: 0
+      net.ipv6.conf.all.forwarding: 1
+    environment:
+      VEIL_HOST: ${VEIL_HOST:-}
+      VEIL_DETECT_IP: ${VEIL_DETECT_IP:-1}
+      # дополнительные имена и адреса в сертификат сервера (через пробел)
+      VEIL_PUBLIC_IPV4: ${VEIL_PUBLIC_IPV4:-}
+      VEIL_PUBLIC_IPV6: ${VEIL_PUBLIC_IPV6:-}
+      IPSEC_EXTRA_SANS: ${IPSEC_EXTRA_SANS:-}
+      IPSEC_POOL: ${IPSEC_POOL:-10.10.0.0/24}
+      IPSEC_FIRST_CLIENT: ${IPSEC_FIRST_CLIENT-client}
+    ports:
+      - "500:500/udp"
+      - "4500:4500/udp"
+    volumes:
+      - ipsec-data:/etc/swanctl
+    networks:
+      - ipsec
+    healthcheck:
+      test: ["CMD", "swanctl", "--stats"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  ipsec:
+    enable_ipv6: true
+    driver_opts:
+      # MTU внешнего интерфейса сервера (облака часто дают 1450–1460); приложение выставляет его само
+      com.docker.network.driver.mtu: ${VEIL_DOCKER_MTU:-1500}
+    ipam:
+      config:
+        - subnet: ${IPSEC_NET_IPV6:-fd76:6569:6c00:5::/64}
+
+volumes:
+  ipsec-data:

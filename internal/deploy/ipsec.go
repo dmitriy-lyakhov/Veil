@@ -190,6 +190,9 @@ func ipsecScript(host string) string {
 
 // IPsecInstalled — есть ли на сервере установка Veil-IPsec.
 func (s *Session) IPsecInstalled() bool {
+	if s.inDocker("ipsec") {
+		return true
+	}
 	_, err := s.r.exec(ipsecDirSh+`test -f "$D/conf.d/veil.conf"`, nil, true)
 	return err == nil
 }
@@ -198,6 +201,22 @@ func (s *Session) IPsecInstalled() bool {
 func (s *Session) InstallIPsec(host string, logf Logf) (*ipsecconf.Config, error) {
 	if err := ValidateIPsecHost(host); err != nil {
 		return nil, err
+	}
+	if s.inDocker("ipsec") {
+		logf("IPsec уже работает в контейнере — выдаю клиента")
+		return s.IPsecAddClient("Клиент 1", host)
+	}
+	env := map[string]string{"VEIL_HOST": host, "IPSEC_POOL": ipsecPool, "IPSEC_FIRST_CLIENT": "", "VEIL_DETECT_IP": "0"}
+	if s.Profile != nil {
+		env["VEIL_PUBLIC_IPV4"], env["VEIL_PUBLIC_IPV6"] = s.Profile.IPv4, s.Profile.IPv6
+	}
+	docker, err := s.tryDocker("ipsec", "IPsec", ipsecDirSh+`test -f "$D/conf.d/veil.conf"`, env, logf)
+	if err != nil {
+		return nil, err
+	}
+	if docker {
+		logf("IPsec запущен в контейнере %s, порты 500 и 4500/UDP", containers["ipsec"].name)
+		return s.IPsecAddClient("Клиент 1", host)
 	}
 	logf("Установка IPsec (strongSwan) на сервер…")
 	if _, err := s.r.exec(ipsecScript(host), nil, true); err != nil {
@@ -251,7 +270,7 @@ func parseIPsecUsers(out string) []string {
 
 // IPsecUsers — список логинов EAP на сервере.
 func (s *Session) IPsecUsers() ([]string, error) {
-	out, err := s.r.exec(ipsecDirSh+`grep '^# veil-user: ' "$D/conf.d/veil-users.conf" || true`, nil, true)
+	out, err := s.proto("ipsec").exec(ipsecDirSh+`grep '^# veil-user: ' "$D/conf.d/veil-users.conf" || true`, nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +278,7 @@ func (s *Session) IPsecUsers() ([]string, error) {
 }
 
 func (s *Session) ipsecCA() (string, error) {
-	return s.r.exec(ipsecDirSh+`cat "$D/x509ca/veil-ca.pem"`, nil, true)
+	return s.proto("ipsec").exec(ipsecDirSh+`cat "$D/x509ca/veil-ca.pem"`, nil, true)
 }
 
 // IPsecAddClient добавляет клиента (логин и пароль EAP) и возвращает его данные.
@@ -277,7 +296,7 @@ func (s *Session) IPsecAddClient(name, host string) (*ipsecconf.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("не удалось прочитать сертификат центра: %w", err)
 	}
-	if _, err := s.r.exec(ipsecDirSh+`cat >> "$D/conf.d/veil-users.conf" && swanctl --load-creds >/dev/null`, []byte(ipsecUserBlock(user, pass)), true); err != nil {
+	if _, err := s.proto("ipsec").exec(ipsecDirSh+`cat >> "$D/conf.d/veil-users.conf" && swanctl --load-creds >/dev/null`, []byte(ipsecUserBlock(user, pass)), true); err != nil {
 		return nil, fmt.Errorf("не удалось добавить клиента: %w", err)
 	}
 	cfg := &ipsecconf.Config{Server: host, CAPEM: strings.TrimSpace(ca) + "\n", Auth: ipsecconf.AuthEAP,
@@ -306,7 +325,7 @@ func (s *Session) IPsecRemoveClient(user string) error {
 	if user != ipsecUserName(user) {
 		return errors.New("некорректное имя клиента")
 	}
-	_, err := s.r.exec(ipsecDirSh+`sed -i '/^# veil-user: `+user+`$/,/^}$/d' "$D/conf.d/veil-users.conf" && swanctl --load-all >/dev/null && swanctl --terminate --ike veil-eap >/dev/null 2>&1; true`, nil, true)
+	_, err := s.proto("ipsec").exec(ipsecDirSh+`sed -i '/^# veil-user: `+user+`$/,/^}$/d' "$D/conf.d/veil-users.conf" && swanctl --load-all >/dev/null && swanctl --terminate --ike veil-eap >/dev/null 2>&1; true`, nil, true)
 	return err
 }
 
@@ -332,7 +351,7 @@ func (s *Session) IPsecAddCertClient(name, host string) (*ipsecconf.Config, erro
 	if err != nil {
 		return nil, fmt.Errorf("не удалось прочитать сертификат центра: %w", err)
 	}
-	out, err := s.r.exec(strings.NewReplacer("@NAME@", n, "@PASS@", pass).Replace(ipsecCertScript), nil, true)
+	out, err := s.proto("ipsec").exec(strings.NewReplacer("@NAME@", n, "@PASS@", pass).Replace(ipsecCertScript), nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось выпустить сертификат клиента: %w", err)
 	}
@@ -347,6 +366,9 @@ func (s *Session) IPsecAddCertClient(name, host string) (*ipsecconf.Config, erro
 
 // RemoveIPsec останавливает IPsec и удаляет настройки, сертификаты, ключ центра и пользователей Veil (пакеты остаются).
 func (s *Session) RemoveIPsec() error {
+	if s.inDocker("ipsec") {
+		return s.r.removeContainer("ipsec")
+	}
 	const script = ipsecDirSh + `UNIT=strongswan
 systemctl list-unit-files 2>/dev/null | grep -q '^strongswan-swanctl.service' && UNIT=strongswan-swanctl
 systemctl disable --now veil-ipsec-nat.service >/dev/null 2>&1 || true

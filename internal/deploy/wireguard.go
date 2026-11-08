@@ -110,15 +110,34 @@ func wgScript(o WGInstall, serverAddr string) string {
 
 // WireGuardInstalled — есть ли на сервере установка Veil-WireGuard.
 func (s *Session) WireGuardInstalled() bool {
+	if s.inDocker("wireguard") {
+		return true
+	}
 	_, err := s.r.exec("test -f "+wgConf, nil, true)
 	return err == nil
 }
 
 // InstallWireGuard ставит WireGuard на сервер (если ещё не стоит) и выдаёт первого клиента.
+// По возможности — в контейнер veil-wireguard (Docker ставится сам), иначе службой wg-quick.
 func (s *Session) InstallWireGuard(o WGInstall, host string, logf Logf) (*wgconf.Config, error) {
 	o, srvAddr, err := ValidateWGInstall(o)
 	if err != nil {
 		return nil, err
+	}
+	if s.inDocker("wireguard") {
+		logf("WireGuard уже работает в контейнере — выдаю клиента")
+		return s.WireGuardAddClient("Клиент 1", host)
+	}
+	if strings.HasSuffix(o.Subnet, "/24") {
+		env := map[string]string{"WG_PORT": strconv.Itoa(o.Port), "WG_SUBNET": o.Subnet, "VEIL_HOST": host, "WG_FIRST_CLIENT": "", "VEIL_DETECT_IP": "0"}
+		docker, err := s.tryDocker("wireguard", "WireGuard", "test -f "+wgConf, env, logf)
+		if err != nil {
+			return nil, err
+		}
+		if docker {
+			logf("WireGuard запущен в контейнере %s, порт %d/UDP", containers["wireguard"].name, o.Port)
+			return s.WireGuardAddClient("Клиент 1", host)
+		}
 	}
 	logf("Установка WireGuard на сервер…")
 	out, err := s.r.exec(wgScript(o, srvAddr), nil, true)
@@ -198,7 +217,8 @@ var wgNameBad = regexp.MustCompile(`[^\p{L}\p{N} ._@-]`)
 
 // WireGuardAddClient добавляет клиента на сервер и возвращает его готовую конфигурацию.
 func (s *Session) WireGuardAddClient(name, host string) (*wgconf.Config, error) {
-	conf, err := s.r.exec("cat "+wgConf, nil, true)
+	r := s.proto("wireguard")
+	conf, err := r.exec("cat "+wgConf, nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось прочитать конфиг WireGuard на сервере: %w", err)
 	}
@@ -215,7 +235,7 @@ func (s *Session) WireGuardAddClient(name, host string) (*wgconf.Config, error) 
 	if port == 0 {
 		return nil, errors.New("в конфиге сервера нет ListenPort")
 	}
-	srvPub, err := s.r.exec("wg show "+WGIface+" public-key", nil, true)
+	srvPub, err := r.exec("wg show "+WGIface+" public-key", nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("служба WireGuard не запущена: %w", err)
 	}
@@ -231,30 +251,48 @@ func (s *Session) WireGuardAddClient(name, host string) (*wgconf.Config, error) 
 	if label == "" {
 		label = "client"
 	}
-	peer := fmt.Sprintf("\n# veil: %s\n[Peer]\nPublicKey = %s\nPresharedKey = %s\nAllowedIPs = %s/32\n", label, pub, psk, ip)
-	if _, err := s.r.exec("cat >> "+wgConf, []byte(peer), true); err != nil {
+	allowed, addrs, dns := clientAddrs(conf, ip, iface)
+	peer := fmt.Sprintf("\n# veil: %s\n[Peer]\nPublicKey = %s\nPresharedKey = %s\nAllowedIPs = %s\n", label, pub, psk, allowed)
+	if _, err := r.exec("cat >> "+wgConf, []byte(peer), true); err != nil {
 		return nil, err
 	}
 	apply := "wg-quick strip " + WGIface + " > /tmp/veilwg.sync && wg syncconf " + WGIface + " /tmp/veilwg.sync; rm -f /tmp/veilwg.sync"
-	if _, err := s.r.exec(apply, nil, true); err != nil {
+	if _, err := r.exec(apply, nil, true); err != nil {
 		return nil, fmt.Errorf("не удалось применить клиента: %w", err)
 	}
-	endpoint := fmt.Sprintf("%s:%d", host, port)
-	if a, err := netip.ParseAddr(host); err == nil && a.Is6() {
-		endpoint = fmt.Sprintf("[%s]:%d", host, port)
-	}
 	cfg := &wgconf.Config{
-		PrivateKey: priv, Address: []netip.Prefix{netip.PrefixFrom(ip, 32)},
-		DNS: []netip.Addr{netip.MustParseAddr("1.1.1.1"), netip.MustParseAddr("1.0.0.1")}, MTU: wgClientMTU,
-		PublicKey: strings.TrimSpace(srvPub), PresharedKey: psk, Endpoint: endpoint,
+		PrivateKey: priv, Address: addrs, DNS: dns, MTU: wgClientMTU,
+		PublicKey: strings.TrimSpace(srvPub), PresharedKey: psk, Endpoint: endpointFor(host, port),
 		AllowedIPs: []netip.Prefix{netip.MustParsePrefix("0.0.0.0/0"), netip.MustParsePrefix("::/0")}, Keepalive: 25,
 	}
-	_ = iface
 	return cfg, cfg.Validate()
+}
+
+func endpointFor(host string, port int) string {
+	if a, err := netip.ParseAddr(host); err == nil && a.Is6() {
+		return fmt.Sprintf("[%s]:%d", host, port)
+	}
+	return fmt.Sprintf("%s:%d", host, port)
+}
+
+// clientAddrs — адреса клиента: IPv4 и, если у интерфейса сервера есть ULA-подсеть (контейнеры Veil), IPv6.
+func clientAddrs(conf string, ip netip.Addr, iface netip.Prefix) (allowed string, addrs []netip.Prefix, dns []netip.Addr) {
+	allowed = netip.PrefixFrom(ip, 32).String()
+	addrs = []netip.Prefix{netip.PrefixFrom(ip, 32)}
+	dns = []netip.Addr{netip.MustParseAddr("1.1.1.1"), netip.MustParseAddr("1.0.0.1")}
+	if a6, ok := ula6For(conf, ip, iface); ok {
+		allowed += ", " + netip.PrefixFrom(a6, 128).String()
+		addrs = append(addrs, netip.PrefixFrom(a6, 128))
+		dns = append(dns, netip.MustParseAddr("2606:4700:4700::1111"))
+	}
+	return allowed, addrs, dns
 }
 
 // RemoveWireGuard останавливает WireGuard и удаляет настройки Veil-WireGuard (пакеты остаются).
 func (s *Session) RemoveWireGuard() error {
+	if s.inDocker("wireguard") {
+		return s.r.removeContainer("wireguard")
+	}
 	const script = `systemctl disable --now wg-quick@` + WGIface + ` >/dev/null 2>&1 || true
 rm -f ` + wgConf + ` /etc/sysctl.d/99-veilwg.conf`
 	_, err := s.r.exec(script, nil, true)

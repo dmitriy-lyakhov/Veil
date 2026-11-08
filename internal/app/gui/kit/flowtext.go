@@ -33,6 +33,12 @@ func NewFlowText(s string, size float32, c color.Color, bold bool, lineHeight fl
 // proseFlush — пояснение 13 px в строках списков (высота строки 17,1 px, приглушённый цвет).
 func ProseFlush(s string) fyne.CanvasObject { return NewFlowText(s, 13, ColMuted, false, 17.1) }
 
+// SetColor меняет цвет текста.
+func (f *flowText) SetColor(c color.Color) {
+	f.col = c
+	f.Refresh()
+}
+
 func (f *flowText) SetText(s string) {
 	f.text = s
 	f.lines = nil
@@ -55,21 +61,21 @@ func (f *flowText) wrap(w float32) []string {
 			if cur != "" {
 				try = cur + " " + word
 			}
-			if cur == "" || fyne.MeasureText(try, f.size, f.style).Width <= w {
-				cur = try
-				for fyne.MeasureText(cur, f.size, f.style).Width > w && len([]rune(cur)) > 1 {
-					r := []rune(cur)
-					k := len(r) - 1
-					for k > 1 && fyne.MeasureText(string(r[:k]), f.size, f.style).Width > w {
-						k--
-					}
-					out = append(out, string(r[:k]))
-					cur = string(r[k:])
-				}
-				continue
+			if cur != "" && fyne.MeasureText(try, f.size, f.style).Width > w {
+				out = append(out, cur)
+				try = word
 			}
-			out = append(out, cur)
-			cur = word
+			cur = try
+			// слово длиннее строки (адрес, имя без пробелов) режется по символам
+			for fyne.MeasureText(cur, f.size, f.style).Width > w && len([]rune(cur)) > 1 {
+				r := []rune(cur)
+				k := len(r) - 1
+				for k > 1 && fyne.MeasureText(string(r[:k]), f.size, f.style).Width > w {
+					k--
+				}
+				out = append(out, string(r[:k]))
+				cur = string(r[k:])
+			}
 		}
 		out = append(out, cur)
 	}

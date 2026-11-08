@@ -89,6 +89,7 @@ func (u *ui) newSubPage(title string) *subPage {
 type subFrame struct {
 	bg, back, title, right, pill, line, body fyne.CanvasObject
 	titleW                                   *kit.FitText
+	maxW                                     float32 // ширина колонки на широком окне (0 — 560 px)
 }
 
 func (f *subFrame) MinSize([]fyne.CanvasObject) fyne.Size { return fyne.NewSize(300, 240) }
@@ -119,7 +120,11 @@ func (f *subFrame) Layout(_ []fyne.CanvasObject, s fyne.Size) {
 		f.titleW.Move(fyne.NewPos(68, 28))
 		f.right.Resize(rs)
 		f.right.Move(fyne.NewPos(s.Width-24-ps.Width-8-rs.Width, (hdr-rs.Height)/2))
-		w := min(560, s.Width-48)
+		colW := f.maxW
+		if colW <= 0 {
+			colW = 560
+		}
+		w := min(colW, s.Width-48)
 		f.body.Resize(fyne.NewSize(w+16, s.Height-92))
 		f.body.Move(fyne.NewPos(16, 92))
 		return
@@ -202,6 +207,15 @@ func (p *subPage) Close() {
 		p.OnClosed()
 	}
 	p.run(false)
+}
+
+// setMaxWidth расширяет колонку содержимого на широком окне (страницы в две колонки).
+func (p *subPage) setMaxWidth(w float32) {
+	if p.subs.maxW == w {
+		return
+	}
+	p.subs.maxW = w
+	p.root.Objects[0].Refresh() // контейнер шапки и тела: перекладывается по новой ширине
 }
 
 // SetRight ставит элемент справа в шапке (например, кнопку меню); nil убирает.

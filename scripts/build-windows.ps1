@@ -18,6 +18,9 @@ Build 'windows' 'amd64' '1' "$flags -H=windowsgui" (Join-Path $out 'veil.exe') '
 Build 'windows' 'amd64' '0' $flags (Join-Path $out 'veil-cli.exe') './cmd/veil-cli'
 foreach ($arch in 'amd64', 'arm64') {
     Build 'linux' $arch '0' $flags (Join-Path $out "server\veil-server-linux-$arch") './cmd/veil-server'
+    # userspace WireGuard и AmneziaWG для контейнеров (образы собираются на сервере из этих бинарников)
+    Build 'linux' $arch '0' $flags (Join-Path $out "server\wireguard-go-linux-$arch") 'golang.zx2c4.com/wireguard'
+    Build 'linux' $arch '0' $flags (Join-Path $out "server\amneziawg-go-linux-$arch") 'github.com/amnezia-vpn/amneziawg-go'
 }
 Remove-Item Env:GOOS, Env:GOARCH, Env:CGO_ENABLED -ErrorAction SilentlyContinue
 Write-Host "Готово: $out"

@@ -214,15 +214,33 @@ func ovClientName(label string) string {
 
 // OpenVPNInstalled — есть ли на сервере установка Veil-OpenVPN.
 func (s *Session) OpenVPNInstalled() bool {
+	if s.inDocker("openvpn") {
+		return true
+	}
 	_, err := s.r.exec("test -f "+ovConf, nil, true)
 	return err == nil
 }
 
 // InstallOpenVPN ставит OpenVPN на сервер (если ещё не стоит) и выдаёт первого клиента.
+// По возможности — в контейнер veil-openvpn (dual-stack), иначе службой openvpn-server@veil.
 func (s *Session) InstallOpenVPN(o OVInstall, host string, logf Logf) (*ovpnconf.Config, error) {
 	o, err := ValidateOVInstall(o)
 	if err != nil {
 		return nil, err
+	}
+	if s.inDocker("openvpn") {
+		logf("OpenVPN уже работает в контейнере — выдаю клиента")
+		return s.OpenVPNAddClient("Клиент 1", host)
+	}
+	env := map[string]string{"OVPN_PORT": strconv.Itoa(o.Port), "OVPN_PROTO": o.Proto, "OVPN_SUBNET": o.Subnet,
+		"VEIL_HOST": host, "OVPN_FIRST_CLIENT": "", "VEIL_DETECT_IP": "0"}
+	docker, err := s.tryDocker("openvpn", "OpenVPN", "test -f "+ovConf, env, logf)
+	if err != nil {
+		return nil, err
+	}
+	if docker {
+		logf("OpenVPN запущен в контейнере %s, порт %d/%s", containers["openvpn"].name, o.Port, strings.ToUpper(o.Proto))
+		return s.OpenVPNAddClient("Клиент 1", host)
 	}
 	logf("Установка OpenVPN на сервер (создание сертификатов может занять около минуты)…")
 	out, err := s.r.exec(ovScript(o), nil, true)
@@ -283,12 +301,14 @@ func splitSections(out string) map[string]string {
 func (s *Session) OpenVPNAddClient(label, host string) (*ovpnconf.Config, error) {
 	name := ovClientName(label)
 	script := strings.NewReplacer("@DIR@", ovDir, "@CONF@", ovConf, "@NAME@", name).Replace(ovAddScript)
-	out, err := s.r.exec(script, nil, true)
+	out, err := s.proto("openvpn").exec(script, nil, true)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось добавить клиента OpenVPN: %w", err)
 	}
 	head, _, _ := strings.Cut(out, "@@CA")
 	info := parseKV(head)
+	// в контейнере сервер слушает [::] («udp6», «tcp6-server»): клиенту — обычные udp/tcp
+	info["PROTO"] = strings.TrimSuffix(strings.TrimSuffix(info["PROTO"], "-server"), "6")
 	port, _ := strconv.Atoi(info["PORT"])
 	if port == 0 || (info["PROTO"] != "udp" && info["PROTO"] != "tcp") {
 		return nil, errors.New("в конфиге сервера нет порта или протокола OpenVPN")
@@ -304,7 +324,7 @@ func (s *Session) OpenVPNAddClient(label, host string) (*ovpnconf.Config, error)
 
 // OpenVPNClients возвращает имена выпущенных клиентских сертификатов (кроме серверного).
 func (s *Session) OpenVPNClients() ([]string, error) {
-	out, err := s.r.exec("ls -1 "+ovDir+"/pki/issued", nil, true)
+	out, err := s.proto("openvpn").exec("ls -1 "+ovDir+"/pki/issued", nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +351,7 @@ export EASYRSA_BATCH=1 EASYRSA_CRL_DAYS=3650
 cp pki/crl.pem crl.pem
 chmod 644 crl.pem
 `
-	_, err := s.r.exec(script, nil, true)
+	_, err := s.proto("openvpn").exec(script, nil, true)
 	if err != nil {
 		return fmt.Errorf("не удалось отозвать клиента: %w", err)
 	}
@@ -340,6 +360,9 @@ chmod 644 crl.pem
 
 // RemoveOpenVPN останавливает OpenVPN и удаляет настройки Veil-OpenVPN (пакеты остаются).
 func (s *Session) RemoveOpenVPN() error {
+	if s.inDocker("openvpn") {
+		return s.r.removeContainer("openvpn")
+	}
 	const script = `systemctl disable --now ` + ovService + ` >/dev/null 2>&1 || true
 systemctl disable --now veil-openvpn-nat >/dev/null 2>&1 || true
 rm -f ` + ovConf + ` /etc/sysctl.d/99-veilovpn.conf /etc/systemd/system/veil-openvpn-nat.service

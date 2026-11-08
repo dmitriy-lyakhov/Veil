@@ -1,0 +1,3 @@
+# скрипты контейнеров должны оставаться с LF и при checkout в Windows
+*.sh text eol=lf
+docker/** text eol=lf

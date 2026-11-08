@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -83,16 +85,46 @@ func profileLink(p *config.Profile) (LinkResponse, error) {
 func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request, path string, trusted bool) {
 	ctx, cancel := context.WithTimeout(r.Context(), apiTimeout)
 	defer cancel()
-	if r.Method == http.MethodGet && path == "state" {
-		writeJSON(w, http.StatusOK, s.State())
+	if r.Method == http.MethodGet {
+		switch path {
+		case "state":
+			writeJSON(w, http.StatusOK, s.State())
+		case "events":
+			writeJSON(w, http.StatusOK, map[string]any{"events": s.events.recent(atoiDefault(r.URL.Query().Get("limit"), 200))})
+		case "stats/traffic":
+			writeJSON(w, http.StatusOK, map[string]any{"hours": s.traffic.last24(time.Now())})
+		case "backup":
+			// полный конфиг сервера: ключи, клиенты, пароль (хэш) — только администратору
+			s.mu.Lock()
+			b, err := json.MarshalIndent(s.cfg, "", "  ")
+			company := s.cfg.Site.Company
+			s.mu.Unlock()
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+				return
+			}
+			actor, ip := apiActor(r)
+			s.Event("settings", actor, ip, "Скачана резервная копия конфигурации")
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Disposition", `attachment; filename="veil-`+config.SafeFileName(company)+`-`+time.Now().Format("2006-01-02")+`.json"`)
+			_, _ = w.Write(b)
+		default:
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+		}
 		return
 	}
 	if r.Method != http.MethodPost {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
 		return
 	}
+	// тело запоминаем для журнала событий
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxAPIBody))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "некорректный запрос"})
+		return
+	}
 	decode := func(v any) bool {
-		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxAPIBody)).Decode(v); err != nil {
+		if err := json.Unmarshal(body, v); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "некорректный запрос"})
 			return false
 		}
@@ -106,6 +138,7 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request, path string, 
 		if v == nil {
 			v = map[string]string{"ok": "1"}
 		}
+		s.logAPI(r, path, body)
 		writeJSON(w, http.StatusOK, v)
 	}
 	withLink := func(p *config.Profile, err error) {
@@ -144,6 +177,41 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request, path string, 
 		var req updateRequest
 		if decode(&req) {
 			reply(nil, s.UpdateClient(req.Name, req.ClientUpdate))
+		}
+	case "clients/subnets":
+		var req struct {
+			Name    string   `json:"name"`
+			Subnets []string `json:"subnets"`
+		}
+		if decode(&req) {
+			reply(nil, s.SetClientSubnets(req.Name, req.Subnets))
+		}
+	case "settings/links":
+		var req config.Links
+		if decode(&req) {
+			reply(nil, s.SetLinks(req))
+		}
+	case "sessions/kill":
+		// разорвать подключения клиента, не блокируя его (он переподключится сам)
+		var req nameRequest
+		if decode(&req) {
+			if s.killSessions(func(peer string) bool { return peer == req.Name }) == 0 {
+				reply(nil, fmt.Errorf("у клиента «%s» нет открытых сессий", req.Name))
+			} else {
+				reply(nil, nil)
+			}
+		}
+	case "settings/admin":
+		// режим веб-панели меняет только приложение по SSH (сокет управления), не сама панель
+		var req struct {
+			Mode string `json:"mode"`
+		}
+		if !trusted {
+			writeJSON(w, http.StatusForbidden, map[string]string{"error": "режим панели меняется из приложения"})
+			return
+		}
+		if decode(&req) {
+			reply(nil, s.SetAdminMode(req.Mode))
 		}
 	case "clients/reissue":
 		var req nameRequest

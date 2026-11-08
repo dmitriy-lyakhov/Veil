@@ -60,6 +60,9 @@ func (s *SwitchWidget) paint() {
 	}
 }
 
+// NewSwitch — отдельный переключатель (для строк, собранных вручную).
+func NewSwitch(on bool, changed func(bool)) *SwitchWidget { return newSwitch(on, changed) }
+
 func (s *SwitchWidget) On() bool { return s.on }
 
 // SetOn меняет состояние без вызова обработчика.

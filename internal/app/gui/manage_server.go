@@ -1,10 +1,7 @@
 package gui
 
 import (
-	"context"
-	"errors"
 	"fmt"
-	"os"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -14,81 +11,6 @@ import (
 	"veil/internal/app/gui/kit"
 	"veil/internal/config"
 )
-
-// renderManagement — вкладка «Управление»: проверка, обновление пакетов, перезагрузка и удаление.
-func (m *manager) renderManagement() {
-	arrow := func() fyne.CanvasObject { return widget.NewIcon(theme.NavigateNextIcon()) }
-	// пароль спрашиваем только в момент действия
-	needSSH := func(f func()) func() {
-		return func() { m.ensureSession(f, nil) }
-	}
-	m.body.Add(kit.ListRow(L("Cover site", "Сайт-прикрытие"), L("Repository, branch, status", "Репозиторий, ветка, статус"), arrow(), needSSH(m.loadCoverSite)))
-	m.body.Add(kit.ListRow(L("Check server", "Проверить сервер"), L("Refresh version and client information", "Обновить сведения о версии и клиентах"), arrow(), needSSH(m.refresh)))
-	m.body.Add(kit.ListRowColored(L("Update server packages", "Обновить пакеты сервера"), L("Install system updates with the distribution package manager", "Установить обновления системы менеджером пакетов дистрибутива"), theme.ColorNameError, arrow(), needSSH(func() {
-		kit.ShowConfirm(L("Update packages", "Обновить пакеты"), L("System packages will be updated on the server. This may take a few minutes. Continue?", "На сервере будет запущено обновление системных пакетов. Это может занять несколько минут. Продолжить?"), func(ok bool) {
-			if !ok {
-				return
-			}
-			m.status.SetText(L("Updating server packages…", "Обновление пакетов сервера…"))
-			go func() {
-				err := m.sess.UpdatePackages(context.Background())
-				fyne.Do(func() {
-					if err != nil {
-						m.status.SetText(L("Failed to update packages", "Не удалось обновить пакеты"))
-						kit.ShowError(err, m.w)
-						return
-					}
-					m.status.SetText(L("Server packages updated", "Пакеты сервера обновлены"))
-				})
-			}()
-		}, m.w)
-	})))
-	m.body.Add(kit.ListRowColored(L("Reboot server", "Перезагрузить сервер"), "", theme.ColorNameError, arrow(), needSSH(func() {
-		kit.ShowConfirm(L("Reboot", "Перезагрузка"), L("The server will be rebooted; VPN is unavailable during the reboot. Continue?", "Сервер будет перезагружен, VPN на время перезагрузки недоступен. Продолжить?"), func(ok bool) {
-			if !ok {
-				return
-			}
-			err := m.sess.Reboot()
-			m.u.dropSession(m.p.Name)
-			m.sess = nil
-			if err != nil {
-				kit.ShowError(err, m.w)
-				return
-			}
-			m.status.SetText(L("Server is rebooting…", "Сервер перезагружается…"))
-		}, m.w)
-	})))
-	m.body.Add(kit.ListRowColored(L("Remove server from the app", "Удалить сервер из приложения"), "", theme.ColorNameError, arrow(), func() {
-		kit.ShowConfirm(L("Remove server", "Удалить сервер"), fmt.Sprintf(L("Profile “%s” will be deleted from this device. The server itself will not change. Continue?", "Профиль «%s» будет удалён с этого устройства. Сам сервер не изменится. Продолжить?"), m.p.Name), func(ok bool) {
-			if !ok {
-				return
-			}
-			if m.p.Name == m.u.active {
-				kit.ShowError(errors.New(L("disconnect the VPN first", "сначала отключите VPN")), m.w)
-				return
-			}
-			if path, err := config.ProfilePath(m.p.Name); err == nil {
-				_ = os.Remove(path)
-			}
-			m.u.dropSession(m.p.Name)
-			m.u.reload()
-			m.w.Close()
-		}, m.w)
-	}))
-	m.body.Add(kit.ListRowColored(L("Uninstall Veil from server", "Удалить Veil с сервера"), L("Stop the service and delete the program and settings on the server", "Остановить службу и удалить программу и настройки на сервере"), theme.ColorNameError, arrow(), needSSH(func() {
-		kit.ShowConfirm(L("Uninstall Veil", "Удалить Veil"), L("Veil will be stopped and removed from the server; all its clients will stop connecting. Continue?", "Veil будет остановлен и удалён с сервера, все его клиенты перестанут подключаться. Продолжить?"), func(ok bool) {
-			if !ok {
-				return
-			}
-			if err := m.sess.Uninstall(); err != nil {
-				kit.ShowError(err, m.w)
-				return
-			}
-			m.status.SetText(L("Veil removed from server", "Veil удалён с сервера"))
-			kit.ShowInfo(L("Done", "Готово"), L("Veil has been removed from the server. The profile remains in the app: delete it separately.", "Veil удалён с сервера. Профиль в приложении остался: удалите его отдельно."), m.w)
-		}, m.w)
-	})))
-}
 
 // sshSummary — «root · 203.0.113.7» под заголовком страницы сервера.
 func sshSummary(p *config.Profile) string {

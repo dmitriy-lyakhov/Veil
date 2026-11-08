@@ -7,17 +7,25 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"veil/internal/config"
 )
 
 type NetSetup struct {
-	undo []func()
-	log  *slog.Logger
+	mu      sync.Mutex
+	undo    []func()
+	log     *slog.Logger
+	iface   string
+	p4, p6  netip.Prefix
+	backend string // "iptables" или "nft"
+	policy  LinkPolicy
+	routes  map[netip.Prefix]bool
+	done    map[string]bool
 }
 
 func SetupNetwork(cfg *config.Server, iface string, log *slog.Logger) (*NetSetup, error) {
-	n := &NetSetup{log: log}
+	n := &NetSetup{log: log, iface: iface, done: map[string]bool{}}
 	p4, err := netip.ParsePrefix(cfg.Address4)
 	if err != nil {
 		return nil, err
@@ -26,6 +34,8 @@ func SetupNetwork(cfg *config.Server, iface string, log *slog.Logger) (*NetSetup
 	if err != nil {
 		return nil, err
 	}
+	n.p4, n.p6 = p4.Masked(), p6.Masked()
+	n.policy = LinkPolicy{Links: cfg.EffectiveLinks(), Tunnel: []netip.Prefix{n.p4, n.p6}}
 	mtu := cfg.MTU
 	if mtu == 0 {
 		mtu = config.DefaultMTU
@@ -41,7 +51,7 @@ func SetupNetwork(cfg *config.Server, iface string, log *slog.Logger) (*NetSetup
 		}
 	}
 	for _, f := range []string{"/proc/sys/net/ipv4/ip_forward", "/proc/sys/net/ipv6/conf/all/forwarding"} {
-		if err := os.WriteFile(f, []byte("1"), 0o644); err != nil {
+		if err := enableSysctl(f); err != nil {
 			return nil, fmt.Errorf("enable forwarding: %w", err)
 		}
 	}
@@ -51,6 +61,18 @@ func SetupNetwork(cfg *config.Server, iface string, log *slog.Logger) (*NetSetup
 		return nil, err
 	}
 	return n, nil
+}
+
+// enableSysctl записывает 1 в параметр ядра. В контейнере /proc/sys смонтирован только для чтения:
+// там пересылку включают снаружи (docker run --sysctl …), и если она уже включена, запись не нужна.
+func enableSysctl(file string) error {
+	if b, err := os.ReadFile(file); err == nil && strings.TrimSpace(string(b)) == "1" {
+		return nil
+	}
+	if err := os.WriteFile(file, []byte("1"), 0o644); err != nil {
+		return fmt.Errorf("%w (в контейнере задайте sysctl %s=1)", err, strings.ReplaceAll(strings.TrimPrefix(file, "/proc/sys/"), "/", "."))
+	}
+	return nil
 }
 
 const udpBufferBytes = 7500000
@@ -74,10 +96,12 @@ func raiseUDPBuffers(log *slog.Logger) {
 
 func (n *NetSetup) firewall(iface string, p4, p6 netip.Prefix) error {
 	if _, err := exec.LookPath("iptables"); err == nil {
+		n.backend = "iptables"
 		return n.iptables(iface, p4, p6)
 	}
 	if _, err := exec.LookPath("nft"); err == nil {
-		return n.nftables(iface, p4, p6)
+		n.backend = "nft"
+		return n.nftApply()
 	}
 	return fmt.Errorf("не найден ни iptables, ни nft")
 }
@@ -109,31 +133,6 @@ func (n *NetSetup) iptables(iface string, p4, p6 netip.Prefix) error {
 		del := append(append(append([]string{}, base...), "-D", r.chain), r.spec...)
 		n.undo = append(n.undo, func() { _ = run(del...) })
 	}
-	return nil
-}
-
-func (n *NetSetup) nftables(iface string, p4, p6 netip.Prefix) error {
-	const table = "veil"
-	ruleset := fmt.Sprintf(`table inet %[1]s {
-	chain post {
-		type nat hook postrouting priority 100;
-		ip saddr %[2]s oifname != "%[4]s" masquerade
-		ip6 saddr %[3]s oifname != "%[4]s" masquerade
-	}
-	chain fwd {
-		type filter hook forward priority -10;
-		iifname "%[4]s" accept
-		oifname "%[4]s" ct state established,related accept
-	}
-}
-`, table, p4, p6, iface)
-	_ = run("nft", "delete", "table", "inet", table)
-	cmd := exec.Command("nft", "-f", "-")
-	cmd.Stdin = strings.NewReader(ruleset)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("nft: %v: %s", err, out)
-	}
-	n.undo = append(n.undo, func() { _ = run("nft", "delete", "table", "inet", table) })
 	return nil
 }
 

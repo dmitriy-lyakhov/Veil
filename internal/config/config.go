@@ -45,6 +45,24 @@ type Server struct {
 	SiteRepo   *SiteRepo  `json:"site_repo,omitempty"`
 	Relays     []Relay    `json:"relays,omitempty"`
 	Upstreams  []Upstream `json:"upstreams,omitempty"`
+	// Links — какой трафик сервер пропускает между участниками сети; nil — как раньше (всё разрешено).
+	Links *Links `json:"links,omitempty"`
+}
+
+// Links — связывание через сервер. «Клиент» — устройство в туннеле (его адрес из подсети туннеля),
+// «сайт» — локальная сеть за клиентом-шлюзом (Peer.Subnets).
+type Links struct {
+	ClientToClient bool `json:"client_to_client"` // клиенты видят друг друга по адресам туннеля
+	ClientToSite   bool `json:"client_to_site"`   // клиенты ↔ сети за шлюзами
+	SiteToSite     bool `json:"site_to_site"`     // сети за разными шлюзами ↔ друг с другом
+}
+
+// EffectiveLinks — политика связывания с учётом значения по умолчанию.
+func (s *Server) EffectiveLinks() Links {
+	if s.Links == nil {
+		return Links{ClientToClient: true, ClientToSite: true, SiteToSite: true}
+	}
+	return *s.Links
 }
 
 // Front — маскировка входа под чужой сайт: SNI, куда проксировать посторонних и общий ключ (base64).
@@ -57,7 +75,19 @@ type Front struct {
 type Admin struct {
 	User         string `json:"user,omitempty"`
 	PasswordHash string `json:"password_hash,omitempty"`
+	// Mode — где работает веб-панель: "" — внутри veil-server (как раньше), AdminContainer — отдельный
+	// процесс/контейнер (veil-server admin), запросы /admin из туннеля проксируются в Upstream;
+	// AdminOff — панели нет, /admin отвечает 404.
+	Mode     string `json:"mode,omitempty"`
+	Upstream string `json:"upstream,omitempty"` // для AdminContainer; по умолчанию DefaultAdminUpstream
 }
+
+const (
+	AdminBuiltin         = ""
+	AdminContainer       = "container"
+	AdminOff             = "off"
+	DefaultAdminUpstream = "http://veil-admin:8080"
+)
 
 func (s *Server) Port() int {
 	_, p, err := net.SplitHostPort(s.Listen)
@@ -88,6 +118,9 @@ type Peer struct {
 	// Role — роль клиента: "admin" (доступ к админке и настройке сервера/каскада через клиент), "user" (только пользуется VPN);
 	// пусто — старые клиенты: доступ к панели по паролю, как раньше.
 	Role string `json:"role,omitempty"`
+	// Subnets — локальные сети за этим клиентом (клиент — шлюз сайта): сервер маршрутизирует их в туннель
+	// к нему, и они доступны другим клиентам и сайтам согласно Server.Links.
+	Subnets []string `json:"subnets,omitempty"`
 }
 
 type AutoRoute struct {
