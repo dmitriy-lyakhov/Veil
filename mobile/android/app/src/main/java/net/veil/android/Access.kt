@@ -87,7 +87,7 @@ private object AccessUi {
 // ---------- общие элементы ----------
 
 /** Карточка-пояснение со значком (дизайн: поля 14, текст 14/500). */
-private fun MainActivity.noteCard(text: String, icon: Int, warn: Boolean = false): View {
+internal fun MainActivity.noteCard(text: String, icon: Int, warn: Boolean = false): View {
     val box = hbox().apply { setPadding(dp(14), dp(14), dp(14), dp(14)); background = rounded(T.p.raised, 14f); gravity = Gravity.TOP }
     box.addView(icon(icon, 22f, if (warn) T.p.accentInk else T.p.muted).also { (it.layoutParams as LinearLayout.LayoutParams).rightMargin = dp(12) })
     box.addView(text(text, 14f, 500, T.p.muted).also { it.setLineSpacing(0f, 1.25f) }, lp(0, WRAP, 1f))
@@ -103,14 +103,23 @@ private fun MainActivity.kv(label: String, value: String): View {
 }
 
 /** Поле ввода-карточка: подпись 12/500 и текст 16/600 (высота ≥ 64). */
-private fun MainActivity.field(label: String, value: String, hint: String = "", bg: Int = T.p.raised, onChange: (String) -> Unit): Pair<View, EditText> {
+internal fun MainActivity.field(
+    label: String, value: String, hint: String = "", bg: Int = T.p.raised,
+    secret: Boolean = false, numeric: Boolean = false, onChange: (String) -> Unit,
+): Pair<View, EditText> {
     val card = vbox().apply { setPadding(dp(16), dp(10), dp(16), dp(10)); minimumHeight = dp(64); background = rounded(bg, 14f); gravity = Gravity.CENTER_VERTICAL }
     card.addView(text(label, 12f, 500, T.p.muted))
     val et = EditText(this).apply {
         setText(value); this.hint = hint
         setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16f)
-        typeface = T.semibold; setTextColor(T.p.ink); setHintTextColor(T.p.muted)
+        setTextColor(T.p.ink); setHintTextColor(T.p.muted)
         background = null; setPadding(0, dp(4), 0, 0); isSingleLine = true
+        inputType = when {
+            secret -> android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            numeric -> android.text.InputType.TYPE_CLASS_NUMBER
+            else -> inputType
+        }
+        typeface = T.semibold   // после inputType: пароль иначе сбрасывает шрифт на моноширинный
         addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) { onChange(s?.toString() ?: "") }
             override fun beforeTextChanged(s: CharSequence?, st: Int, c: Int, af: Int) {}

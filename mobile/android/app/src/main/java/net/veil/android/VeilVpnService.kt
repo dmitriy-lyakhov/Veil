@@ -41,6 +41,7 @@ class VeilVpnService : VpnService() {
                 Stats.add(this@VeilVpnService, rx - lastRx, tx - lastTx)
                 lastRx = rx; lastTx = tx
                 updateNotification(st)
+                VeilWidget.tick(this@VeilVpnService, st)
             }
             main.postDelayed(this, 2000)
         }
@@ -122,7 +123,7 @@ class VeilVpnService : VpnService() {
                 Log.w(TAG, "connect failed: ${e.javaClass.simpleName}")
                 Store.lastError = e.message ?: e.javaClass.simpleName
                 closeAll()
-                main.post { stopForegroundCompat(); stopSelf() }
+                main.post { stopForegroundCompat(); stopSelf(); VeilWidget.update(this) }
             }
         }
     }
@@ -203,7 +204,7 @@ class VeilVpnService : VpnService() {
     private fun disconnect() {
         Thread {
             synchronized(this) { closeAll() }
-            main.post { stopForegroundCompat(); stopSelf() }
+            main.post { stopForegroundCompat(); stopSelf(); VeilWidget.update(this) }
         }.start()
     }
 

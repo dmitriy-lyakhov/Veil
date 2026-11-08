@@ -82,6 +82,14 @@ class MainActivity : Activity() {
         overlay.visibility = View.GONE
         root.addView(overlay, FrameLayout.LayoutParams(MATCH, MATCH))
         setContentView(root)
+        // пока открыта клавиатура, панель вкладок прячется: иначе она поднимается над клавиатурой и закрывает поля формы
+        root.viewTreeObserver.addOnGlobalLayoutListener {
+            val r = android.graphics.Rect()
+            root.getWindowVisibleDisplayFrame(r)
+            val keyboard = root.rootView.height - r.bottom > root.rootView.height / 4
+            val want = if (keyboard) View.GONE else View.VISIBLE
+            if (navBar.visibility != want) navBar.visibility = want
+        }
         applyBars()
         // пересоздание после смены темы или языка: остаёмся на той же вкладке, ссылку из intent повторно
         // не импортируем, автоподключение «при запуске» и проверку обновлений второй раз не выполняем
@@ -119,6 +127,14 @@ class MainActivity : Activity() {
     }
 
     private fun handleIntent(i: Intent?) {
+        if (i?.action == VeilWidget.ACTION_OPEN_CONNECT) {
+            // из виджета: нужен системный запрос разрешения VPN — он показывается здесь, затем подключение
+            val id = i.getStringExtra(VeilWidget.EXTRA_PROFILE)
+            i.action = null
+            if (id != null) Settings.setActive(this, id)
+            connect(id)
+            return
+        }
         val d = i?.dataString ?: return
         if (d.startsWith("veil://")) {
             i.data = null
@@ -140,6 +156,7 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         handler.removeCallbacks(poll)
+        VeilWidget.update(this)   // активный сервер и тема могли измениться в приложении
         super.onPause()
     }
 
@@ -460,6 +477,8 @@ class MainActivity : Activity() {
         code == "E_FORMAT" -> getString(R.string.err_format)
         code == "E_EMPTY" -> getString(R.string.err_empty)
         code == "E_VPN" -> getString(R.string.err_vpn)
+        code == "E_SSH_AUTH" -> getString(R.string.ssh_err_auth)
+        code == "E_SSH_HOSTKEY" -> getString(R.string.ssh_err_hostkey)
         else -> code
     }
 
@@ -509,6 +528,7 @@ class MainActivity : Activity() {
                 VeilVpnService.connect(this, pendingProfile)
             } else toast(getString(R.string.err_vpn_denied))
             REQ_FILE -> if (resultCode == RESULT_OK) data?.data?.let { importFile(it) }
+            REQ_SSH_KEY -> if (resultCode == RESULT_OK) data?.data?.let { readSshKey(it) }
             REQ_EXPORT -> if (resultCode == RESULT_OK) data?.data?.let { uri ->
                 try {
                     contentResolver.openOutputStream(uri)?.use { it.write(Profiles.exportJson(this).toByteArray()) }
@@ -547,6 +567,24 @@ class MainActivity : Activity() {
                 val n = Profiles.importBackup(this, text)
                 toast(getString(R.string.backup_restored, n)); selectTab(0)
             } else importText(text, null)
+        } catch (_: Exception) { toast(getString(R.string.err_generic)) }
+    }
+
+    /** Файл закрытого ключа SSH для установки сервера: читается в память формы, на диск не копируется. */
+    fun pickSshKey() {
+        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
+        @Suppress("DEPRECATION")
+        startActivityForResult(i, REQ_SSH_KEY)
+    }
+
+    private fun readSshKey(uri: Uri) {
+        try {
+            val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return
+            val text = bytes.toString(Charsets.UTF_8)
+            if (bytes.size > 64 * 1024 || !text.contains("PRIVATE KEY")) { toast(getString(R.string.ssh_err_key_file)); return }
+            SshForm.key = text
+            SshForm.keyName = uri.lastPathSegment?.substringAfterLast('/')?.substringAfterLast(':') ?: "key"
+            render()
         } catch (_: Exception) { toast(getString(R.string.err_generic)) }
     }
 
@@ -607,6 +645,7 @@ class MainActivity : Activity() {
         const val REQ_EXPORT = 12
         const val REQ_IMPORT = 13
         const val REQ_SAVE = 14
+        const val REQ_SSH_KEY = 15
     }
 }
 

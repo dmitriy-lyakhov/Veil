@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -69,11 +70,39 @@ type Request struct {
 	AdminPanel bool
 	// Progress получает шаги установки для экрана прогресса (может быть nil).
 	Progress Progress
+	// Release — сервер сам скачивает свои файлы из релиза (Android: бинарников рядом с приложением нет).
+	// nil — файлы берутся из ServerBinDir и загружаются с этого устройства, как раньше.
+	Release *Release
+	// ClientName — имя клиента этого устройства на сервере (пусто — по названию сервера и имени компьютера).
+	ClientName string
+	// AddClientIfRunning — Veil уже работает: только выдать клиента через сокет управления, без
+	// перезаписи конфига и перезапуска (подключения остальных клиентов не рвутся).
+	AddClientIfRunning bool
 }
 
 type Logf func(format string, args ...any)
 
 func Deploy(ctx context.Context, req Request, logf Logf) (*config.Profile, error) {
+	res, err := DeployVeil(ctx, req, logf)
+	if err != nil {
+		return nil, err
+	}
+	return res.Profile, nil
+}
+
+// VeilResult — итог установки Veil.
+type VeilResult struct {
+	Profile *config.Profile
+	// Existing — Veil уже работал: ничего не переустанавливалось, только выдан клиент (AddClientIfRunning).
+	Existing bool
+	// Containers — контейнеры Veil на сервере после установки (пусто — Docker нет или не прочитать).
+	Containers []ContainerInfo
+	// Client — имя клиента этого устройства на сервере (Profile.Name — название сервера в приложении).
+	Client string
+}
+
+// DeployVeil ставит Veil (или, с AddClientIfRunning, только выдаёт клиента на работающем сервере).
+func DeployVeil(ctx context.Context, req Request, logf Logf) (*VeilResult, error) {
 	if req.SSHPort == 0 {
 		req.SSHPort = 22
 	}
@@ -83,7 +112,7 @@ func Deploy(ctx context.Context, req Request, logf Logf) (*config.Profile, error
 	if req.Name == "" {
 		req.Name = firstNonEmpty(req.IPv4, req.IPv6)
 	}
-	r := &remote{password: req.Password, prog: req.Progress}
+	r := &remote{password: req.Password, prog: req.Progress, rel: req.Release}
 	r.step("ssh", "Подключение по SSH", req.User+"@"+firstNonEmpty(req.IPv4, req.IPv6), "active")
 	client, hostKey, err := connect(ctx, req, logf)
 	if err != nil {
@@ -93,11 +122,90 @@ func Deploy(ctx context.Context, req Request, logf Logf) (*config.Profile, error
 	defer client.Close()
 	r.c = client
 	r.step("ssh", "Подключение по SSH", req.User+"@"+firstNonEmpty(req.IPv4, req.IPv6)+", ключ хоста "+hostKey, "done")
-	prof, err := r.install(ctx, req, hostKey, logf)
-	if err == nil {
-		r.step("profile", "Профиль сохранён", "Подключение к "+req.Name, "done")
+	res := &VeilResult{}
+	if req.AddClientIfRunning {
+		if prof, ok, err := r.addVeilClientIfRunning(req, hostKey, logf); err != nil {
+			return nil, err
+		} else if ok {
+			res.Profile, res.Existing = prof, true
+		}
 	}
-	return prof, err
+	if res.Profile == nil {
+		prof, err := r.install(ctx, req, hostKey, logf)
+		if err != nil {
+			return nil, err
+		}
+		res.Profile = prof
+	}
+	res.Client = r.issued
+	if all, err := (&Session{r: r}).Containers(); err == nil {
+		res.Containers = all
+	}
+	r.step("profile", "Профиль сохранён", "Подключение к "+req.Name, "done")
+	return res, nil
+}
+
+// addVeilClientIfRunning — Veil уже работает (в контейнере или службой) и отвечает на сокете управления:
+// выдаёт клиента через него, ничего не переустанавливая. false без ошибки — Veil не работает, нужна установка.
+func (r *remote) addVeilClientIfRunning(req Request, hostKey string, logf Logf) (*config.Profile, bool, error) {
+	uid, err := r.exec("id -u", nil, false)
+	if err != nil {
+		return nil, false, err
+	}
+	r.root = uid == "0"
+	ctl := r
+	if r.containerExists(containers["veil"].name) {
+		ctl = r.in(containers["veil"].name)
+	}
+	if _, err := ctl.exec("test -S "+controlSocket, nil, true); err != nil {
+		return nil, false, nil
+	}
+	name := firstNonEmpty(req.ClientName, req.Name)
+	// имя должно быть свободным: при повторной установке с того же устройства — «Pixel 3-2», «Pixel 3-3»…
+	if st, err := ctl.exec("veil-server ctl GET /state", nil, true); err == nil {
+		var state struct {
+			Clients []struct {
+				Name string `json:"name"`
+			} `json:"clients"`
+		}
+		if json.Unmarshal([]byte(st), &state) == nil {
+			existing := &config.Server{}
+			for _, c := range state.Clients {
+				existing.Peers = append(existing.Peers, config.Peer{Name: c.Name})
+			}
+			name = uniqueExactName(existing, name)
+		}
+	}
+	logf("Veil уже работает на сервере — выдаю клиента «%s» без переустановки", name)
+	r.step("client", "Veil уже на сервере", "ничего не переустанавливается — выдаю нового клиента", "active")
+	body, _ := json.Marshal(map[string]any{"name": name, "note": "", "route": []string{}, "role": "admin"})
+	out, err := ctl.exec("veil-server ctl POST /clients "+base64.StdEncoding.EncodeToString(body), nil, true)
+	if err != nil {
+		r.step("client", "Veil уже на сервере", err.Error(), "fail")
+		return nil, false, fmt.Errorf("не удалось выдать клиента: %w", err)
+	}
+	var resp struct {
+		Name  string `json:"name"`
+		Link  string `json:"link"`
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(out), &resp); err != nil || resp.Link == "" {
+		msg := firstNonEmpty(resp.Error, strings.TrimSpace(out))
+		r.step("client", "Veil уже на сервере", msg, "fail")
+		return nil, false, fmt.Errorf("сервер не выдал клиента: %s", msg)
+	}
+	prof, err := config.DecodeLink(resp.Link)
+	if err != nil {
+		return nil, false, err
+	}
+	prof.Name = req.Name
+	if req.IPv4 != "" || req.IPv6 != "" {
+		prof.IPv4, prof.IPv6 = req.IPv4, req.IPv6
+	}
+	prof.SSH = &config.SSHInfo{Port: req.SSHPort, User: req.User, HostKey: hostKey, KeyPath: req.KeyPath}
+	r.issued = resp.Name
+	r.step("client", "Клиент выдан", resp.Name+" · роль «Администратор»", "done")
+	return prof, true, nil
 }
 
 func connect(ctx context.Context, req Request, logf Logf) (*ssh.Client, string, error) {
@@ -209,6 +317,10 @@ type remote struct {
 	prog     Progress
 	// adminPanel — при установке Veil в Docker поднять и контейнер veil-admin
 	adminPanel bool
+	// rel — сервер скачивает бинарники из релиза сам (nil — загрузка с этого устройства)
+	rel *Release
+	// issued — имя клиента, выданного этому устройству
+	issued string
 }
 
 func (r *remote) exec(cmd string, stdin []byte, asRoot bool) (string, error) {
@@ -294,9 +406,11 @@ func (r *remote) install(ctx context.Context, req Request, hostKey string, logf 
 		return nil, err
 	}
 
-	bin, err := ServerBinary(req.ServerBinDir, arch)
-	if err != nil {
-		return nil, err
+	var bin []byte
+	if r.rel == nil {
+		if bin, err = ServerBinary(req.ServerBinDir, arch); err != nil {
+			return nil, err
+		}
 	}
 
 	srvCfg, existed, err := r.loadOrCreateConfig(req.SiteLang, logf)
@@ -311,10 +425,18 @@ func (r *remote) install(ctx context.Context, req Request, hostKey string, logf 
 	if err := applyFront(srvCfg, req.FrontSNI); err != nil {
 		return nil, err
 	}
-	prof, err := provision.AddPeer(srvCfg, uniquePeerName(srvCfg, req.Name))
+	peerName := uniquePeerName(srvCfg, req.Name)
+	if req.ClientName != "" {
+		peerName = uniqueExactName(srvCfg, req.ClientName)
+	}
+	r.issued = peerName
+	prof, err := provision.AddPeer(srvCfg, peerName)
 	if err != nil {
 		return nil, err
 	}
+	// устройство, которое ставит сервер, — его администратор: настройки открываются по туннелю без пароля
+	srvCfg.Peers[len(srvCfg.Peers)-1].Role = "admin"
+	prof.Role = "admin"
 	if srvCfg.Front != nil && srvCfg.Front.SNI != "" {
 		prof.FrontSNI, prof.FrontKey = srvCfg.Front.SNI, srvCfg.Front.Key
 		logf("Маскировка под %s: посторонние соединения уйдут на настоящий сайт", srvCfg.Front.SNI)
@@ -365,13 +487,19 @@ func (r *remote) install(ctx context.Context, req Request, hostKey string, logf 
 		logf("Контейнер veil запущен, устройств на сервере: %d", len(srvCfg.Peers))
 		return prof, nil
 	}
-	logf("Загрузка серверного бинарника (%d КБ)…", len(bin)/1024)
-	r.step("files", "Загрузка veil-server", fmt.Sprintf("%s, %d КБ", remoteBinary, len(bin)/1024), "active")
-	if err := r.upload(bin, remoteBinary, "0755"); err != nil {
-		r.step("files", "Загрузка veil-server", err.Error(), "fail")
-		return nil, err
+	if r.rel != nil {
+		if err := r.fetchRelease([]string{"veil-server"}, arch, func(string) string { return remoteBinary }, logf); err != nil {
+			return nil, err
+		}
+	} else {
+		logf("Загрузка серверного бинарника (%d КБ)…", len(bin)/1024)
+		r.step("files", "Загрузка veil-server", fmt.Sprintf("%s, %d КБ", remoteBinary, len(bin)/1024), "active")
+		if err := r.upload(bin, remoteBinary, "0755"); err != nil {
+			r.step("files", "Загрузка veil-server", err.Error(), "fail")
+			return nil, err
+		}
+		r.step("files", "Загрузка veil-server", fmt.Sprintf("%s, %d КБ", remoteBinary, len(bin)/1024), "done")
 	}
-	r.step("files", "Загрузка veil-server", fmt.Sprintf("%s, %d КБ", remoteBinary, len(bin)/1024), "done")
 	if err := r.upload(cfgJSON, remoteConfig, "0600"); err != nil {
 		return nil, err
 	}
@@ -517,6 +645,19 @@ func uniquePeerName(s *config.Server, name string) string {
 	cand := base
 	for i := 2; taken[cand]; i++ {
 		cand = base + "-" + strconv.Itoa(i)
+	}
+	return cand
+}
+
+// uniqueExactName — имя клиента как задано (без «@компьютер»), с «-2», «-3»… если оно уже занято.
+func uniqueExactName(s *config.Server, name string) string {
+	taken := map[string]bool{}
+	for _, p := range s.Peers {
+		taken[p.Name] = true
+	}
+	cand := name
+	for i := 2; taken[cand]; i++ {
+		cand = name + "-" + strconv.Itoa(i)
 	}
 	return cand
 }

@@ -42,6 +42,11 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (sign("VEIL_KEYSTORE") != null) signingConfig = signingConfigs.getByName("release")
         }
+        debug {
+            // отладочная сборка ставится рядом с рабочей и не трогает её профили
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

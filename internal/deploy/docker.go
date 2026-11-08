@@ -166,7 +166,7 @@ func (r *remote) arch() (string, error) {
 }
 
 // dockerBundle — архив для /opt/veil: docker/… (встроенные файлы), bin/… (бинарники), docker/<dir>/.env.
-func dockerBundle(c container, arch, binDir string, env map[string]string) ([]byte, error) {
+func dockerBundle(c container, arch, binDir string, env map[string]string, skipBins bool) ([]byte, error) {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	tw := tar.NewWriter(gz)
@@ -195,6 +195,9 @@ func dockerBundle(c container, arch, binDir string, env map[string]string) ([]by
 		return nil, err
 	}
 	for _, name := range c.bins {
+		if skipBins {
+			break // бинарники сервер скачает сам из релиза (fetchRelease)
+		}
 		b, err := findBinary(binDir, name, arch)
 		if err != nil {
 			return nil, err
@@ -248,7 +251,7 @@ func (r *remote) startContainer(proto, binDir string, env map[string]string, rec
 			env["VEIL_DOCKER_MTU"] = strconv.Itoa(n)
 		}
 	}
-	bundle, err := dockerBundle(c, arch, binDir, env)
+	bundle, err := dockerBundle(c, arch, binDir, env, r.rel != nil)
 	if err != nil {
 		return err
 	}
@@ -262,6 +265,11 @@ func (r *remote) startContainer(proto, binDir string, env map[string]string, rec
 		return err
 	}
 	r.step("files", "Файлы контейнеров", fmt.Sprintf("%s: docker/, bin/ (%d КБ)", dockerRoot, len(bundle)/1024), "done")
+	if r.rel != nil && len(c.bins) > 0 {
+		if err := r.fetchRelease(c.bins, arch, func(base string) string { return dockerRoot + "/bin/" + base + "-linux-" + arch }, logf); err != nil {
+			return err
+		}
+	}
 	logf("Сборка образа %s (первый раз — несколько минут)…", c.image)
 	r.step("build", "Сборка образа", "veil/"+c.image+":latest", "active")
 	// образ собирается отдельно, в сети хоста: шаги RUN через мост Docker (MTU 1500) на VPS с меньшим MTU
@@ -386,7 +394,7 @@ func DeployProtocol(ctx context.Context, req Request, proto string, port int, lo
 	if req.Name == "" {
 		req.Name = firstNonEmpty(req.IPv4, req.IPv6)
 	}
-	r := &remote{password: req.Password, prog: req.Progress}
+	r := &remote{password: req.Password, prog: req.Progress, rel: req.Release}
 	who := req.User + "@" + firstNonEmpty(req.IPv4, req.IPv6)
 	r.step("ssh", "Подключение по SSH", who, "active")
 	client, hostKey, err := connect(ctx, req, logf)
@@ -425,6 +433,9 @@ func DeployProtocol(ctx context.Context, req Request, proto string, port int, lo
 	s := &Session{Profile: &config.Profile{Name: req.Name, IPv4: req.IPv4, IPv6: req.IPv6}, BinDir: req.ServerBinDir, r: r}
 	host := firstNonEmpty(req.IPv4, req.IPv6)
 	label := req.Name + "@" + hostnameOr("device")
+	if req.ClientName != "" {
+		label = req.ClientName
+	}
 	res := &ProtocolResult{SSH: &config.SSHInfo{Port: req.SSHPort, User: req.User, HostKey: hostKey, KeyPath: req.KeyPath}}
 	if port == 0 {
 		port = 20000 + randInt(0, 39999)

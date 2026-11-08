@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/wg_bg_dark" android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="10dp" android:paddingEnd="8dp">
+    <FrameLayout android:id="@+id/ring" android:layout_width="36dp" android:layout_height="36dp" android:background="@drawable/wg_ring_off_dark">
+        <ImageView android:id="@+id/icon" android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="center" android:src="@drawable/wg_power" android:contentDescription="@null" />
+        <ProgressBar android:id="@+id/spin" android:layout_width="match_parent" android:layout_height="match_parent" android:indeterminate="true" android:indeterminateTint="#FFFF393D" android:visibility="gone" />
+    </FrameLayout>
+    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="8dp" android:orientation="vertical">
+        <TextView android:id="@+id/name" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="13sp" android:fontFamily="@font/montserrat_semibold" android:singleLine="true" android:ellipsize="end" />
+        <TextView android:id="@+id/sub" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textSize="11sp" android:fontFamily="@font/montserrat_medium" android:singleLine="true" android:ellipsize="end" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ячейка лаунчера бывает выше, чем шире: квадратная подложка по центру, как в дизайне W2 -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
+    <FrameLayout android:id="@+id/root" android:layout_width="56dp" android:layout_height="56dp" android:layout_gravity="center" android:background="@drawable/wg_bg_dark">
+        <FrameLayout android:id="@+id/ring" android:layout_width="40dp" android:layout_height="40dp" android:layout_gravity="center" android:background="@drawable/wg_ring_off_dark">
+            <ImageView android:id="@+id/icon" android:layout_width="18dp" android:layout_height="18dp" android:layout_gravity="center" android:src="@drawable/wg_power" android:contentDescription="@null" />
+            <ProgressBar android:id="@+id/spin" android:layout_width="match_parent" android:layout_height="match_parent" android:indeterminate="true" android:indeterminateTint="#FFFF393D" android:visibility="gone" />
+        </FrameLayout>
+    </FrameLayout>
+</FrameLayout>

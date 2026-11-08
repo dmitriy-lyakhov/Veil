@@ -388,6 +388,16 @@ class AddPage(a: MainActivity) : Page(a) {
     override val title get() = a.getString(R.string.add_title)
     override fun build(): View {
         val col = a.vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(20)) }
+        // свой сервер по SSH (дизайн M1): установка Veil, WireGuard или AmneziaWG прямо с телефона
+        val ssh = a.row(a.getString(R.string.ssh_title), a.getString(R.string.ssh_add_sub), R.drawable.ic_server, chevron = true) {
+            if (Installer.running) a.push(InstallPage(a)) else {
+                SshForm.forgetSecrets()   // новая установка: пароль прошлой в форму не подставляется
+                a.push(SshFormPage(a))
+            }
+        }
+        ssh.background = rounded(T.p.raised, 16f, T.p.accent, 2f)
+        col.addView(ssh, lp(MATCH, WRAP).apply { bottomMargin = dp(8) })
+        col.addView(a.text(a.getString(R.string.add_ready), 12f, 600, T.p.muted).also { it.setPadding(dp(4), dp(16), 0, dp(6)) })
         col.addView(a.text(a.getString(R.string.add_hint), 13f, 500, T.p.muted).also { it.setPadding(0, 0, 0, dp(12)) })
         val name = a.input(a.getString(R.string.name_hint))
         val link = a.input(a.getString(R.string.link_hint), "", true)
