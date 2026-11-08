@@ -26,6 +26,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:screenOrientation="portrait"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
             android:exported="true"
             android:launchMode="singleTask"
@@ -42,10 +43,10 @@
             </intent-filter>
         </activity>
 
-        <!-- сканер zxing по умолчанию принудительно альбомный; на телефоне QR сканируют в портрете -->
+        <!-- приложение работает только в портретной ориентации; сканер zxing по умолчанию альбомный — тоже портрет -->
         <activity
             android:name="com.journeyapps.barcodescanner.CaptureActivity"
-            android:screenOrientation="fullSensor"
+            android:screenOrientation="portrait"
             tools:replace="android:screenOrientation" />
 
         <receiver

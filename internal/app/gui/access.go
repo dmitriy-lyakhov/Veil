@@ -11,6 +11,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"veil/internal/app/gui/kit"
+	"veil/internal/client/adminapi"
 	"veil/internal/server"
 )
 
@@ -129,7 +130,7 @@ func (s *shareState) renderConnection(m *manager) {
 			kit.ShowError(fmt.Errorf("%s", L("enter a user name", "укажите имя пользователя")), s.u.win)
 			return
 		}
-		m.ensureSession(func() {
+		m.ready(func() {
 			var r server.LinkResponse
 			m.call("POST", "/clients", map[string]any{"name": n, "note": "", "route": []string{}, "role": s.roleValue()}, &r, func(err error) {
 				if err != nil {
@@ -141,10 +142,10 @@ func (s *shareState) renderConnection(m *manager) {
 				m.refresh()
 				s.render()
 			})
-		}, nil)
+		})
 	})
 	route := bigButton(L("Set route via cascade…", "Задать маршрут через каскад…"), "", false, func() {
-		m.ensureSession(m.addClient, nil)
+		m.ready(m.addClient)
 	})
 	s.body.Add(fieldEntry(L("User name", "Имя пользователя"), name))
 	s.body.Add(s.u.fieldSelect(L("Server", "Сервер"), s.server, s.names, func(v string) {
@@ -162,10 +163,16 @@ func (s *shareState) renderConnection(m *manager) {
 
 func (s *shareState) renderUsers(m *manager) {
 	if !m.loaded {
-		if m.sess != nil {
+		if m.transport() != nil {
 			m.refresh()
 			s.body.Add(note(L("Loading users…", "Загружаем пользователей…")))
 			return
+		}
+		if adminapi.Allowed(m.p) {
+			s.body.Add(note(L("You are an administrator of this server: connect to it, and the user list opens over the VPN without any password.", "Вы администратор этого сервера: подключитесь к нему, и список пользователей откроется через VPN без пароля.")))
+			if m.p.SSH == nil {
+				return
+			}
 		}
 		s.body.Add(note(L("The user list is stored on the server. Sign in over SSH to open it.", "Список пользователей хранится на сервере. Чтобы его открыть, войдите по SSH.")))
 		btn := widget.NewButtonWithIcon(L("Sign in via SSH", "Войти по SSH"), theme.LoginIcon(), func() {

@@ -31,7 +31,7 @@ func hopsAll() string { return L("all available", "все доступные") }
 func (u *ui) managedProfiles() []*config.Profile {
 	var out []*config.Profile
 	for _, p := range u.profiles {
-		if managed(p) {
+		if sshManaged(p) {
 			out = append(out, p)
 		}
 	}

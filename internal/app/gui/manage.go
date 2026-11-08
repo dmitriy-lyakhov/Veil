@@ -2,6 +2,7 @@ package gui
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"veil/internal/app/gui/kit"
+	"veil/internal/client/adminapi"
 	"veil/internal/config"
 	"veil/internal/deploy"
 	"veil/internal/server"
@@ -31,7 +33,37 @@ func nodeName(p *config.Profile) string {
 	return strings.ReplaceAll(strings.TrimSpace(p.Name), "/", "-")
 }
 
-func managed(p *config.Profile) bool { return p.SSH != nil && p.IsVeil() }
+// sshManaged — сервер установлен из этого приложения: к нему есть вход по SSH (нужен для каскадов между
+// своими серверами, обновления сервера и установки протоколов).
+func sshManaged(p *config.Profile) bool { return p.SSH != nil && p.IsVeil() }
+
+// managed — сервером можно управлять из приложения: он установлен отсюда (есть SSH) или профиль выдан
+// с ролью «администратор» (настройки открываются по туннелю, без пароля и SSH).
+func managed(p *config.Profile) bool { return p.IsVeil() && (p.SSH != nil || adminapi.Allowed(p)) }
+
+// tunnelCall выполняет запрос к админ-API сервера по туннелю от имени клиента-администратора: сервер узнаёт его
+// по ключу туннеля, поэтому ни пароль SSH, ни пароль админ-панели не нужны. Пути те же, что у сокета управления.
+func tunnelCall(p *config.Profile, method, path string, in, out any) error {
+	var body []byte
+	if in != nil {
+		b, err := json.Marshal(in)
+		if err != nil {
+			return err
+		}
+		body = b
+	}
+	raw, err := adminapi.Do(context.Background(), p, method, path, body)
+	if err != nil {
+		if err.Error() == adminapi.NoAdmin {
+			return errors.New(L("the server did not accept this profile as an administrator: issue an administrator config for it", "сервер не признал этот профиль администратором: выпустите для него конфиг администратора"))
+		}
+		return err
+	}
+	if out == nil {
+		return nil
+	}
+	return json.Unmarshal(raw, out)
+}
 
 func (u *ui) withSession(parent fyne.Window, p *config.Profile, done func(*deploy.Session, error)) {
 	if s, ok := u.sessions[p.Name]; ok {
@@ -180,13 +212,43 @@ type manager struct {
 
 func (u *ui) openManager(p *config.Profile) {
 	m := u.buildManager(p)
-	// вход по SSH не требуется для просмотра страницы: пароль спросим, когда он понадобится
+	// вход по SSH не требуется для просмотра страницы: пароль спросим, когда он понадобится;
+	// администратор с поднятым туннелем к серверу открывает настройки сразу, без пароля
 	if s, ok := u.sessions[p.Name]; ok {
 		m.sess = s
+		m.refresh()
+	} else if m.viaTunnel() {
 		m.refresh()
 	} else {
 		m.render()
 	}
+}
+
+// viaTunnel — SSH-сессии нет, но профиль администратора и туннель к этому серверу поднят: запросы идут по туннелю.
+func (m *manager) viaTunnel() bool {
+	return m.sess == nil && adminapi.Allowed(m.p) && m.u != nil && m.u.active == m.p.Name && m.u.connected
+}
+
+// transport возвращает способ выполнить запрос к серверу прямо сейчас (SSH или туннель); nil — нужен вход по SSH.
+// Функцию можно вызывать из горутины.
+func (m *manager) transport() func(method, path string, in, out any) error {
+	if s := m.sess; s != nil {
+		return s.Call
+	}
+	if m.viaTunnel() {
+		p := m.p
+		return func(method, path string, in, out any) error { return tunnelCall(p, method, path, in, out) }
+	}
+	return nil
+}
+
+// ready выполняет ok, когда к серверу можно обращаться: по туннелю сразу, иначе после входа по SSH.
+func (m *manager) ready(ok func()) {
+	if m.callHook != nil || m.transport() != nil {
+		ok()
+		return
+	}
+	m.ensureSession(ok, nil)
 }
 
 // buildManager создаёт и показывает страницу сервера, не обращаясь к серверу.
@@ -249,15 +311,17 @@ func (m *manager) call(method, path string, in, out any, done func(error)) {
 		m.callHook(method, path, in, out, done)
 		return
 	}
-	if m.sess == nil {
+	do := m.transport()
+	if do == nil {
 		m.ensureSession(func() { m.call(method, path, in, out, done) }, done)
 		return
 	}
+	viaSSH := m.sess != nil
 	m.status.SetText(L("Working…", "Выполняется…"))
 	go func() {
-		err := m.sess.Call(method, path, in, out)
+		err := do(method, path, in, out)
 		fyne.Do(func() {
-			if err != nil && !errors.Is(err, deploy.ErrOutdated) && strings.Contains(err.Error(), "ssh") {
+			if viaSSH && err != nil && !errors.Is(err, deploy.ErrOutdated) && strings.Contains(err.Error(), "ssh") {
 				m.u.dropSession(m.p.Name)
 			}
 			if err != nil {
@@ -458,7 +522,7 @@ func (m *manager) renderCascade() {
 func (m *manager) otherManaged() []*config.Profile {
 	var out []*config.Profile
 	for _, p := range m.u.profiles {
-		if managed(p) && p.Name != m.p.Name {
+		if sshManaged(p) && p.Name != m.p.Name {
 			out = append(out, p)
 		}
 	}

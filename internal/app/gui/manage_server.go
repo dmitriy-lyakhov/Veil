@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"errors"
 	"fmt"
 
 	"fyne.io/fyne/v2"
@@ -9,6 +10,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"veil/internal/app/gui/kit"
+	"veil/internal/client/adminapi"
 	"veil/internal/config"
 )
 
@@ -26,10 +28,30 @@ func sshSummary(p *config.Profile) string {
 
 // renderLogin — вместо запроса пароля при открытии страницы: пояснение и кнопка входа.
 func (m *manager) renderLogin(msg string) {
+	if adminapi.Allowed(m.p) {
+		// администратор открывает настройки по туннелю — без пароля SSH и пароля админки
+		m.body.Add(note(L("You are an administrator of this server: connect to it, and the settings open over the VPN without any password.", "Вы администратор этого сервера: подключитесь к нему, и настройки откроются через VPN без пароля.")))
+		open := widget.NewButtonWithIcon(L("Open settings", "Открыть настройки"), theme.ViewRefreshIcon(), func() {
+			if !m.viaTunnel() && m.sess == nil {
+				kit.ShowError(errors.New(L("connect to this server first", "сначала подключитесь к этому серверу")), m.w)
+				return
+			}
+			m.refresh()
+		})
+		open.Importance = widget.HighImportance
+		m.body.Add(open)
+		if m.p.SSH == nil {
+			return
+		}
+		msg = L("Or sign in over SSH.", "Или войдите по SSH.")
+	}
 	btn := widget.NewButtonWithIcon(L("Sign in over SSH", "Войти по SSH"), theme.LoginIcon(), func() {
 		m.ensureSession(m.refresh, nil)
 	})
 	btn.Importance = widget.HighImportance
+	if adminapi.Allowed(m.p) {
+		btn.Importance = widget.MediumImportance
+	}
 	m.body.Add(note(msg))
 	m.body.Add(btn)
 }
@@ -52,6 +74,8 @@ func (m *manager) renderProtocol() {
 			port = 22
 		}
 		m.body.Add(kit.ListRow(L("SSH management", "Управление по SSH"), fmt.Sprintf(L("%s · port %d · login %s", "%s · порт %d · вход %s"), p.SSH.User, port, auth), nil, nil))
+	} else if adminapi.Allowed(p) {
+		m.body.Add(kit.ListRow(L("Management", "Управление"), L("As an administrator over the VPN: no password needed. Updating the server and installing protocols require SSH", "Как администратор через VPN, без пароля. Обновление сервера и установка протоколов — только по SSH"), nil, nil))
 	} else {
 		m.body.Add(kit.ListRow(L("Management", "Управление"), L("The server was added from a file or link; it cannot be managed from this app", "Сервер добавлен по файлу или ссылке, управлять им из этого приложения нельзя"), nil, nil))
 	}

@@ -355,6 +355,17 @@ func (s *Server) ReissueClient(ctx context.Context, name string) (*config.Profil
 		disabled := true
 		_ = s.UpdateClient(name, ClientUpdate{Disabled: &disabled})
 	}
+	// новый конфиг не меняет права клиента и сети за ним; у старых клиентов без роли она остаётся пустой
+	if p.Role != "" {
+		if err := s.applyRole(prof, name, p.Role); err != nil {
+			return nil, err
+		}
+	}
+	if len(p.Subnets) > 0 {
+		if err := s.SetClientSubnets(name, p.Subnets); err != nil {
+			return nil, err
+		}
+	}
 	return prof, nil
 }
 

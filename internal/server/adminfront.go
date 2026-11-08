@@ -327,7 +327,7 @@ func (a *AdminFront) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	roleLogin := sessKey == [32]byte{}
 	actor := defaultAdminUser
 	if roleLogin {
-		actor = "клиент-администратор"
+		actor = actorKeyAdmin
 	} else {
 		a.st.touch(sessKey, ip, r.UserAgent())
 	}

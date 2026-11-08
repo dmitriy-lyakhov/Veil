@@ -145,6 +145,9 @@
     <string name="ac_seg_users">Users</string>
     <string name="ac_lead">Share VPN access without the ability to manage the server</string>
     <string name="ac_need_admin">Only a server administrator can share access. Connect with an Administrator profile.</string>
+    <string name="ac_server_settings">Server settings</string>
+    <string name="ac_server_settings_sub">Cover site, domain, links, cascade, log — no password</string>
+    <string name="ac_server_settings_error">The admin panel did not open: make sure the VPN is connected to this server</string>
     <string name="ac_need_connect">Connect to the server to manage access.</string>
     <string name="ac_loading">Loading…</string>
     <string name="ac_retry">Retry</string>

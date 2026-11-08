@@ -145,6 +145,9 @@
     <string name="ac_seg_users">Пользователи</string>
     <string name="ac_lead">Доступ к VPN без права управлять сервером</string>
     <string name="ac_need_admin">Выдавать доступ может администратор сервера. Подключитесь профилем с ролью «Администратор».</string>
+    <string name="ac_server_settings">Настройки сервера</string>
+    <string name="ac_server_settings_sub">Сайт-прикрытие, домен, связи, каскад, журнал — без пароля</string>
+    <string name="ac_server_settings_error">Админ-панель не открылась: проверьте, что VPN подключён к этому серверу</string>
     <string name="ac_need_connect">Подключитесь к серверу, чтобы управлять доступом.</string>
     <string name="ac_loading">Загрузка…</string>
     <string name="ac_retry">Повторить</string>

@@ -55,6 +55,9 @@ object Access {
     fun load(a: MainActivity, force: Boolean = false) {
         val p = Profiles.active(a) ?: return
         if (loading || (!force && ready(a))) return
+        // после ошибки — только по кнопке «Повторить»: иначе каждая перестройка страницы снова шлёт запрос,
+        // ответ снова перестраивает страницу, и интерфейс перестаёт реагировать на нажатия
+        if (!force && error != null && forId == p.id) return
         loading = true; error = null
         call(a, "GET", "state", null) { r, e ->
             loading = false; forId = p.id; state = r; error = e
@@ -184,6 +187,10 @@ class AccessPage(a: MainActivity) : Page(a) {
             }
         }
         col.addView(share, lp(MATCH, WRAP).apply { topMargin = dp(16) })
+        // настройки сервера целиком — админ-панель по туннелю: администратор входит по ключу туннеля, без пароля
+        col.addView(a.row(a.getString(R.string.ac_server_settings), a.getString(R.string.ac_server_settings_sub), R.drawable.ic_sliders, chevron = true) {
+            a.push(AdminWebPage(a))
+        }, lp(MATCH, WRAP).apply { topMargin = dp(24) })
     }
 
     private fun usersTab(col: LinearLayout) {

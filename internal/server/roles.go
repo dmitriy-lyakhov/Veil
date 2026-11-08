@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"veil/internal/config"
+	"veil/internal/provision"
 )
 
 // Роли клиентов. Пустая роль — клиент создан до появления ролей: доступ к панели по паролю, как раньше.
@@ -97,10 +98,7 @@ func (s *Server) relayAdmin(name string) bool {
 func (s *Server) adminURL() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if pf, err := netip.ParsePrefix(s.cfg.Address4); err == nil {
-		return "https://" + pf.Addr().String() + adminPrefix
-	}
-	return ""
+	return provision.AdminURL(s.cfg)
 }
 
 // applyRole выставляет роль выданному клиенту и дописывает в его профиль роль и адрес админки.

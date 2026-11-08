@@ -53,6 +53,7 @@ type parsed struct {
 	Role      string   `json:"role,omitempty"`
 	Host      string   `json:"host,omitempty"`
 	AdminURL  string   `json:"admin_url,omitempty"` // адрес админки в туннеле (только у профиля с ролью admin)
+	CertPin   string   `json:"cert_pin,omitempty"`  // отпечаток SPKI сертификата сервера: встроенная админка проверяет по нему самоподписанный сертификат
 }
 
 func protocolOf(p *config.Profile) string {
@@ -122,6 +123,7 @@ func describe(p *config.Profile) (parsed, error) {
 		if p.Role == "admin" {
 			if b, err := adminBase(p); err == nil {
 				out.AdminURL = b + "/admin"
+				out.CertPin = p.CertPin
 			}
 		}
 		for _, e := range p.Entries {

@@ -32,6 +32,8 @@ abstract class Page(val a: MainActivity) {
     open fun refresh() {}
     /** Кнопка «назад»: true — страница обработала сама (например, свернула панель). */
     open fun onBack(): Boolean = false
+    /** Прокрутка страницы: запоминается при уходе на подстраницу и при перестройке, восстанавливается при возврате. */
+    var scrollY = 0
 }
 
 class MainActivity : Activity() {
@@ -81,11 +83,23 @@ class MainActivity : Activity() {
         root.addView(overlay, FrameLayout.LayoutParams(MATCH, MATCH))
         setContentView(root)
         applyBars()
-        show(rootPage(0))
-        handleIntent(intent)
+        // пересоздание после смены темы или языка: остаёмся на той же вкладке, ссылку из intent повторно
+        // не импортируем и автоподключение «при запуске» второй раз не выполняем
+        if (savedInstanceState != null) {
+            tab = savedInstanceState.getInt(STATE_TAB, 0).coerceIn(0, 3)
+            autoDone = savedInstanceState.getBoolean(STATE_AUTO, false)
+        }
+        show(rootPage(tab))
+        if (savedInstanceState == null) handleIntent(intent)
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 2)
         }
+    }
+
+    override fun onSaveInstanceState(out: Bundle) {
+        super.onSaveInstanceState(out)
+        out.putInt(STATE_TAB, tab)
+        out.putBoolean(STATE_AUTO, autoDone)
     }
 
     private fun applyBars() {
@@ -185,15 +199,19 @@ class MainActivity : Activity() {
     // ---------- переходы между страницами (дизайн: уход 140 мс, появление 320 мс; вперёд +32 dp, назад −32 dp, вкладка — подъём 10 dp) ----------
 
     private var enterDir = 0
-    private var navBusy = false
+    private var pendingNav: (() -> Unit)? = null
 
     /** Сменить страницу: старая уходит за 140 мс, затем change() правит стек и новая страница появляется. dir: 1 вперёд, −1 назад, 2 вкладка. */
     private fun go(dir: Int, change: () -> Unit) {
+        // предыдущий переход ещё анимируется (например, pop() и сразу push()) — сначала доводим его до конца,
+        // иначе его отложенная правка стека выполнится позже и снимет только что открытую страницу
+        pendingNav?.let { pendingNav = null; it() }
         val old = if (content.childCount > 0) content.getChildAt(0) else null
-        if (old == null || navBusy || Settings.reduceMotion(this)) { change(); enterDir = dir; render(); return }
-        navBusy = true
+        if (old == null || Settings.reduceMotion(this)) { change(); enterDir = dir; render(); return }
+        val run = { change(); enterDir = dir; render() }
+        pendingNav = run
         old.animate().alpha(0f).translationX(if (dir == 2) 0f else -dp(14).toFloat()).setDuration(140)
-            .withEndAction { navBusy = false; change(); enterDir = dir; render() }.start()
+            .withEndAction { if (pendingNav === run) { pendingNav = null; run() } }.start()
     }
 
     private fun enterAnimation(v: View) {
@@ -204,11 +222,16 @@ class MainActivity : Activity() {
         v.animate().alpha(1f).translationX(0f).translationY(0f).setDuration(320).setInterpolator(sheetEase).start()
     }
 
+    private var shownPage: Page? = null
+    private var shownScroll: ScrollView? = null
+
     private fun render() {
         val p = stack.last()
         updateNav()
+        shownScroll?.let { sv -> shownPage?.let { if (it in stack) it.scrollY = sv.scrollY } }
         content.removeAllViews()
         val body = p.build()
+        var sv: ScrollView? = null
         val v: View = if (stack.size > 1 || p.title != null) {
             val col = vbox()
             // шапка по дизайну: высота 56 dp, заголовок 17 sp по центру, «назад» 44 dp слева с отступом 8 dp
@@ -223,11 +246,14 @@ class MainActivity : Activity() {
                 head.addView(back, FrameLayout.LayoutParams(dp(44), dp(44), Gravity.START or Gravity.CENTER_VERTICAL).apply { leftMargin = dp(8) })
             }
             col.addView(head, lp(MATCH, dp(56)))
-            val b = if (p.scroll) ScrollView(this).apply { addView(body); isFillViewport = true } else body
+            val b = if (p.scroll) ScrollView(this).apply { addView(body); isFillViewport = true }.also { sv = it } else body
             col.addView(b, lp(MATCH, 0, 1f))
             col
-        } else if (p.scroll) ScrollView(this).apply { addView(body); isFillViewport = true } else body
+        } else if (p.scroll) ScrollView(this).apply { addView(body); isFillViewport = true }.also { sv = it } else body
         content.addView(v, FrameLayout.LayoutParams(MATCH, MATCH))
+        val s = sv
+        shownPage = p; shownScroll = s
+        if (s != null && p.scrollY > 0) { val y = p.scrollY; s.post { s.scrollTo(0, y) } }
         enterAnimation(v)
         p.refresh()
     }
@@ -274,7 +300,8 @@ class MainActivity : Activity() {
         head.addView(text(title, 22f, 600), lp(0, WRAP, 1f))
         val x = icon(R.drawable.ic_close, 22f, T.p.muted)
         x.setPadding(dp(11), dp(11), dp(11), dp(11))   // цель нажатия 44 dp, значок 22 (дизайн: отступ -8 справа и сверху)
-        x.layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply { rightMargin = -dp(8); topMargin = -dp(8) }
+        // симметричные отрицательные поля сверху и снизу: шапка не растёт из-за цели нажатия, а значок стоит на одной оси с заголовком
+        x.layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply { rightMargin = -dp(8); topMargin = -dp(8); bottomMargin = -dp(8) }
         x.setOnClickListener { closeSheet() }
         head.addView(x)
         sheet.addView(head, lp(MATCH, WRAP))
@@ -509,6 +536,8 @@ class MainActivity : Activity() {
 
     companion object {
         const val REQ_VPN = 1
+        private const val STATE_TAB = "tab"
+        private const val STATE_AUTO = "autoDone"
         const val REQ_FILE = 11
         const val REQ_EXPORT = 12
         const val REQ_IMPORT = 13

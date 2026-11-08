@@ -181,11 +181,17 @@ func NewAdminPassword() string {
 	return string(b)
 }
 
+// AdminURL — адрес админ-панели в туннеле; порт указывается, если сервер слушает не 443.
 func AdminURL(s *config.Server) string {
-	if p, err := netip.ParsePrefix(s.Address4); err == nil {
-		return "https://" + p.Addr().String() + "/admin"
+	p, err := netip.ParsePrefix(s.Address4)
+	if err != nil {
+		return ""
 	}
-	return ""
+	host := p.Addr().String()
+	if port := s.Port(); port != config.DefaultPort {
+		host = netip.AddrPortFrom(p.Addr(), uint16(port)).String()
+	}
+	return "https://" + host + "/admin"
 }
 
 func CertPin(certPEM string) (string, error) {

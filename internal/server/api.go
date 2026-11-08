@@ -276,7 +276,7 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request, path string, 
 		if decode(&req) {
 			err := s.SetFront(req.SNI, req.Dest)
 			resp := map[string]string{"ok": "1"}
-			if err == nil && trusted {
+			if err == nil && (trusted || keyAdmin(r)) {
 				resp["sni"], resp["key"] = s.FrontInfo().SNI, s.FrontKey()
 			}
 			reply(resp, err)
@@ -313,7 +313,7 @@ func (s *Server) handleAPI(w http.ResponseWriter, r *http.Request, path string, 
 		var req passwordRequest
 		if decode(&req) {
 			var current *string
-			if !trusted {
+			if !trusted && !keyAdmin(r) {
 				current = &req.Current
 			}
 			reply(nil, s.SetAdminPassword(current, req.New))

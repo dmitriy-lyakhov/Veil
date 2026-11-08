@@ -38,7 +38,7 @@ func (u *ui) openChainBuilder(entry *config.Profile) {
 	freeServers := func() []string {
 		var opts []string
 		for _, p := range u.profiles {
-			if managed(p) && !inChain(p) {
+			if sshManaged(p) && !inChain(p) {
 				opts = append(opts, p.Name)
 			}
 		}

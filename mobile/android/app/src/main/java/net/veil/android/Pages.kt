@@ -102,6 +102,8 @@ class HomePage(a: MainActivity) : Page(a) {
         val line = a.hbox().apply { gravity = Gravity.CENTER }
         serverName = a.text("", if (tight) 22f else 28f, 600, lines = 1)
         serverName.gravity = Gravity.CENTER
+        // слева — пустое место шириной стрелки (22 + 8 dp), чтобы имя стояло ровно по центру экрана, как подпись под ним
+        line.addView(View(a), LinearLayout.LayoutParams(dp(30), 1))
         line.addView(serverName, LinearLayout.LayoutParams(0, WRAP, 1f))
         val arrow = a.icon(R.drawable.ic_down, 22f, T.p.muted).also { (it.layoutParams as LinearLayout.LayoutParams).leftMargin = dp(8) }
         line.addView(arrow)
@@ -564,9 +566,9 @@ class AboutPage(a: MainActivity) : Page(a) {
     override fun build(): View {
         val col = a.vbox().apply { setPadding(dp(20), dp(20), dp(20), dp(20)); gravity = Gravity.CENTER_HORIZONTAL }
         col.addView(a.icon(R.drawable.ic_mark, 72f).also { it.clearColorFilter() })
-        col.addView(a.text("Veil", 28f, 600).also { it.setPadding(0, dp(12), 0, dp(4)) })
+        col.addView(a.text("Veil", 28f, 600).also { it.gravity = Gravity.CENTER; it.setPadding(0, dp(12), 0, dp(4)) })
         val v = try { a.packageManager.getPackageInfo(a.packageName, 0).versionName } catch (_: Exception) { "" }
-        col.addView(a.text(a.getString(R.string.about_version, v ?: ""), 13f, 500, T.p.muted))
+        col.addView(a.text(a.getString(R.string.about_version, v ?: ""), 13f, 500, T.p.muted).also { it.gravity = Gravity.CENTER })
         col.addView(a.text(a.getString(R.string.about_text), 14f, 500, T.p.muted).also { it.gravity = Gravity.CENTER; it.setPadding(0, dp(20), 0, 0) })
         return col
     }

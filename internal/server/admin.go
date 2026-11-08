@@ -173,7 +173,7 @@ func (s *Server) serveAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 	roleLogin := sessKey == [32]byte{}
 	if roleLogin {
-		actor = "клиент-администратор"
+		actor = actorKeyAdmin
 	} else {
 		s.admin.touch(sessKey, ip, r.UserAgent())
 	}

@@ -78,17 +78,17 @@ func (m *manager) openCoverSite() {
 	}
 	// пока сервер грузит репозиторий, раз в 2 секунды спрашиваем состояние (не дольше двух минут)
 	poll = func() {
-		if polling || m.sess == nil {
+		call := m.transport()
+		if polling || call == nil {
 			return
 		}
 		polling = true
-		sess := m.sess
 		go func() {
 			defer func() { polling = false }()
 			siteRepoPoller{
 				fetch: func() (server.SiteRepoInfo, error) {
 					var st stateRoles
-					err := sess.Call("GET", "/state", nil, &st)
+					err := call("GET", "/state", nil, &st)
 					if err == nil {
 						fyne.Do(func() { m.state = st.State })
 					}

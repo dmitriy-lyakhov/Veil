@@ -233,6 +233,11 @@ func (m *manager) setAdminPanel(on bool) {
 func (m *manager) renderDocker() {
 	d := m.docker
 	if d == nil {
+		if m.sess == nil && m.p.SSH == nil {
+			// профиль администратора без SSH: настройки — по туннелю, а Docker на сервере доступен только по SSH
+			m.body.Add(kit.ListRow(L("Containers and Docker", "Контейнеры и Docker"), L("Available only to the app that installed the server (over SSH)", "Доступно только приложению, которое установило сервер (по SSH)"), nil, nil))
+			return
+		}
 		if m.sess == nil {
 			m.body.Add(kit.NavRow(L("Containers and Docker", "Контейнеры и Docker"), L("Docker version, container logs and restarts, admin panel — requires SSH sign-in", "Версия Docker, журналы и перезапуск контейнеров, админ-панель — понадобится вход по SSH"), func() {
 				m.ensureSession(func() {
@@ -268,19 +273,28 @@ func (m *manager) renderDocker() {
 func (m *manager) renderManagement() {
 	m.renderDocker()
 	needSSH := func(f func()) func() { return func() { m.ensureSession(f, nil) } }
-	m.body.Add(newAutoGrid(200,
-		bigButton(L("Update server", "Обновить сервер"), "download", false, m.updateServer),
-		bigButton(L("Update packages", "Обновить пакеты"), "refresh", false, needSSH(m.updatePackages)),
-		bigButtonDanger(L("Uninstall Veil from server", "Удалить Veil с сервера"), "trash", needSSH(m.uninstall)),
-	))
+	hasSSH := m.p.SSH != nil // без SSH (профиль администратора) — только то, что идёт через админ-API по туннелю
+	if hasSSH {
+		m.body.Add(newAutoGrid(200,
+			bigButton(L("Update server", "Обновить сервер"), "download", false, m.updateServer),
+			bigButton(L("Update packages", "Обновить пакеты"), "refresh", false, needSSH(m.updatePackages)),
+			bigButtonDanger(L("Uninstall Veil from server", "Удалить Veil с сервера"), "trash", needSSH(m.uninstall)),
+		))
+	}
 
 	arrow := func() fyne.CanvasObject { return widget.NewIcon(theme.NavigateNextIcon()) }
 	m.body.Add(kit.SectionLabel(L("More", "Ещё")))
-	m.body.Add(kit.ListRow(L("Cover site", "Сайт-прикрытие"), L("Repository, branch, status", "Репозиторий, ветка, статус"), arrow(), needSSH(m.loadCoverSite)))
-	m.body.Add(kit.ListRow(L("Check server", "Проверить сервер"), L("Refresh version, client and container information", "Обновить сведения о версии, клиентах и контейнерах"), arrow(), needSSH(func() {
-		m.docker = nil
-		m.refresh()
-	})))
+	m.body.Add(kit.ListRow(L("Cover site", "Сайт-прикрытие"), L("Repository, branch, status", "Репозиторий, ветка, статус"), arrow(), func() { m.ready(m.loadCoverSite) }))
+	m.body.Add(kit.ListRow(L("Check server", "Проверить сервер"), L("Refresh version, client and container information", "Обновить сведения о версии, клиентах и контейнерах"), arrow(), func() {
+		m.ready(func() {
+			m.docker = nil
+			m.refresh()
+		})
+	}))
+	if !hasSSH {
+		m.renderRemoveProfile(arrow)
+		return
+	}
 	m.body.Add(kit.ListRowColored(L("Reboot server", "Перезагрузить сервер"), "", theme.ColorNameError, arrow(), needSSH(func() {
 		kit.ShowConfirm(L("Reboot", "Перезагрузка"), L("The server will be rebooted; VPN is unavailable during the reboot. Continue?", "Сервер будет перезагружен, VPN на время перезагрузки недоступен. Продолжить?"), func(ok bool) {
 			if !ok {
@@ -297,6 +311,11 @@ func (m *manager) renderManagement() {
 			m.status.SetText(L("Server is rebooting…", "Сервер перезагружается…"))
 		}, m.w)
 	})))
+	m.renderRemoveProfile(arrow)
+}
+
+// renderRemoveProfile — строка «Удалить сервер из приложения»: стирает только профиль на этом устройстве.
+func (m *manager) renderRemoveProfile(arrow func() fyne.CanvasObject) {
 	m.body.Add(kit.ListRowColored(L("Remove server from the app", "Удалить сервер из приложения"), "", theme.ColorNameError, arrow(), func() {
 		kit.ShowConfirm(L("Remove server", "Удалить сервер"), fmt.Sprintf(L("Profile “%s” will be deleted from this device. The server itself will not change. Continue?", "Профиль «%s» будет удалён с этого устройства. Сам сервер не изменится. Продолжить?"), m.p.Name), func(ok bool) {
 			if !ok {
